@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
-// İkonların eksiksiz olduğundan emin olalım
-import { User, Settings, History, Trash2, Save, Loader2, ArrowLeft, LogOut, Tv, Youtube, Plus } from 'lucide-react'
+import { User, Settings, History, Trash2, Save, Loader2, ArrowLeft, LogOut, Tv, Youtube, Plus, Link as LinkIcon, Search } from 'lucide-react'
 import { PROVIDERS } from '@/lib/tmdb'
+import { resolveYouTubeChannel } from '../actions' // Action import
 
 export default function ProfilePage() {
   const supabase = createClientComponentClient()
@@ -15,12 +15,14 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<'settings' | 'channels' | 'history'>('settings')
   const [loading, setLoading] = useState(true)
 
-  // State'leri boş array olarak başlatıyoruz ki hata vermesin
+  // State
   const [myPlatforms, setMyPlatforms] = useState<number[]>([])
   const [myChannels, setMyChannels] = useState<string[]>([])
-  const [newChannel, setNewChannel] = useState('')
+  const [newChannelInput, setNewChannelInput] = useState('')
+  const [addingChannel, setAddingChannel] = useState(false) 
   const [saving, setSaving] = useState(false)
   const [history, setHistory] = useState<any[]>([])
+  const [badges, setBadges] = useState<any[]>([]) // Rozetler
 
   useEffect(() => {
     const fetchData = async () => {
@@ -29,58 +31,43 @@ export default function ProfilePage() {
         if (!user) { router.push('/login'); return }
         setUser(user)
 
-        // 1. Profil Verilerini Güvenli Çekme
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-        
         if (profile) {
-          // Null kontrolü yaparak set ediyoruz
-          if(Array.isArray(profile.selected_platforms)) {
-             setMyPlatforms(profile.selected_platforms.map((p: string) => parseInt(p)))
-          }
-          if(Array.isArray(profile.favorite_channels)) {
-             setMyChannels(profile.favorite_channels)
-          }
+          if(Array.isArray(profile.selected_platforms)) setMyPlatforms(profile.selected_platforms.map((p: string) => parseInt(p)))
+          if(Array.isArray(profile.favorite_channels)) setMyChannels(profile.favorite_channels)
         }
 
-        // 2. Geçmişi Çekme
-        const { data: historyData } = await supabase
-          .from('user_history')
-          .select('*')
-          .order('watched_at', { ascending: false })
-          .limit(50)
-        
+        const { data: historyData } = await supabase.from('user_history').select('*').order('watched_at', { ascending: false }).limit(50)
         if (historyData) setHistory(historyData)
 
-      } catch (error) {
-        console.error("Profil yükleme hatası:", error)
-      } finally {
-        setLoading(false)
-      }
+        // Rozetleri Çek
+        const { data: userBadges } = await supabase.from('user_badges').select('badge_id, created_at, badges(name, icon, description)').eq('user_id', user.id)
+        if (userBadges) setBadges(userBadges)
+
+      } catch (error) { console.error(error) } 
+      finally { setLoading(false) }
     }
     fetchData()
   }, [])
 
-  // --- KAYDETME ---
   const saveAll = async () => {
     setSaving(true)
-    const { error } = await supabase.from('profiles').update({
-      selected_platforms: myPlatforms.map(String),
-      favorite_channels: myChannels
-    }).eq('id', user.id)
-    
+    const { error } = await supabase.from('profiles').update({ selected_platforms: myPlatforms.map(String), favorite_channels: myChannels }).eq('id', user.id)
     if (!error) alert("Kaydedildi! ✅")
-    else alert("Hata oluştu. Lütfen tekrar dene.")
+    else alert("Hata oluştu.")
     setSaving(false)
   }
 
-  // --- KANAL İŞLEMLERİ ---
-  const addChannel = () => {
-    if(newChannel.startsWith('UC') && newChannel.length > 10) {
-      setMyChannels([...myChannels, newChannel])
-      setNewChannel('')
-    } else {
-      alert("Geçerli bir YouTube Kanal ID girin (UC ile başlamalı).")
-    }
+  // --- KANAL BUL VE EKLE ---
+  const handleAddChannel = async () => {
+    if (!newChannelInput) return;
+    setAddingChannel(true);
+    const result = await resolveYouTubeChannel(newChannelInput);
+    if (result.success && result.id) {
+      if (!myChannels.includes(result.id)) { setMyChannels([...myChannels, result.id]); setNewChannelInput(''); } 
+      else { alert("Bu kanal zaten var."); }
+    } else { alert(result.message || "Kanal bulunamadı."); }
+    setAddingChannel(false);
   }
 
   const removeChannel = (id: string) => setMyChannels(myChannels.filter(c => c !== id))
@@ -93,7 +80,6 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-[#0f1014] text-white font-sans p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <button onClick={() => router.push('/')} className="p-2 bg-gray-800 rounded-full hover:bg-gray-700 transition"><ArrowLeft /></button>
@@ -103,14 +89,31 @@ export default function ProfilePage() {
         </div>
 
         <div className="flex gap-4 mb-8 border-b border-gray-800 overflow-x-auto">
-          <button onClick={() => setActiveTab('settings')} className={`pb-4 px-4 font-bold whitespace-nowrap ${activeTab === 'settings' ? 'text-yellow-500 border-b-2 border-yellow-500' : 'text-gray-400'}`}>Platformlar</button>
+          <button onClick={() => setActiveTab('settings')} className={`pb-4 px-4 font-bold whitespace-nowrap ${activeTab === 'settings' ? 'text-yellow-500 border-b-2 border-yellow-500' : 'text-gray-400'}`}>Genel Ayarlar</button>
           <button onClick={() => setActiveTab('channels')} className={`pb-4 px-4 font-bold whitespace-nowrap ${activeTab === 'channels' ? 'text-red-500 border-b-2 border-red-500' : 'text-gray-400'}`}>YouTube Kanallarım</button>
           <button onClick={() => setActiveTab('history')} className={`pb-4 px-4 font-bold whitespace-nowrap ${activeTab === 'history' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400'}`}>İzleme Geçmişi</button>
         </div>
 
-        {/* TAB 1: PLATFORMLAR */}
+        {/* TAB 1: AYARLAR VE ROZETLER */}
         {activeTab === 'settings' && (
           <div className="animate-in fade-in">
+            {/* ROZETLER */}
+            <div className="bg-gradient-to-r from-yellow-900/20 to-purple-900/20 p-6 rounded-2xl border border-yellow-500/20 mb-8">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">🏆 Rozet Koleksiyonun</h2>
+              {badges.length > 0 ? (
+                <div className="flex gap-4 flex-wrap">
+                  {badges.map((b: any) => (
+                    <div key={b.badge_id} className="bg-gray-900 p-3 rounded-xl border border-gray-700 flex flex-col items-center text-center w-24" title={b.badges.description}>
+                      <div className="text-3xl mb-2">{b.badges.icon}</div>
+                      <div className="text-xs font-bold text-gray-300">{b.badges.name}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm">Henüz rozetin yok. İzlemeye başla!</p>
+              )}
+            </div>
+
             <div className="bg-gray-900/50 p-6 rounded-2xl border border-gray-800 mb-6">
               <h2 className="text-xl font-bold mb-4">Üyeliklerin</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -129,8 +132,13 @@ export default function ProfilePage() {
             <div className="bg-gray-900/50 p-6 rounded-2xl border border-gray-800">
               <h2 className="text-xl font-bold mb-2 flex items-center gap-2"><Youtube className="text-red-600"/> Favori Kanalların</h2>
               <div className="flex gap-2 mb-6">
-                <input value={newChannel} onChange={e => setNewChannel(e.target.value)} placeholder="Kanal ID (Örn: UCkX...)" className="bg-gray-800 border border-gray-700 p-3 rounded-lg flex-1 outline-none focus:border-red-500 text-white"/>
-                <button onClick={addChannel} className="bg-red-600 hover:bg-red-500 px-4 rounded-lg font-bold"><Plus/></button>
+                <div className="relative flex-1">
+                  <LinkIcon className="absolute left-3 top-3 text-gray-500" size={20}/>
+                  <input value={newChannelInput} onChange={e => setNewChannelInput(e.target.value)} placeholder="Örn: youtube.com/@BarisOzcan" className="bg-gray-800 border border-gray-700 p-3 pl-10 rounded-lg w-full outline-none focus:border-red-500 text-white" />
+                </div>
+                <button onClick={handleAddChannel} disabled={addingChannel || !newChannelInput} className="bg-red-600 hover:bg-red-500 disabled:bg-gray-700 text-white px-4 rounded-lg font-bold flex items-center gap-2">
+                  {addingChannel ? <Loader2 className="animate-spin"/> : <><Search size={18}/> Bul & Ekle</>}
+                </button>
               </div>
               <div className="space-y-2 mb-6">
                 {myChannels.map(id => (
@@ -139,7 +147,6 @@ export default function ProfilePage() {
                     <button onClick={() => removeChannel(id)} className="text-red-500 hover:text-red-400"><Trash2 size={16}/></button>
                   </div>
                 ))}
-                {myChannels.length === 0 && <p className="text-gray-500 text-sm italic">Listeye henüz kanal eklenmemiş.</p>}
               </div>
               <button onClick={saveAll} disabled={saving} className="bg-yellow-600 hover:bg-yellow-500 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2">{saving ? <Loader2 className="animate-spin" /> : <><Save size={18}/> Kaydet</>}</button>
             </div>

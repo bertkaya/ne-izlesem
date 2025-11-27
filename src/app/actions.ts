@@ -150,3 +150,78 @@ export async function fetchAndSaveChannelVideos(channelId: string) {
     return { success: false, message: 'Bir şeyler ters gitti.' }
   }
 }
+// --- YENİ: YOUTUBE LINKINDEN ID BULUCU ---
+export async function resolveYouTubeChannel(input: string) {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey) return { success: false, message: 'API Key eksik.' };
+
+  let channelId = '';
+
+  // DURUM 1: Kullanıcı direkt ID yapıştırmışsa (UC...)
+  if (input.startsWith('UC') && input.length === 24) {
+    return { success: true, id: input, title: 'Kanal ID' };
+  }
+
+  // DURUM 2: Kanal Linki (@kullaniciadi)
+  // Örn: https://www.youtube.com/@BarisOzcan -> handle: BarisOzcan
+  const handleMatch = input.match(/@([\w\-.]+)/);
+  
+  if (handleMatch && handleMatch[1]) {
+    const handle = handleMatch[1];
+    try {
+      const res = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=id,snippet&forHandle=${handle}&key=${apiKey}`);
+      const data = await res.json();
+      
+      if (data.items && data.items.length > 0) {
+        return { 
+          success: true, 
+          id: data.items[0].id, 
+          title: data.items[0].snippet.title 
+        };
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // DURUM 3: Eski tip link (/user/username)
+  // Bu çok nadir kaldı ama basit bir arama ile çözebiliriz
+  // Şimdilik sadece Handle desteği yeterli ve en garantisidir.
+
+  return { success: false, message: 'Kanal bulunamadı. Lütfen @kullaniciadi içeren linki girin.' };
+}
+// ... (Mevcut kodların altına)
+
+// --- ROZET KONTROL SİSTEMİ ---
+export async function checkBadges(userId: string) {
+  // 1. Kullanıcının geçmişini say
+  const { count } = await supabase.from('user_history').select('*', { count: 'exact', head: true }).eq('user_id', userId);
+  const totalWatched = count || 0;
+
+  // 2. Mevcut rozetlerini çek
+  const { data: myBadges } = await supabase.from('user_badges').select('badge_id').eq('user_id', userId);
+  const ownedBadgeIds = myBadges?.map(b => b.badge_id) || [];
+
+  const newBadges = [];
+
+  // --- KURAL 1: ÇIRAK (1 İzleme) ---
+  if (totalWatched >= 1 && !ownedBadgeIds.includes('starter')) {
+    await supabase.from('user_badges').insert({ user_id: userId, badge_id: 'starter' });
+    newBadges.push('Çırak 🐣');
+  }
+
+  // --- KURAL 2: SİNEFİL (10 İzleme) ---
+  if (totalWatched >= 10 && !ownedBadgeIds.includes('movie_buff')) {
+    await supabase.from('user_badges').insert({ user_id: userId, badge_id: 'movie_buff' });
+    newBadges.push('Sinefil 🎬');
+  }
+
+  // --- KURAL 3: GECE KUŞU (Saat 00-05 arası) ---
+  const currentHour = new Date().getHours();
+  if ((currentHour >= 0 && currentHour < 5) && !ownedBadgeIds.includes('night_owl')) {
+    await supabase.from('user_badges').insert({ user_id: userId, badge_id: 'night_owl' });
+    newBadges.push('Gece Kuşu 🦉');
+  }
+
+  return { newBadges };
+}
