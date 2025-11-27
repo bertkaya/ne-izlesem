@@ -3,15 +3,19 @@
 import { useState, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { getSmartRecommendation, getRandomEpisode, searchTvShow, getVideoFromChannel, MOOD_TO_MOVIE_GENRE, MOOD_TO_TV_GENRE, PROVIDERS } from '@/lib/tmdb'
-// Action importu
-import { checkBadges } from './actions' 
+import { analyzePrompt } from '@/lib/smart-search'
+import { checkBadges } from './actions'
 import { 
   Play, RotateCcw, ExternalLink, Youtube, PlusCircle, X, 
-  ShoppingBag, Tv, Film, Utensils, User, LogOut, Star, Search, Loader2, EyeOff, Heart, Flag, Flame
+  ShoppingBag, Tv, Film, Utensils, User, LogOut, Star, Search, Loader2, EyeOff, Heart, Flag, Flame, Sparkles, Video
 } from 'lucide-react'
 import MovieSwiper from '@/components/MovieSwiper'
 
-// --- SABİT VERİLER ---
+// --- HATA DÜZELTME BÖLÜMÜ ---
+// ReactPlayer'ı ana paketten çekiyoruz ve 'as any' ekleyerek tip hatalarını susturuyoruz.
+import dynamic from 'next/dynamic'
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false }) as any;
+
 const POPULAR_SHOWS = [
   { id: 4608, name: 'Gibi' }, { id: 1668, name: 'Friends' }, { id: 1400, name: 'Seinfeld' }, 
   { id: 2316, name: 'The Office' }, { id: 456, name: 'The Simpsons' }, { id: 62560, name: 'Mr. Robot' }, 
@@ -26,16 +30,16 @@ export default function Home() {
   const [user, setUser] = useState<any>(null)
   
   // MODLAR
-  const [appMode, setAppMode] = useState<'youtube' | 'tmdb' | 'swipe'>('youtube')
+  const [appMode, setAppMode] = useState<'youtube' | 'tmdb' | 'swipe' | 'ai'>('youtube')
   
-  // YOUTUBE STATE
+  // Youtube State
   const [ytVideo, setYtVideo] = useState<any>(null)
   const [ytLoading, setYtLoading] = useState(false)
   const [duration, setDuration] = useState('meal')
   const [mood, setMood] = useState('funny')
   const [myChannels, setMyChannels] = useState<string[]>([])
 
-  // TMDB STATE
+  // TMDb State
   const [tmdbResult, setTmdbResult] = useState<any>(null)
   const [tmdbLoading, setTmdbLoading] = useState(false)
   const [tmdbType, setTmdbType] = useState<'movie' | 'tv'>('movie')
@@ -43,36 +47,30 @@ export default function Home() {
   const [tmdbMood, setTmdbMood] = useState('funny') 
   const [searchQuery, setSearchQuery] = useState('')
   const [onlyTurkish, setOnlyTurkish] = useState(false) 
+  const [aiPrompt, setAiPrompt] = useState('')
 
-  // SWIPE STATE
-  const [swipeMovies, setSwipeMovies] = useState<any[]>([])
+  // Swipe State
+  const [swipeMovies, setSwipeMovies] = useState<any[]>([]) 
 
-  // DATA
+  // Data
   const [watchedIds, setWatchedIds] = useState<number[]>([])
   const [blacklistedIds, setBlacklistedIds] = useState<number[]>([])
   const [favorites, setFavorites] = useState<number[]>([])
 
-  // MODAL
+  // Modal
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [suggestUrl, setSuggestUrl] = useState('')
   const [suggestStatus, setSuggestStatus] = useState('')
+  const [trailerId, setTrailerId] = useState<string | null>(null)
 
-  // --- INIT ---
   useEffect(() => {
     const initData = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
-      
-      const { data: blacklist } = await supabase.from('blacklist').select('tmdb_id')
-      if (blacklist) setBlacklistedIds(blacklist.map(b => b.tmdb_id))
-
+      const { data: blacklist } = await supabase.from('blacklist').select('tmdb_id'); if (blacklist) setBlacklistedIds(blacklist.map(b => b.tmdb_id))
       if (user) {
-        const { data: history } = await supabase.from('user_history').select('tmdb_id').eq('user_id', user.id)
-        if (history) setWatchedIds(history.map(h => h.tmdb_id))
-
-        const { data: favs } = await supabase.from('favorites').select('tmdb_id').eq('user_id', user.id)
-        if (favs) setFavorites(favs.map(f => f.tmdb_id))
-
+        const { data: history } = await supabase.from('user_history').select('tmdb_id').eq('user_id', user.id); if (history) setWatchedIds(history.map(h => h.tmdb_id))
+        const { data: favs } = await supabase.from('favorites').select('tmdb_id').eq('user_id', user.id); if (favs) setFavorites(favs.map(f => f.tmdb_id))
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
         if (profile) {
            if(profile.selected_platforms) setPlatforms(profile.selected_platforms.map((p: string) => parseInt(p)))
@@ -83,25 +81,11 @@ export default function Home() {
     initData()
   }, [])
 
-  // --- MANTIK ---
+  // --- LOGIC ---
+  const fetchYoutubeVideo = async () => { setYtLoading(true); setYtVideo(null); if (myChannels.length > 0 && Math.random() > 0.5) { const r = await getVideoFromChannel(myChannels[Math.floor(Math.random() * myChannels.length)]); if(r) { setYtVideo(r); setYtLoading(false); return } } const { data } = await supabase.rpc('get_random_video', { chosen_duration: duration, chosen_mood: mood }); if (data && data.length > 0) { setYtVideo(data[0]); if(user) await supabase.from('user_history').insert({ user_id: user.id, tmdb_id: 0, media_type: 'youtube', title: data[0].title }) } else alert("Video bulunamadı."); setYtLoading(false) }
   
-  const fetchYoutubeVideo = async () => { 
-    setYtLoading(true); setYtVideo(null); 
-    if (myChannels.length > 0 && Math.random() > 0.5) { 
-      const r = await getVideoFromChannel(myChannels[Math.floor(Math.random() * myChannels.length)]); 
-      if(r) { setYtVideo(r); setYtLoading(false); return } 
-    } 
-    const { data } = await supabase.rpc('get_random_video', { chosen_duration: duration, chosen_mood: mood }); 
-    if (data && data.length > 0) { 
-      setYtVideo(data[0]); 
-      if(user) await supabase.from('user_history').insert({ user_id: user.id, tmdb_id: 0, media_type: 'youtube', title: data[0].title }) 
-    } else alert("Video bulunamadı."); 
-    setYtLoading(false) 
-  }
-
   const fetchTmdbContent = async () => { 
-    setTmdbLoading(true); setTmdbResult(null); 
-    const pStr = platforms.join('|'); 
+    setTmdbLoading(true); setTmdbResult(null); const pStr = platforms.join('|'); 
     try { 
       if (tmdbType === 'movie') { 
         const g = MOOD_TO_MOVIE_GENRE[tmdbMood as keyof typeof MOOD_TO_MOVIE_GENRE] || '35'; 
@@ -118,45 +102,26 @@ export default function Home() {
     finally { setTmdbLoading(false) } 
   }
 
-  // --- İZLEDİM BUTONU & ROZET KONTROLÜ ---
-  const markAsWatched = async () => {
-    if(!tmdbResult || !user) {
-        if(!user && confirm("Kaydetmek için giriş yapmalısın. Gitmek ister misin?")) window.location.href = '/login';
-        return;
-    }
-    
-    // 1. Kaydet
-    await supabase.from('user_history').insert({ 
-        user_id: user.id, tmdb_id: tmdbResult.id, media_type: tmdbType, 
-        title: tmdbResult.title || tmdbResult.name, poster_path: tmdbResult.poster_path, vote_average: tmdbResult.vote_average 
-    })
-    
-    // 2. Listeden Çıkar
-    setWatchedIds([...watchedIds, tmdbResult.id])
-    
-    // 3. Yenisini Getir
-    fetchTmdbContent()
-
-    // 4. ROZET KONTROLÜ
-    try {
-        const { newBadges } = await checkBadges(user.id);
-        if (newBadges && newBadges.length > 0) {
-            alert(`🎉 TEBRİKLER! Yeni Rozet Kazandın: ${newBadges.join(', ')}`);
-        }
-    } catch (error) {
-        console.error("Rozet hatası", error);
-    }
+  const fetchAiRecommendation = async () => {
+    if(!aiPrompt) return; setTmdbLoading(true); setTmdbResult(null); const pStr = platforms.join('|');
+    const { genreIds, sort, year } = analyzePrompt(aiPrompt);
+    const m = await getSmartRecommendation(genreIds, pStr, 'movie', watchedIds, blacklistedIds, false, year, sort);
+    if(m) { setTmdbResult(m); setAppMode('tmdb'); setTmdbType('movie'); } else { alert("Bulunamadı."); }
+    setTmdbLoading(false);
   }
 
-  const toggleFavorite = async () => { if(!tmdbResult || !user) return; if(favorites.includes(tmdbResult.id)) { await supabase.from('favorites').delete().eq('user_id', user.id).eq('tmdb_id', tmdbResult.id); setFavorites(favorites.filter(id => id !== tmdbResult.id)) } else { await supabase.from('favorites').insert({ user_id: user.id, tmdb_id: tmdbResult.id, media_type: tmdbType, title: tmdbResult.title || tmdbResult.name, poster_path: tmdbResult.poster_path, vote_average: tmdbResult.vote_average }); setFavorites([...favorites, tmdbResult.id]) } }
+  const openTrailer = () => {
+    if (tmdbResult && tmdbResult.videos && tmdbResult.videos.results) {
+      const trailer = tmdbResult.videos.results.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube');
+      if (trailer) setTrailerId(trailer.key); else alert("Fragman bulunamadı.");
+    } else alert("Fragman bulunamadı.");
+  }
+
+  const markAsWatched = async () => { if(!tmdbResult || !user) return; await supabase.from('user_history').insert({ user_id: user.id, tmdb_id: tmdbResult.id, media_type: tmdbType, title: tmdbResult.title || tmdbResult.name, poster_path: tmdbResult.poster_path, vote_average: tmdbResult.vote_average }); setWatchedIds([...watchedIds, tmdbResult.id]); fetchTmdbContent(); const { newBadges } = await checkBadges(user.id); if (newBadges && newBadges.length > 0) alert(`🎉 Yeni Rozet: ${newBadges.join(', ')}`); }
+  const toggleFavorite = async () => { if(!tmdbResult || !user) { alert("Giriş yapmalısın."); return; } if(favorites.includes(tmdbResult.id)) { await supabase.from('favorites').delete().eq('user_id', user.id).eq('tmdb_id', tmdbResult.id); setFavorites(favorites.filter(id => id !== tmdbResult.id)) } else { await supabase.from('favorites').insert({ user_id: user.id, tmdb_id: tmdbResult.id, media_type: tmdbType, title: tmdbResult.title || tmdbResult.name, poster_path: tmdbResult.poster_path, vote_average: tmdbResult.vote_average }); setFavorites([...favorites, tmdbResult.id]) } }
   const handleSuggest = async (e: React.FormEvent) => { e.preventDefault(); setSuggestStatus('sending'); const v = getYoutubeId(suggestUrl); if (!v) { setSuggestStatus('error'); return } const { error } = await supabase.from('videos').insert({ title: 'Kullanıcı Önerisi', url: suggestUrl, duration_category: 'meal', mood: 'funny', is_approved: false }); if (!error) { setSuggestStatus('success'); setTimeout(() => { setIsModalOpen(false); setSuggestStatus(''); setSuggestUrl('') }, 2000) } else { setSuggestStatus('db_error') } }
   const togglePlatform = async (id: number) => { const n = platforms.includes(id) ? platforms.filter(p => p !== id) : [...platforms, id]; setPlatforms(n); if(user) await supabase.from('profiles').update({ selected_platforms: n.map(String) }).eq('id', user.id) }
-  
-  const getWatchLink = () => {
-    if (!tmdbResult) return '#';
-    if (tmdbResult['watch/providers']?.results?.TR?.link) return tmdbResult['watch/providers'].results.TR.link;
-    return `https://www.themoviedb.org/${tmdbType}/${tmdbResult.id}`;
-  }
+  const getWatchLink = () => { if (!tmdbResult) return '#'; const t = tmdbResult.title || tmdbResult.name; if (platforms.includes(8)) return `https://www.netflix.com/search?q=${encodeURIComponent(t)}`; if (platforms.includes(119)) return `https://www.primevideo.com/search/ref=atv_nb_sr?phrase=${encodeURIComponent(t)}`; return `https://www.google.com/search?q=${encodeURIComponent(t)}+izle`; }
 
   return (
     <div className="min-h-screen bg-[#0f1014] text-white font-sans pb-20 selection:bg-red-500">
@@ -173,12 +138,25 @@ export default function Home() {
 
       {/* MOD SEÇİCİ */}
       <div className="flex justify-center mt-6 px-4">
-        <div className="bg-gray-900 p-1 rounded-2xl border border-gray-800 flex w-full max-w-lg shadow-lg">
-          <button onClick={() => setAppMode('youtube')} className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${appMode === 'youtube' ? 'bg-gray-800 text-yellow-500 shadow-lg' : 'text-gray-500 hover:text-white'}`}><Utensils size={18} /> Yemek</button>
-          <button onClick={() => setAppMode('tmdb')} className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${appMode === 'tmdb' ? 'bg-gray-800 text-red-500 shadow-lg' : 'text-gray-500 hover:text-white'}`}><Film size={18} /> Gurme</button>
-          <button onClick={() => setAppMode('swipe')} className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${appMode === 'swipe' ? 'bg-gray-800 text-purple-500 shadow-lg' : 'text-gray-500 hover:text-white'}`}><Flame size={18} /> Keşfet</button>
+        <div className="bg-gray-900 p-1 rounded-2xl border border-gray-800 flex flex-wrap justify-center w-full max-w-xl shadow-lg">
+          <button onClick={() => setAppMode('youtube')} className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${appMode === 'youtube' ? 'bg-gray-800 text-yellow-500 shadow-lg' : 'text-gray-500 hover:text-white'}`}><Utensils size={18} /> Yemek</button>
+          <button onClick={() => setAppMode('tmdb')} className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${appMode === 'tmdb' ? 'bg-gray-800 text-red-500 shadow-lg' : 'text-gray-500 hover:text-white'}`}><Film size={18} /> Gurme</button>
+          <button onClick={() => setAppMode('ai')} className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${appMode === 'ai' ? 'bg-gray-800 text-cyan-400 shadow-lg' : 'text-gray-500 hover:text-white'}`}><Sparkles size={18} /> Asistan</button>
+          <button onClick={() => setAppMode('swipe')} className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${appMode === 'swipe' ? 'bg-gray-800 text-purple-500 shadow-lg' : 'text-gray-500 hover:text-white'}`}><Flame size={18} /> Keşfet</button>
         </div>
       </div>
+
+      {/* AI MODU */}
+      {appMode === 'ai' && (
+        <div className="flex flex-col items-center mt-12 px-4 animate-in fade-in duration-500 w-full max-w-lg mx-auto text-center">
+          <h2 className="text-3xl font-black mb-2 text-cyan-400">Film Sommelier 🤖</h2>
+          <p className="text-gray-400 mb-8">Ne hissettiğini söyle, sana uygun filmi bulayım.</p>
+          <div className="w-full relative">
+            <textarea value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} placeholder="Örn: 90'larda geçen, beni ağlatacak ama sonu güzel biten bir dram filmi..." className="w-full bg-gray-900 border border-gray-700 rounded-2xl p-4 text-white outline-none focus:border-cyan-500 min-h-[120px] resize-none text-lg" />
+            <button onClick={fetchAiRecommendation} disabled={!aiPrompt || tmdbLoading} className="absolute bottom-4 right-4 bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl transition-all shadow-lg shadow-cyan-900/50 disabled:opacity-50">{tmdbLoading ? <Loader2 className="animate-spin" /> : <Sparkles size={24} />}</button>
+          </div>
+        </div>
+      )}
 
       {/* YOUTUBE MODU */}
       {appMode === 'youtube' && (
@@ -213,17 +191,29 @@ export default function Home() {
             </div>
             
             <div className="mb-6"><p className="text-xs text-gray-400 uppercase font-bold tracking-widest mb-3">Platformlar</p><div className="flex gap-2 flex-wrap">{PROVIDERS.map(p => <button key={p.id === 0 ? p.name : p.id} onClick={() => togglePlatform(p.id)} className={`px-3 py-2 rounded-lg border text-xs font-bold transition-all ${platforms.includes(p.id) ? p.color + ' bg-opacity-20 bg-white' : 'border-gray-700 text-gray-600 grayscale'}`}>{p.name}</button>)}</div></div>
-            {tmdbType === 'movie' && <div className="mb-6"><button onClick={() => setOnlyTurkish(!onlyTurkish)} className={`w-full p-4 rounded-xl border-2 font-black text-lg flex items-center justify-center gap-3 transition-all shadow-xl ${onlyTurkish ? 'bg-red-700 border-red-500 text-white shadow-red-900/50 scale-105' : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'}`}><Flag size={24} fill={onlyTurkish ? "currentColor" : "none"}/> SADECE YERLİ YAPIMLAR</button></div>}
-            {tmdbType === 'tv' && <div className="mb-6 relative"><p className="text-xs text-gray-400 uppercase font-bold tracking-widest mb-3">Spesifik Dizi</p><div className="relative mb-3"><Search className="absolute left-3 top-3 text-gray-500" size={20} /><input type="text" placeholder="Dizi adı yaz..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-gray-800 border border-gray-700 rounded-xl py-3 pl-10 text-white focus:border-red-500 outline-none" /></div><div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">{POPULAR_SHOWS.map(show => <button key={show.id} onClick={() => setSearchQuery(show.name)} className="px-3 py-1 bg-gray-800 border border-gray-700 rounded-full text-xs whitespace-nowrap hover:bg-gray-700 hover:border-white transition">{show.name}</button>)}</div></div>}
+            
+            {tmdbType === 'movie' && (
+               <div className="mb-6"><button onClick={() => setOnlyTurkish(!onlyTurkish)} className={`w-full p-4 rounded-xl border-2 font-black text-lg flex items-center justify-center gap-3 transition-all shadow-xl ${onlyTurkish ? 'bg-red-700 border-red-500 text-white shadow-red-900/50 scale-105' : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'}`}><Flag size={24} fill={onlyTurkish ? "currentColor" : "none"}/> SADECE YERLİ YAPIMLAR</button></div>
+            )}
+
+            {tmdbType === 'tv' && (
+              <div className="mb-6 relative">
+                 <p className="text-xs text-gray-400 uppercase font-bold tracking-widest mb-3">Spesifik Dizi</p>
+                 <div className="relative mb-3"><Search className="absolute left-3 top-3 text-gray-500" size={20} /><input type="text" placeholder="Dizi adı yaz..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-gray-800 border border-gray-700 rounded-xl py-3 pl-10 text-white focus:border-red-500 outline-none" /></div>
+                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">{POPULAR_SHOWS.map(show => <button key={show.id} onClick={() => setSearchQuery(show.name)} className="px-3 py-1 bg-gray-800 border border-gray-700 rounded-full text-xs whitespace-nowrap hover:bg-gray-700 hover:border-white transition">{show.name}</button>)}</div>
+              </div>
+            )}
+            
             <div className="mb-8"><p className="text-xs text-gray-400 uppercase font-bold tracking-widest mb-3">Tür Seç</p><div className="grid grid-cols-3 gap-2">{[['funny', '😂 Komedi'], ['scary', '😱 Gerilim'], ['emotional', '😭 Dram'], ['action', '💥 Aksiyon'], ['scifi', '👽 Bilim Kurgu'], ['crime', '🕵️‍♂️ Suç']].map(([val, label]) => <button key={val} onClick={() => setTmdbMood(val)} className={`p-3 rounded-xl text-xs md:text-sm font-bold transition-all border ${tmdbMood === val ? 'bg-red-600 text-white border-red-600' : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'}`}>{label}</button>)}</div></div>
             <button onClick={fetchTmdbContent} disabled={tmdbLoading} className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-all shadow-lg active:scale-95">{tmdbLoading ? <Loader2 className="animate-spin" /> : <><Play fill="currentColor" /> {tmdbType === 'movie' ? 'FİLM BUL' : 'BÖLÜM ÇEVİR'}</>}</button>
           </div>
           {tmdbResult && (
             <div className="w-full max-w-4xl animate-in slide-in-from-bottom-8 duration-700 mb-10">
               <div className="relative rounded-3xl overflow-hidden bg-gray-800 shadow-2xl border border-gray-700 md:flex">
-                <div className="md:w-1/3 relative min-h-[400px]">
+                <div className="md:w-1/3 relative min-h-[400px] group cursor-pointer" onClick={openTrailer}>
                   <img src={`https://image.tmdb.org/t/p/w500${tmdbResult.poster_path || tmdbResult.still_path}`} className="w-full h-full object-cover" />
-                  <button onClick={toggleFavorite} className="absolute top-4 right-4 bg-black/60 backdrop-blur p-3 rounded-full text-white hover:text-red-500 hover:scale-110 transition-all shadow-xl z-20"><Heart size={24} fill={favorites.includes(tmdbResult.id) ? "currentColor" : "none"} className={favorites.includes(tmdbResult.id) ? "text-red-500" : ""} /></button>
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-all"><div className="bg-red-600 text-white p-4 rounded-full shadow-xl scale-90 group-hover:scale-110 transition-transform"><Play fill="currentColor" size={32}/></div></div>
+                  <button onClick={(e) => { e.stopPropagation(); toggleFavorite() }} className="absolute top-4 right-4 bg-black/60 backdrop-blur p-3 rounded-full text-white hover:text-red-500 hover:scale-110 transition-all shadow-xl z-20"><Heart size={24} fill={favorites.includes(tmdbResult.id) ? "currentColor" : "none"} className={favorites.includes(tmdbResult.id) ? "text-red-500" : ""} /></button>
                   <div className="absolute top-4 left-4 bg-black/60 backdrop-blur px-3 py-1 rounded-lg flex items-center gap-1 text-yellow-400 font-bold text-sm"><Star size={14} fill="currentColor"/> {tmdbResult.vote_average?.toFixed(1) || 'N/A'}</div>
                 </div>
                 <div className="p-8 md:w-2/3 flex flex-col justify-center relative">
@@ -236,8 +226,8 @@ export default function Home() {
                   <p className="text-gray-400 text-sm leading-relaxed mb-6 line-clamp-4">{tmdbResult.overview || 'Özet yok.'}</p>
                   <div className="grid grid-cols-2 gap-3 mb-6">
                     <button onClick={() => window.open(tmdbResult.external_ids?.imdb_id ? `https://www.imdb.com/title/${tmdbResult.external_ids.imdb_id}` : `https://www.google.com/search?q=${tmdbResult.title || tmdbResult.name}+imdb`, '_blank')} className="bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-xl font-bold transition flex items-center justify-center gap-2"><ExternalLink size={18}/> IMDb</button>
-                    {/* DİREKT TMDB LİNKİ (YENİ) */}
-                    <button onClick={() => window.open(getWatchLink(), '_blank')} className="bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition flex items-center justify-center gap-2"><Play size={20} /> Bilgi Sayfası (TMDb)</button>
+                    {/* DİREKT TMDB LİNKİ */}
+                    <button onClick={() => window.open(getWatchLink(), '_blank')} className="bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition flex items-center justify-center gap-2"><Play size={20} /> {platforms.includes(8) ? 'Netflix\'te İzle' : 'Hemen İzle'}</button>
                   </div>
                   <div className="flex gap-3">
                     <button onClick={fetchTmdbContent} className="flex-1 border border-gray-600 hover:bg-gray-700 text-gray-300 py-3 rounded-xl transition flex items-center justify-center gap-2"><RotateCcw size={18} /> Pas Geç</button>
@@ -269,6 +259,16 @@ export default function Home() {
                <input required placeholder="YouTube Linki" value={suggestUrl} onChange={e => setSuggestUrl(e.target.value)} className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white outline-none" />
                <button disabled={suggestStatus === 'sending'} type="submit" className="w-full bg-yellow-600 text-white font-bold py-3 rounded-lg">Gönder</button>
              </form>
+           </div>
+        </div>
+      )}
+
+      {/* FRAGMAN MODAL */}
+      {trailerId && (
+        <div className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4 backdrop-blur-md animate-in zoom-in duration-300">
+           <div className="relative w-full max-w-4xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-gray-800">
+             <button onClick={() => setTrailerId(null)} className="absolute top-4 right-4 text-white bg-black/50 p-2 rounded-full hover:bg-red-600 transition z-10"><X size={24} /></button>
+             <ReactPlayer url={`https://www.youtube.com/watch?v=${trailerId}`} width="100%" height="100%" playing={true} controls={true} />
            </div>
         </div>
       )}
