@@ -225,3 +225,42 @@ export async function checkBadges(userId: string) {
 
   return { newBadges };
 }
+// ... (Mevcut importların altına)
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// --- YENİ: GERÇEK AI ASİSTANI (GEMINI) ---
+export async function askGemini(prompt: string) {
+  const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
+  if (!apiKey) return { success: false, params: null };
+
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    // AI'ya rol veriyoruz: "Kullanıcı girdisini TMDb filtrelerine çevir"
+    const systemInstruction = `
+      You are a movie recommendation assistant. Convert the user's mood/request into TMDb API discovery parameters.
+      User Input: "${prompt}"
+      
+      Return ONLY a JSON object with these keys (do not wrap in markdown):
+      - genre_ids: string (comma separated IDs from TMDb: 28=Action, 12=Adventure, 16=Animation, 35=Comedy, 80=Crime, 99=Documentary, 18=Drama, 10751=Family, 14=Fantasy, 36=History, 27=Horror, 10402=Music, 9648=Mystery, 10749=Romance, 878=Sci-Fi, 10770=TV Movie, 53=Thriller, 10752=War, 37=Western)
+      - sort_by: string (usually 'popularity.desc' or 'vote_average.desc')
+      - year_range: string (optional, format 'YYYY-YYYY' or 'YYYY')
+      - keywords: string (optional, english keywords for specific topics like 'space', 'dog', 'zombie')
+      - type: 'movie' or 'tv' (infer from context, default 'movie')
+    `;
+
+    const result = await model.generateContent(systemInstruction);
+    const response = result.response;
+    const text = response.text();
+    
+    // JSON Temizliği (Bazen markdown ```json ... ``` içinde gelir)
+    const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const params = JSON.parse(jsonStr);
+
+    return { success: true, params };
+  } catch (error) {
+    console.error("AI Error:", error);
+    return { success: false, params: null };
+  }
+}

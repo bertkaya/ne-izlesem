@@ -1,9 +1,8 @@
 const BASE_URL = 'https://api.themoviedb.org/3';
 const API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
-// YouTube API Key hem server hem client tarafında çalışabilsin diye kontrol ediyoruz
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY;
 
-// --- TÜRKİYE PLATFORM KODLARI ---
+// --- PLATFORMLAR ---
 export const PROVIDERS = [
   { id: 8, name: 'Netflix', color: 'border-red-600 text-red-500' },
   { id: 119, name: 'Prime Video', color: 'border-blue-500 text-blue-500' },
@@ -11,60 +10,33 @@ export const PROVIDERS = [
   { id: 342, name: 'BluTV (HBO)', color: 'border-teal-500 text-teal-500' },
   { id: 188, name: 'YouTube Premium', color: 'border-red-500 text-red-500' },
   { id: 365, name: 'TV+', color: 'border-yellow-500 text-yellow-500' },
-  { id: 345, name: 'TOD (beIN)', color: 'border-purple-500 text-purple-500' },
+  { id: 345, name: 'TOD', color: 'border-purple-500 text-purple-500' },
   { id: 0, name: 'Exxen', color: 'border-yellow-400 text-yellow-400' },
   { id: 0, name: 'Tabii', color: 'border-green-500 text-green-500' },
   { id: 0, name: 'Gain', color: 'border-pink-500 text-pink-500' }
 ];
 
-// --- FİLM TÜR KODLARI ---
+// --- TÜR EŞLEŞTİRMELERİ ---
 export const MOOD_TO_MOVIE_GENRE = {
-  funny: '35',         // Komedi
-  scary: '27,53',      // Korku, Gerilim
-  emotional: '18,10749', // Dram, Romantik
-  action: '28,12',     // Aksiyon, Macera
-  scifi: '878,14',     // Bilim Kurgu, Fantastik
-  crime: '80',         // Suç
-  relax: '99'          // Belgesel
+  funny: '35', scary: '27,53', emotional: '18,10749', action: '28,12', scifi: '878,14', crime: '80', relax: '99'
 };
 
-// --- DİZİ TÜR KODLARI ---
 export const MOOD_TO_TV_GENRE = {
-  funny: '35',         // Komedi
-  scary: '9648,10765', // Gizem, Sci-Fi
-  emotional: '18',     // Dram
-  action: '10759',     // Aksiyon & Macera
-  scifi: '10765',      // Bilim Kurgu & Fantastik
-  crime: '80',         // Suç
-  relax: '99,10764'    // Belgesel
+  funny: '35', scary: '9648,10765', emotional: '18', action: '10759', scifi: '10765', crime: '80', relax: '99,10764'
 };
 
-// --- YARDIMCI: FETCH ---
+// --- YARDIMCI FONKSİYONLAR ---
 async function fetchTMDB(endpoint: string, params: Record<string, string> = {}) {
-  if (!API_KEY) { 
-    console.error("TMDB API KEY EKSİK! .env.local dosyasını kontrol et."); 
-    return {}; 
-  }
-
+  if (!API_KEY) { console.error("TMDB API KEY EKSİK!"); return {}; }
   const query = new URLSearchParams({ api_key: API_KEY, language: 'tr-TR', ...params }).toString();
-  try {
-    const res = await fetch(`${BASE_URL}${endpoint}?${query}`);
-    return await res.json();
-  } catch (e) {
-    console.error("TMDB Fetch Error:", e);
-    return {};
-  }
+  try { return await (await fetch(`${BASE_URL}${endpoint}?${query}`)).json(); } catch (e) { return {}; }
 }
 
-// --- YARDIMCI: DETAYLARI ÇEK ---
 async function getDetails(id: number, type: 'movie' | 'tv') {
-  // Fragmanlar (videos) ve Platform linkleri (watch/providers) burada çekiliyor
   return await fetchTMDB(`/${type}/${id}`, { append_to_response: 'external_ids,credits,watch/providers,videos' });
 }
 
-// ============================================================
-// 1. AKILLI ÖNERİ MOTORU (AI & FİLTRELER)
-// ============================================================
+// --- 1. AKILLI ÖNERİ (FİLM) ---
 export async function getSmartRecommendation(
   genreIds: string, 
   providers: string, 
@@ -72,8 +44,8 @@ export async function getSmartRecommendation(
   watchedIds: number[] = [], 
   blacklistedIds: number[] = [],
   onlyTurkish: boolean = false,
-  yearRange: string = '', // AI için yıl filtresi
-  sortBy: string = 'popularity.desc' // AI için sıralama
+  yearRange: string = '', 
+  sortBy: string = 'popularity.desc'
 ) {
   const randomPage = Math.floor(Math.random() * 5) + 1;
   const validProviders = providers.split('|').filter(id => id !== '0').join('|');
@@ -87,12 +59,8 @@ export async function getSmartRecommendation(
     'vote_count.gte': '20'
   };
 
-  // Türkçe Filtresi
-  if (onlyTurkish) {
-    params.with_original_language = 'tr';
-  }
-
-  // Yıl Filtresi (AI'dan gelen)
+  if (onlyTurkish) params.with_original_language = 'tr';
+  
   if (yearRange) {
     if(yearRange === '2023-2025') {
        params['primary_release_date.gte'] = '2023-01-01';
@@ -107,29 +75,22 @@ export async function getSmartRecommendation(
 
   if (!data.results || data.results.length === 0) return null;
 
-  // Filtreleme (İzlenenler ve Yasaklılar)
   const filtered = data.results.filter((item: any) => !watchedIds.includes(item.id) && !blacklistedIds.includes(item.id));
-
   if (filtered.length === 0) return null;
 
   const randomItem = filtered[Math.floor(Math.random() * filtered.length)];
-  
   const details = await getDetails(randomItem.id, type);
   return { ...randomItem, ...details };
 }
 
-// ============================================================
-// 2. DİZİ ARAMA
-// ============================================================
+// --- 2. DİZİ ARAMA ---
 export async function searchTvShow(query: string) {
   const data = await fetchTMDB('/search/tv', { query: query });
   if (!data.results || data.results.length === 0) return null;
-  return await getDetails(data.results[0].id, 'tv'); // Detaylarıyla dön (Fragman için)
+  return await getDetails(data.results[0].id, 'tv');
 }
 
-// ============================================================
-// 3. RASTGELE BÖLÜM BULUCU
-// ============================================================
+// --- 3. RASTGELE BÖLÜM ---
 export async function getRandomEpisode(tvId: number | null = null, genreId: string | null = null, providers: string = '') {
   let selectedShowId = tvId;
   let showNameOverride = '';
@@ -137,7 +98,6 @@ export async function getRandomEpisode(tvId: number | null = null, genreId: stri
   if (!selectedShowId) {
     const randomPage = Math.floor(Math.random() * 5) + 1;
     const validProviders = providers.split('|').filter(id => id !== '0').join('|');
-
     const discoverData = await fetchTMDB('/discover/tv', {
       with_genres: genreId || '35', 
       with_watch_providers: validProviders,
@@ -147,7 +107,6 @@ export async function getRandomEpisode(tvId: number | null = null, genreId: stri
     });
     
     if (!discoverData.results || discoverData.results.length === 0) return null;
-    
     const randomShow = discoverData.results[Math.floor(Math.random() * discoverData.results.length)];
     selectedShowId = randomShow.id;
     showNameOverride = randomShow.name;
@@ -160,7 +119,6 @@ export async function getRandomEpisode(tvId: number | null = null, genreId: stri
   if (seasons.length === 0) return null;
 
   const randomSeason = seasons[Math.floor(Math.random() * seasons.length)];
-  
   const seasonDetails = await fetchTMDB(`/tv/${selectedShowId}/season/${randomSeason.season_number}`);
   if (!seasonDetails.episodes || seasonDetails.episodes.length === 0) return null;
 
@@ -181,56 +139,33 @@ export async function getRandomEpisode(tvId: number | null = null, genreId: stri
   };
 }
 
-// ============================================================
-// 4. YOUTUBE KANALINDAN VIDEO ÇEKME
-// ============================================================
+// --- 4. YOUTUBE KANAL VİDEOSU ---
 export async function getVideoFromChannel(channelId: string) {
   if (!YOUTUBE_API_KEY) return null;
-
   try {
     const channelRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channelId}&key=${YOUTUBE_API_KEY}`);
     const channelData = await channelRes.json();
-    
     const uploadPlaylistId = channelData?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
-
     if (!uploadPlaylistId) return null;
-
     const vidRes = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadPlaylistId}&maxResults=50&key=${YOUTUBE_API_KEY}`);
     const vidData = await vidRes.json();
-
     if (!vidData.items || vidData.items.length === 0) return null;
-
     const randomVideo = vidData.items[Math.floor(Math.random() * vidData.items.length)];
-    
     return {
-      id: 0, 
-      title: randomVideo.snippet.title,
-      url: `https://www.youtube.com/watch?v=${randomVideo.snippet.resourceId.videoId}`,
-      duration_category: 'meal', 
-      mood: 'relax',
-      channelTitle: randomVideo.snippet.channelTitle,
-      thumbnail: randomVideo.snippet.thumbnails?.high?.url
+      id: 0, title: randomVideo.snippet.title, url: `https://www.youtube.com/watch?v=${randomVideo.snippet.resourceId.videoId}`,
+      duration_category: 'meal', mood: 'relax', channelTitle: randomVideo.snippet.channelTitle, thumbnail: randomVideo.snippet.thumbnails?.high?.url
     };
-  } catch (e) {
-    console.error("YouTube Channel Fetch Error", e);
-    return null;
-  }
+  } catch (e) { console.error("YouTube Error", e); return null; }
 }
 
-// ============================================================
-// 5. SWIPE (KEŞFET) MODU İÇİN TOPLU FİLM ÇEKME
-// ============================================================
+// --- 5. SWIPE MODU (EKSİK OLAN BUYDU) ---
 export async function getDiscoverBatch(page: number = 1) {
-  // Rastgelelik katmak için popüler filmlerden karışık sayfalar çekelim
-  // API limiti yememek için sayfa sayısını makul tutuyoruz (1-20 arası)
   const randomPage = Math.floor(Math.random() * 10) + page; 
-  
   const data = await fetchTMDB('/discover/movie', {
     sort_by: 'popularity.desc',
     'vote_count.gte': '100',
     page: randomPage.toString(),
-    with_original_language: 'en|tr' // Geniş havuz
+    with_original_language: 'en|tr'
   });
-
   return data.results || [];
 }

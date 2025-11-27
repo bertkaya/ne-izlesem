@@ -16,8 +16,8 @@ import {
 } from 'lucide-react'
 import MovieSwiper from '@/components/MovieSwiper'
 
-// --- HATA DÜZELTME BURADA ---
-// "react-player/youtube" yerine direkt "react-player" kullanıyoruz.
+// --- HATA DÜZELTME ---
+// "/youtube" kısmını kaldırdık. Ana paketi çağırıyoruz.
 import dynamic from 'next/dynamic'
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false }) as any;
 
@@ -55,7 +55,7 @@ export default function Home() {
   const [onlyTurkish, setOnlyTurkish] = useState(false) 
   const [aiPrompt, setAiPrompt] = useState('')
 
-  // SWIPE (KEŞFET) STATE
+  // SWIPE STATE
   const [swipeMovies, setSwipeMovies] = useState<any[]>([])
   const [swipePage, setSwipePage] = useState(1)
   const [isSwipingLoading, setIsSwipingLoading] = useState(false)
@@ -98,9 +98,7 @@ export default function Home() {
     loadSwipeCards(1)
   }, [])
 
-  // ==========================
-  // 1. SWIPE LOGIC
-  // ==========================
+  // --- SWIPE LOGIC ---
   const loadSwipeCards = async (pageNum: number) => {
     if (isSwipingLoading) return;
     setIsSwipingLoading(true);
@@ -137,18 +135,14 @@ export default function Home() {
     }
   }
 
-  // ==========================
-  // 2. YOUTUBE MANTIĞI
-  // ==========================
+  // --- YOUTUBE LOGIC ---
   const fetchYoutubeVideo = async () => { 
     setYtLoading(true); setYtVideo(null); 
-    
     if (myChannels.length > 0 && Math.random() > 0.5) { 
       const randomChannel = myChannels[Math.floor(Math.random() * myChannels.length)]; 
       const r = await getVideoFromChannel(randomChannel); 
       if(r) { setYtVideo(r); setYtLoading(false); return } 
     } 
-    
     const { data } = await supabase.rpc('get_random_video', { chosen_duration: duration, chosen_mood: mood }); 
     if (data && data.length > 0) { 
       setYtVideo(data[0]); 
@@ -157,9 +151,7 @@ export default function Home() {
     setYtLoading(false) 
   }
 
-  // ==========================
-  // 3. TMDB MANTIĞI
-  // ==========================
+  // --- TMDB LOGIC ---
   const fetchTmdbContent = async () => { 
     setTmdbLoading(true); setTmdbResult(null); const pStr = platforms.join('|'); 
     try { 
@@ -178,9 +170,11 @@ export default function Home() {
     finally { setTmdbLoading(false) } 
   }
 
-  const fetchAiRecommendation = async () => {
-    if(!aiPrompt) return; setTmdbLoading(true); setTmdbResult(null); const pStr = platforms.join('|');
-    const { genreIds, sort, year } = analyzePrompt(aiPrompt);
+  const fetchAiRecommendation = async (overridePrompt?: string) => {
+    const promptToUse = overridePrompt || aiPrompt;
+    if(!promptToUse) return;
+    setTmdbLoading(true); setTmdbResult(null); const pStr = platforms.join('|');
+    const { genreIds, sort, year } = analyzePrompt(promptToUse);
     const m = await getSmartRecommendation(genreIds, pStr, 'movie', watchedIds, blacklistedIds, false, year, sort);
     if(m) { setTmdbResult(m); setAppMode('tmdb'); setTmdbType('movie'); } else { alert("Bulunamadı."); }
     setTmdbLoading(false);
@@ -197,7 +191,19 @@ export default function Home() {
   const toggleFavorite = async () => { if(!tmdbResult || !user) { alert("Giriş yapmalısın."); return; } if(favorites.includes(tmdbResult.id)) { await supabase.from('favorites').delete().eq('user_id', user.id).eq('tmdb_id', tmdbResult.id); setFavorites(favorites.filter(id => id !== tmdbResult.id)) } else { await supabase.from('favorites').insert({ user_id: user.id, tmdb_id: tmdbResult.id, media_type: tmdbType, title: tmdbResult.title || tmdbResult.name, poster_path: tmdbResult.poster_path, vote_average: tmdbResult.vote_average }); setFavorites([...favorites, tmdbResult.id]) } }
   const handleSuggest = async (e: React.FormEvent) => { e.preventDefault(); setSuggestStatus('sending'); const v = getYoutubeId(suggestUrl); if (!v) { setSuggestStatus('error'); return } const { error } = await supabase.from('videos').insert({ title: 'Kullanıcı Önerisi', url: suggestUrl, duration_category: 'meal', mood: 'funny', is_approved: false }); if (!error) { setSuggestStatus('success'); setTimeout(() => { setIsModalOpen(false); setSuggestStatus(''); setSuggestUrl('') }, 2000) } else { setSuggestStatus('db_error') } }
   const togglePlatform = async (id: number) => { const n = platforms.includes(id) ? platforms.filter(p => p !== id) : [...platforms, id]; setPlatforms(n); if(user) await supabase.from('profiles').update({ selected_platforms: n.map(String) }).eq('id', user.id) }
-  const getWatchLink = () => { if (!tmdbResult) return '#'; const t = tmdbResult.title || tmdbResult.name; if (platforms.includes(8)) return `https://www.netflix.com/search?q=${encodeURIComponent(t)}`; if (platforms.includes(119)) return `https://www.primevideo.com/search/ref=atv_nb_sr?phrase=${encodeURIComponent(t)}`; return `https://www.google.com/search?q=${encodeURIComponent(t)}+izle`; }
+  const getWatchLink = () => { if (!tmdbResult) return '#'; if (tmdbResult['watch/providers']?.results?.TR?.link) return tmdbResult['watch/providers'].results.TR.link; const t = tmdbResult.title || tmdbResult.name; if (platforms.includes(8)) return `https://www.netflix.com/search?q=${encodeURIComponent(t)}`; if (platforms.includes(119)) return `https://www.primevideo.com/search/ref=atv_nb_sr?phrase=${encodeURIComponent(t)}`; return `https://www.google.com/search?q=${encodeURIComponent(t)}+izle`; }
+
+  // Hızlı AI İstekleri (CHIPS)
+  const AI_CHIPS = [
+    "😭 Hüngür hüngür ağlamak istiyorum",
+    "🤯 Beyin yakan bir film bul",
+    "🤣 Gülmekten karnıma ağrılar girsin",
+    "👻 Gece uyutmayacak bir korku filmi",
+    "🚀 Uzay ve bilim kurgu olsun",
+    "🕵️‍♂️ Katil kim temalı gizem",
+    "🍬 Çerezlik romantik komedi",
+    "🦁 Vahşi yaşam belgeseli"
+  ];
 
   return (
     <div className="min-h-screen bg-[#0f1014] text-white font-sans pb-20 selection:bg-red-500">
@@ -219,6 +225,7 @@ export default function Home() {
           <button onClick={() => setAppMode('tmdb')} className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${appMode === 'tmdb' ? 'bg-gray-800 text-red-500 shadow-lg' : 'text-gray-500 hover:text-white'}`}><Film size={18} /> Gurme</button>
           <button onClick={() => setAppMode('ai')} className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${appMode === 'ai' ? 'bg-gray-800 text-cyan-400 shadow-lg' : 'text-gray-500 hover:text-white'}`}><Sparkles size={18} /> Asistan</button>
           <button onClick={() => setAppMode('swipe')} className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${appMode === 'swipe' ? 'bg-gray-800 text-purple-500 shadow-lg' : 'text-gray-500 hover:text-white'}`}><Flame size={18} /> Keşfet</button>
+          <button onClick={() => window.location.href='/match'} className="flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-gray-800 text-pink-500 shadow-lg hover:text-white"> <Heart size={18} /> Çiftler</button>
         </div>
       </div>
 
@@ -226,10 +233,17 @@ export default function Home() {
       {appMode === 'ai' && (
         <div className="flex flex-col items-center mt-12 px-4 animate-in fade-in duration-500 w-full max-w-lg mx-auto text-center">
           <h2 className="text-3xl font-black mb-2 text-cyan-400">Film Sommelier 🤖</h2>
-          <p className="text-gray-400 mb-8">Ne hissettiğini söyle, sana uygun filmi bulayım.</p>
-          <div className="w-full relative">
+          <p className="text-gray-400 mb-8">Ne hissettiğini söyle veya aşağıdan seç.</p>
+          
+          <div className="w-full relative mb-8">
             <textarea value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} placeholder="Örn: 90'larda geçen, beni ağlatacak ama sonu güzel biten bir dram filmi..." className="w-full bg-gray-900 border border-gray-700 rounded-2xl p-4 text-white outline-none focus:border-cyan-500 min-h-[120px] resize-none text-lg" />
-            <button onClick={fetchAiRecommendation} disabled={!aiPrompt || tmdbLoading} className="absolute bottom-4 right-4 bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl transition-all shadow-lg shadow-cyan-900/50 disabled:opacity-50">{tmdbLoading ? <Loader2 className="animate-spin" /> : <Sparkles size={24} />}</button>
+            <button onClick={() => fetchAiRecommendation()} disabled={!aiPrompt || tmdbLoading} className="absolute bottom-4 right-4 bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl transition-all shadow-lg shadow-cyan-900/50 disabled:opacity-50">{tmdbLoading ? <Loader2 className="animate-spin" /> : <Sparkles size={24} />}</button>
+          </div>
+
+          <div className="flex flex-wrap gap-2 justify-center">
+            {AI_CHIPS.map((chip, i) => (
+              <button key={i} onClick={() => { setAiPrompt(chip); fetchAiRecommendation(chip); }} className="bg-gray-800 hover:bg-gray-700 border border-gray-700 px-4 py-2 rounded-full text-sm transition-colors">{chip}</button>
+            ))}
           </div>
         </div>
       )}
