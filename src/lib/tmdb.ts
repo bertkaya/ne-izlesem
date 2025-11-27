@@ -109,3 +109,63 @@ export async function getRandomEpisode(tvId: number | null = null, genreId: stri
     external_ids: showDetails.external_ids
   };
 }
+// ... (Üst kısımlar, PROVIDERS ve MOOD listeleri AYNI KALSIN) ...
+
+const BASE_URL = 'https://api.themoviedb.org/3';
+const API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+
+// --- EKLENEN KISIM: PROVIDERS ve MOOD Listelerini buraya tekrar yazmıyorum, silme sakın! ---
+// ... (PROVIDERS, MOOD_TO_MOVIE_GENRE, MOOD_TO_TV_GENRE kodları burada olmalı) ...
+// Eğer elinde yoksa önceki cevabımdan alabilirsin.
+
+async function fetchTMDB(endpoint: string, params: Record<string, string> = {}) {
+  if (!API_KEY) return {};
+  const query = new URLSearchParams({ api_key: API_KEY, language: 'tr-TR', ...params }).toString();
+  try { return await (await fetch(`${BASE_URL}${endpoint}?${query}`)).json(); } catch (e) { return {}; }
+}
+
+async function getDetails(id: number, type: 'movie' | 'tv') {
+  return await fetchTMDB(`/${type}/${id}`, { append_to_response: 'external_ids,credits,watch/providers' });
+}
+
+// --- GÜNCELLENMİŞ ÖNERİ FONKSİYONU ---
+export async function getSmartRecommendation(
+  genreIds: string, 
+  providers: string, 
+  type: 'movie' | 'tv', 
+  watchedIds: number[] = [], 
+  blacklistedIds: number[] = [],
+  onlyTurkish: boolean = false // YENİ PARAMETRE
+) {
+  const randomPage = Math.floor(Math.random() * 5) + 1;
+  const validProviders = providers.split('|').filter(id => id !== '0').join('|');
+
+  const params: any = {
+    with_genres: genreIds,
+    with_watch_providers: validProviders,
+    watch_region: 'TR',
+    sort_by: 'popularity.desc',
+    page: randomPage.toString(),
+    'vote_count.gte': '20'
+  };
+
+  // SADECE TÜRK YAPIMI FİLTRESİ
+  if (onlyTurkish) {
+    params.with_original_language = 'tr';
+  }
+
+  const data = await fetchTMDB(`/discover/${type}`, params);
+
+  if (!data.results || data.results.length === 0) return null;
+
+  const filtered = data.results.filter((item: any) => !watchedIds.includes(item.id) && !blacklistedIds.includes(item.id));
+  if (filtered.length === 0) return null;
+
+  const randomItem = filtered[Math.floor(Math.random() * filtered.length)];
+  const details = await getDetails(randomItem.id, type);
+  
+  return { ...randomItem, ...details };
+}
+
+// ... (searchTvShow ve getRandomEpisode AYNI KALSIN) ...
+// Not: getRandomEpisode içinde de Türkçe mantığı eklenebilir ama sitcomlarda TR az olduğu için şimdilik filmde bıraktık.
