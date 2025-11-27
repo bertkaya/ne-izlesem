@@ -141,7 +141,7 @@ export default function Home() {
   const handleSuggest = async (e: React.FormEvent) => { e.preventDefault(); setSuggestStatus('sending'); const videoId = getYoutubeId(suggestUrl); if (!videoId) { setSuggestStatus('error'); return } const { error } = await supabase.from('videos').insert({ title: 'Kullanıcı Önerisi', url: suggestUrl, duration_category: suggestDuration, mood: suggestMood, is_approved: false }); if (!error) { setSuggestStatus('success'); setTimeout(() => { setIsModalOpen(false); setSuggestStatus(''); setSuggestUrl('') }, 2000) } else { setSuggestStatus('db_error') } }
   const togglePlatform = async (id: number) => { const newPlatforms = platforms.includes(id) ? platforms.filter(p => p !== id) : [...platforms, id]; setPlatforms(newPlatforms); if(user) await supabase.from('profiles').update({ selected_platforms: newPlatforms.map(String) }).eq('id', user.id) }
 
-  // YENİ: DİREKT İZLEME LİNKİ OLUŞTURUCU
+  // YENİ: DİREKT İZLEME LİNKİ OLUŞTURUCUmu acaba
   const getWatchLink = () => {
     if (!tmdbResult) return '#';
     const title = tmdbResult.title || tmdbResult.name;
