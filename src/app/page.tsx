@@ -2,20 +2,26 @@
 
 import { useState, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { getSmartRecommendation, getRandomEpisode, searchTvShow, getVideoFromChannel, MOOD_TO_MOVIE_GENRE, MOOD_TO_TV_GENRE, PROVIDERS } from '@/lib/tmdb'
+import { 
+  getSmartRecommendation, getRandomEpisode, searchTvShow, 
+  getVideoFromChannel, getDiscoverBatch, 
+  MOOD_TO_MOVIE_GENRE, MOOD_TO_TV_GENRE, PROVIDERS 
+} from '@/lib/tmdb'
 import { analyzePrompt } from '@/lib/smart-search'
 import { checkBadges } from './actions'
 import { 
   Play, RotateCcw, ExternalLink, Youtube, PlusCircle, X, 
-  ShoppingBag, Tv, Film, Utensils, User, LogOut, Star, Search, Loader2, EyeOff, Heart, Flag, Flame, Sparkles, Video
+  ShoppingBag, Tv, Film, Utensils, User, LogOut, Star, Search, 
+  Loader2, EyeOff, Heart, Flag, Flame, Sparkles, Video
 } from 'lucide-react'
 import MovieSwiper from '@/components/MovieSwiper'
 
-// --- HATA DÜZELTME BÖLÜMÜ ---
-// ReactPlayer'ı ana paketten çekiyoruz ve 'as any' ekleyerek tip hatalarını susturuyoruz.
+// --- HATA DÜZELTME BURADA ---
+// "react-player/youtube" yerine direkt "react-player" kullanıyoruz.
 import dynamic from 'next/dynamic'
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false }) as any;
 
+// --- SABİT VERİLER ---
 const POPULAR_SHOWS = [
   { id: 4608, name: 'Gibi' }, { id: 1668, name: 'Friends' }, { id: 1400, name: 'Seinfeld' }, 
   { id: 2316, name: 'The Office' }, { id: 456, name: 'The Simpsons' }, { id: 62560, name: 'Mr. Robot' }, 
@@ -32,14 +38,14 @@ export default function Home() {
   // MODLAR
   const [appMode, setAppMode] = useState<'youtube' | 'tmdb' | 'swipe' | 'ai'>('youtube')
   
-  // Youtube State
+  // YOUTUBE STATE
   const [ytVideo, setYtVideo] = useState<any>(null)
   const [ytLoading, setYtLoading] = useState(false)
   const [duration, setDuration] = useState('meal')
   const [mood, setMood] = useState('funny')
   const [myChannels, setMyChannels] = useState<string[]>([])
 
-  // TMDb State
+  // TMDB STATE
   const [tmdbResult, setTmdbResult] = useState<any>(null)
   const [tmdbLoading, setTmdbLoading] = useState(false)
   const [tmdbType, setTmdbType] = useState<'movie' | 'tv'>('movie')
@@ -49,28 +55,38 @@ export default function Home() {
   const [onlyTurkish, setOnlyTurkish] = useState(false) 
   const [aiPrompt, setAiPrompt] = useState('')
 
-  // Swipe State
-  const [swipeMovies, setSwipeMovies] = useState<any[]>([]) 
+  // SWIPE (KEŞFET) STATE
+  const [swipeMovies, setSwipeMovies] = useState<any[]>([])
+  const [swipePage, setSwipePage] = useState(1)
+  const [isSwipingLoading, setIsSwipingLoading] = useState(false)
 
-  // Data
+  // DATA
   const [watchedIds, setWatchedIds] = useState<number[]>([])
   const [blacklistedIds, setBlacklistedIds] = useState<number[]>([])
   const [favorites, setFavorites] = useState<number[]>([])
 
-  // Modal
+  // MODALS
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [suggestUrl, setSuggestUrl] = useState('')
   const [suggestStatus, setSuggestStatus] = useState('')
   const [trailerId, setTrailerId] = useState<string | null>(null)
 
+  // --- INIT ---
   useEffect(() => {
     const initData = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
-      const { data: blacklist } = await supabase.from('blacklist').select('tmdb_id'); if (blacklist) setBlacklistedIds(blacklist.map(b => b.tmdb_id))
+      
+      const { data: blacklist } = await supabase.from('blacklist').select('tmdb_id')
+      if (blacklist) setBlacklistedIds(blacklist.map(b => b.tmdb_id))
+
       if (user) {
-        const { data: history } = await supabase.from('user_history').select('tmdb_id').eq('user_id', user.id); if (history) setWatchedIds(history.map(h => h.tmdb_id))
-        const { data: favs } = await supabase.from('favorites').select('tmdb_id').eq('user_id', user.id); if (favs) setFavorites(favs.map(f => f.tmdb_id))
+        const { data: history } = await supabase.from('user_history').select('tmdb_id').eq('user_id', user.id)
+        if (history) setWatchedIds(history.map(h => h.tmdb_id))
+
+        const { data: favs } = await supabase.from('favorites').select('tmdb_id').eq('user_id', user.id)
+        if (favs) setFavorites(favs.map(f => f.tmdb_id))
+
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
         if (profile) {
            if(profile.selected_platforms) setPlatforms(profile.selected_platforms.map((p: string) => parseInt(p)))
@@ -79,11 +95,71 @@ export default function Home() {
       }
     }
     initData()
+    loadSwipeCards(1)
   }, [])
 
-  // --- LOGIC ---
-  const fetchYoutubeVideo = async () => { setYtLoading(true); setYtVideo(null); if (myChannels.length > 0 && Math.random() > 0.5) { const r = await getVideoFromChannel(myChannels[Math.floor(Math.random() * myChannels.length)]); if(r) { setYtVideo(r); setYtLoading(false); return } } const { data } = await supabase.rpc('get_random_video', { chosen_duration: duration, chosen_mood: mood }); if (data && data.length > 0) { setYtVideo(data[0]); if(user) await supabase.from('user_history').insert({ user_id: user.id, tmdb_id: 0, media_type: 'youtube', title: data[0].title }) } else alert("Video bulunamadı."); setYtLoading(false) }
-  
+  // ==========================
+  // 1. SWIPE LOGIC
+  // ==========================
+  const loadSwipeCards = async (pageNum: number) => {
+    if (isSwipingLoading) return;
+    setIsSwipingLoading(true);
+
+    try {
+      const movies = await getDiscoverBatch(pageNum)
+      const uniqueMovies = movies.filter((m: any) => 
+        !swipeMovies.some(sm => sm.id === m.id) && 
+        !watchedIds.includes(m.id) &&
+        !blacklistedIds.includes(m.id)
+      );
+
+      setSwipeMovies(prev => [...prev, ...uniqueMovies])
+      setSwipePage(p => p + 1)
+    } catch (e) {
+      console.error("Swipe yükleme hatası", e)
+    } finally {
+      setIsSwipingLoading(false)
+    }
+  }
+
+  const handleSwipe = async (direction: 'left' | 'right', movie: any) => {
+    if (swipeMovies.length < 8) {
+      loadSwipeCards(swipePage); 
+    }
+
+    if (direction === 'right') {
+      if (user) {
+        supabase.from('favorites').insert({
+          user_id: user.id, tmdb_id: movie.id, media_type: 'movie', 
+          title: movie.title, poster_path: movie.poster_path, vote_average: movie.vote_average
+        }).then(() => setFavorites(prev => [...prev, movie.id]));
+      }
+    }
+  }
+
+  // ==========================
+  // 2. YOUTUBE MANTIĞI
+  // ==========================
+  const fetchYoutubeVideo = async () => { 
+    setYtLoading(true); setYtVideo(null); 
+    
+    if (myChannels.length > 0 && Math.random() > 0.5) { 
+      const randomChannel = myChannels[Math.floor(Math.random() * myChannels.length)]; 
+      const r = await getVideoFromChannel(randomChannel); 
+      if(r) { setYtVideo(r); setYtLoading(false); return } 
+    } 
+    
+    const { data } = await supabase.rpc('get_random_video', { chosen_duration: duration, chosen_mood: mood }); 
+    if (data && data.length > 0) { 
+      setYtVideo(data[0]); 
+      if(user) await supabase.from('user_history').insert({ user_id: user.id, tmdb_id: 0, media_type: 'youtube', title: data[0].title }) 
+    } else alert("Video bulunamadı."); 
+    setYtLoading(false) 
+  }
+
+  // ==========================
+  // 3. TMDB MANTIĞI
+  // ==========================
   const fetchTmdbContent = async () => { 
     setTmdbLoading(true); setTmdbResult(null); const pStr = platforms.join('|'); 
     try { 
@@ -225,7 +301,7 @@ export default function Home() {
                   <h2 className="text-3xl font-black mb-4 leading-tight text-white">{tmdbResult.title || tmdbResult.name}</h2>
                   <p className="text-gray-400 text-sm leading-relaxed mb-6 line-clamp-4">{tmdbResult.overview || 'Özet yok.'}</p>
                   <div className="grid grid-cols-2 gap-3 mb-6">
-                    <button onClick={() => window.open(tmdbResult.external_ids?.imdb_id ? `https://www.imdb.com/title/${tmdbResult.external_ids.imdb_id}` : `https://www.google.com/search?q=${tmdbResult.title || tmdbResult.name}+imdb`, '_blank')} className="bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-xl font-bold transition flex items-center justify-center gap-2"><ExternalLink size={18}/> IMDb</button>
+                    <button onClick={openTrailer} className="bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold transition flex items-center justify-center gap-2"><Video size={18}/> Fragman İzle</button>
                     {/* DİREKT TMDB LİNKİ */}
                     <button onClick={() => window.open(getWatchLink(), '_blank')} className="bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition flex items-center justify-center gap-2"><Play size={20} /> {platforms.includes(8) ? 'Netflix\'te İzle' : 'Hemen İzle'}</button>
                   </div>
@@ -244,12 +320,12 @@ export default function Home() {
       {appMode === 'swipe' && (
         <div className="flex flex-col items-center mt-12 px-4 animate-in fade-in duration-500 w-full max-w-lg mx-auto">
           <h2 className="text-2xl font-black mb-6 text-purple-500">Kendi Zevkini Keşfet</h2>
-          <MovieSwiper movies={swipeMovies} onSwipe={() => {}} /> 
+          <MovieSwiper movies={swipeMovies} onSwipe={handleSwipe} /> 
           <p className="mt-8 text-gray-500 text-sm text-center">Sağa kaydır = Beğendim, Sola kaydır = İlgimi Çekmedi</p>
         </div>
       )}
 
-      {/* MODAL */}
+      {/* MODAL: VIDEO ÖNERİ */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
            <div className="bg-gray-900 p-6 rounded-2xl w-full max-w-md border border-gray-700 relative">
@@ -263,7 +339,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* FRAGMAN MODAL */}
+      {/* MODAL: FRAGMAN */}
       {trailerId && (
         <div className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4 backdrop-blur-md animate-in zoom-in duration-300">
            <div className="relative w-full max-w-4xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-gray-800">

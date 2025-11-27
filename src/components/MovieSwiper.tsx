@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion'
-import { Star, X, Heart, Info } from 'lucide-react'
+import { Star, X, Heart, Info, Loader2 } from 'lucide-react'
+import Image from 'next/image' // Hız için kritik
 
 interface Movie {
   id: number;
@@ -20,7 +21,6 @@ interface Props {
 export default function MovieSwiper({ movies, onSwipe }: Props) {
   const [cards, setCards] = useState<Movie[]>(movies)
 
-  // Liste biterse veya değişirse güncelle
   useEffect(() => {
     setCards(movies)
   }, [movies])
@@ -28,16 +28,15 @@ export default function MovieSwiper({ movies, onSwipe }: Props) {
   const removeCard = (id: number, direction: 'left' | 'right') => {
     const movie = cards.find(c => c.id === id)
     if (movie) onSwipe(direction, movie)
+    // Listeden anında çıkar (Hızlı tepki)
     setCards((prev) => prev.filter((item) => item.id !== id))
   }
 
   return (
-    <div className="relative w-full h-[500px] flex items-center justify-center overflow-hidden">
+    <div className="relative w-full h-[500px] flex items-center justify-center">
       <AnimatePresence>
         {cards.map((movie, index) => {
-          // Sadece en üstteki kart sürüklenebilir olsun
           const isTop = index === cards.length - 1
-          
           return (
             <Card 
               key={movie.id} 
@@ -49,30 +48,26 @@ export default function MovieSwiper({ movies, onSwipe }: Props) {
         })}
       </AnimatePresence>
       
+      {/* Kartlar bittiğinde veya yüklenirken gösterilecek alan */}
       {cards.length === 0 && (
-        <div className="text-center text-gray-500 animate-pulse">
-          Daha fazla film yükleniyor...
+        <div className="flex flex-col items-center justify-center text-gray-500 animate-pulse">
+          <Loader2 size={48} className="animate-spin mb-4 text-purple-500"/>
+          <p>Yeni filmler yükleniyor...</p>
         </div>
       )}
     </div>
   )
 }
 
-// --- TEKLİ KART BİLEŞENİ ---
 function Card({ movie, isTop, onRemove }: { movie: Movie, isTop: boolean, onRemove: any }) {
   const x = useMotionValue(0)
   const rotate = useTransform(x, [-200, 200], [-25, 25])
   const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0])
-  
-  // Renk Değişimi (Sağa yeşil, Sola kırmızı)
   const overlayColor = useTransform(x, [-200, 0, 200], ['rgba(239, 68, 68, 0.5)', 'rgba(0,0,0,0)', 'rgba(34, 197, 94, 0.5)'])
 
   const handleDragEnd = (_: any, info: any) => {
-    if (info.offset.x > 100) {
-      onRemove(movie.id, 'right')
-    } else if (info.offset.x < -100) {
-      onRemove(movie.id, 'left')
-    }
+    if (info.offset.x > 100) onRemove(movie.id, 'right')
+    else if (info.offset.x < -100) onRemove(movie.id, 'left')
   }
 
   return (
@@ -87,30 +82,31 @@ function Card({ movie, isTop, onRemove }: { movie: Movie, isTop: boolean, onRemo
       transition={{ duration: 0.3 }}
       className="absolute top-0 w-full max-w-sm h-full bg-gray-800 rounded-3xl shadow-2xl border border-gray-700 cursor-grab active:cursor-grabbing overflow-hidden"
     >
-      {/* Resim */}
-      <div className="relative h-3/4 pointer-events-none">
-        <img 
+      <div className="relative h-3/4 pointer-events-none bg-gray-900">
+        {/* Next.js Image ile optimize edilmiş görsel */}
+        <Image 
           src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`} 
-          className="w-full h-full object-cover" 
-          draggable="false"
+          alt={movie.title}
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, 400px"
+          priority={isTop} // En üstteki kartı öncelikli yükle
         />
         <motion.div style={{ backgroundColor: overlayColor }} className="absolute inset-0 z-10" />
-        <div className="absolute top-4 right-4 bg-black/60 px-3 py-1 rounded-lg text-yellow-400 font-bold flex items-center gap-1 z-20">
+        <div className="absolute top-4 right-4 bg-black/60 px-3 py-1 rounded-lg text-yellow-400 font-bold flex items-center gap-1 z-20 backdrop-blur-sm">
           <Star size={16} fill="currentColor"/> {movie.vote_average.toFixed(1)}
         </div>
       </div>
 
-      {/* Bilgi */}
       <div className="h-1/4 p-5 flex flex-col justify-center bg-gray-900 pointer-events-none">
         <h2 className="text-xl font-bold text-white line-clamp-1">{movie.title}</h2>
         <p className="text-xs text-gray-400 line-clamp-2 mt-2">{movie.overview || 'Özet bulunamadı.'}</p>
       </div>
 
-      {/* İkonlar (Sadece görsel rehber) */}
       {isTop && (
         <div className="absolute bottom-32 w-full px-8 flex justify-between pointer-events-none z-20">
-          <div className="bg-red-500/80 p-3 rounded-full text-white shadow-lg"><X size={32}/></div>
-          <div className="bg-green-500/80 p-3 rounded-full text-white shadow-lg"><Heart size={32} fill="currentColor"/></div>
+          <div className="bg-red-500/80 p-3 rounded-full text-white shadow-lg backdrop-blur"><X size={32}/></div>
+          <div className="bg-green-500/80 p-3 rounded-full text-white shadow-lg backdrop-blur"><Heart size={32} fill="currentColor"/></div>
         </div>
       )}
     </motion.div>
