@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
-import { User, Settings, History, Trash2, Save, Loader2, ArrowLeft, LogOut } from 'lucide-react'
+// DÜZELTME BURADA: 'Tv' ikonunu import listesine ekledik
+import { User, Settings, History, Trash2, Save, Loader2, ArrowLeft, LogOut, Tv } from 'lucide-react'
 import { PROVIDERS } from '@/lib/tmdb'
 
 export default function ProfilePage() {
