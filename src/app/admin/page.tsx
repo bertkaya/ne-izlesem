@@ -2,152 +2,160 @@
 
 import { useState, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-// resolveYouTubeChannel fonksiyonunu import listesine ekledik
-import { fetchAndSaveChannelVideos, autoPopulateYouTube, checkAndCleanDeadLinks, resolveYouTubeChannel } from '../actions' 
-import { ShieldCheck, Youtube, Loader2, CheckCircle, Trash2, ExternalLink, Ban, Plus, Eye, Bot, AlertTriangle, Link as LinkIcon } from 'lucide-react'
+import { 
+  fetchAndSaveChannelVideos, resolveYouTubeChannel, 
+  addSafeChannel, removeSafeChannel, fetchFromSafeChannels,
+  bulkUpdateVideos, checkVideoHealth 
+} from '../actions' 
+import { 
+  ShieldCheck, Youtube, Loader2, CheckCircle, Trash2, ExternalLink, 
+  Ban, Plus, Eye, Link as LinkIcon, Save, Layers, RefreshCw, Stethoscope, CheckSquare, Square
+} from 'lucide-react'
 
 const supabase = createClientComponentClient()
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'videos' | 'blacklist'>('videos')
-  
-  const [videos, setVideos] = useState<any[]>([])
-  const [channelInput, setChannelInput] = useState('') // İsmi channelInput yaptık (ID veya Link olabilir)
+  const [activeTab, setActiveTab] = useState<'videos' | 'safe_channels' | 'blacklist'>('videos')
   const [loading, setLoading] = useState(false)
+  const [statusMsg, setStatusMsg] = useState('')
+
+  // VIDEOS TAB
+  const [videos, setVideos] = useState<any[]>([])
   const [videoFilter, setVideoFilter] = useState<'all' | 'pending'>('all')
-  const [statusMsg, setStatusMsg] = useState('') 
+  const [selectedIds, setSelectedIds] = useState<number[]>([]) // Toplu seçim
+  
+  // SAFE CHANNELS TAB
+  const [safeChannels, setSafeChannels] = useState<any[]>([])
+  const [newSafeInput, setNewSafeInput] = useState('')
 
+  // BLACKLIST TAB
   const [blacklist, setBlacklist] = useState<any[]>([])
-  const [banId, setBanId] = useState('')
-  const [banReason, setBanReason] = useState('')
+  const [banId, setBanId] = useState(''); const [banReason, setBanReason] = useState('')
 
-  useEffect(() => {
-    fetchVideos()
-    fetchBlacklist()
-  }, [videoFilter])
+  useEffect(() => { fetchVideos(); fetchSafeChannels(); fetchBlacklist(); }, [videoFilter])
 
+  // --- DATA FETCHING ---
   const fetchVideos = async () => {
     let query = supabase.from('videos').select('*').order('created_at', { ascending: false }).limit(100)
     if (videoFilter === 'pending') query = query.eq('is_approved', false)
-    const { data } = await query
-    if(data) setVideos(data)
+    const { data } = await query; if(data) setVideos(data)
+  }
+  const fetchSafeChannels = async () => { const { data } = await supabase.from('safe_channels').select('*'); if(data) setSafeChannels(data) }
+  const fetchBlacklist = async () => { const { data } = await supabase.from('blacklist').select('*'); if(data) setBlacklist(data) }
+
+  // --- VIDEO İŞLEMLERİ ---
+  const toggleSelect = (id: number) => selectedIds.includes(id) ? setSelectedIds(selectedIds.filter(i=>i!==id)) : setSelectedIds([...selectedIds, id])
+  const toggleSelectAll = () => selectedIds.length === videos.length ? setSelectedIds([]) : setSelectedIds(videos.map(v=>v.id))
+
+  const handleBulkAction = async (action: 'delete' | 'approve') => {
+    if(!confirm(`Seçili ${selectedIds.length} video için işlem yapılsın mı?`)) return;
+    if(action === 'delete') { await supabase.from('videos').delete().in('id', selectedIds); }
+    if(action === 'approve') { await supabase.from('videos').update({ is_approved: true }).in('id', selectedIds); }
+    setSelectedIds([]); fetchVideos();
   }
 
-  const fetchBlacklist = async () => {
-    const { data } = await supabase.from('blacklist').select('*').order('created_at', { ascending: false })
-    if(data) setBlacklist(data)
+  const handleBulkUpdate = async (field: string, value: string) => {
+    if(!confirm(`Seçili videoların ${field} değeri değişecek.`)) return;
+    await bulkUpdateVideos(selectedIds, { [field]: value });
+    fetchVideos(); setSelectedIds([]);
   }
 
-  const handleApprove = async (id: number) => { await supabase.from('videos').update({ is_approved: true }).eq('id', id); fetchVideos() }
-  const deleteVideo = async (id: number) => { if(confirm('Silinsin mi?')) { await supabase.from('videos').delete().eq('id', id); fetchVideos() } }
-  
-  // --- AKILLI KANAL IMPORT (GÜNCELLENDİ) ---
-  const handleImportChannel = async () => {
-    if(!channelInput) return
-    setLoading(true)
-    setStatusMsg('Kanal ID çözümleniyor...')
+  const handleSingleUpdate = async (id: number, field: string, value: string) => {
+    // Optimistic update
+    setVideos(videos.map(v => v.id === id ? { ...v, [field]: value } : v))
+    await supabase.from('videos').update({ [field]: value }).eq('id', id)
+  }
 
-    // 1. Adım: Linkten ID'yi bul
-    const resolveRes = await resolveYouTubeChannel(channelInput)
+  const handleHealthCheck = async () => {
+    setLoading(true); setStatusMsg("Videolar kontrol ediliyor (Bu işlem sürebilir)...");
+    const res = await checkVideoHealth();
+    setStatusMsg(res.message); setLoading(false); fetchVideos();
+  }
 
-    if (resolveRes.success && resolveRes.id) {
-        setStatusMsg(`Kanal bulundu (${resolveRes.id}). Videolar çekiliyor...`)
-        
-        // 2. Adım: Videoları çek
-        const saveRes = await fetchAndSaveChannelVideos(resolveRes.id)
-        
-        setStatusMsg(saveRes.message)
-        if (saveRes.success) {
-            setChannelInput('') // Başarılıysa kutuyu temizle
-            fetchVideos() // Listeyi yenile
-        }
+  // --- SAFE CHANNEL İŞLEMLERİ ---
+  const handleAddSafe = async () => {
+    if(!newSafeInput) return;
+    setLoading(true); setStatusMsg("Kanal aranıyor...");
+    const res = await resolveYouTubeChannel(newSafeInput);
+    if(res.success && res.id) {
+       // ID'yi bulduk, şimdi ismini alıp kaydedelim (Basitlik için ismi manuel veya boş geçiyoruz şimdilik)
+       await addSafeChannel(res.id, newSafeInput); // İsim olarak input'u kullandık
+       setNewSafeInput(''); fetchSafeChannels(); setStatusMsg("Kanal güvenli listeye eklendi.");
     } else {
-        setStatusMsg(resolveRes.message || 'Kanal bulunamadı.')
+       setStatusMsg("Kanal bulunamadı.");
     }
-    setLoading(false)
+    setLoading(false);
   }
 
-  // --- DİĞER OTOMASYONLAR ---
-  const handleBot = async () => {
-    setLoading(true)
-    setStatusMsg('Bot içerik tarıyor...')
-    const res = await autoPopulateYouTube()
-    setStatusMsg(res.message)
-    setLoading(false)
-    fetchVideos()
+  const handleFetchSafe = async () => {
+    setLoading(true); setStatusMsg("Güvenli kanallar taranıyor...");
+    const res = await fetchFromSafeChannels();
+    setStatusMsg(res.message); setLoading(false); fetchVideos();
   }
 
-  const handleClean = async () => {
-    setLoading(true)
-    setStatusMsg('Ölü linkler kontrol ediliyor...')
-    const res = await checkAndCleanDeadLinks()
-    setStatusMsg(res.message)
-    setLoading(false)
-    fetchVideos()
-  }
-
-  const handleBan = async () => { if(!banId) return; const { error } = await supabase.from('blacklist').insert({ tmdb_id: parseInt(banId), media_type: 'unknown', reason: banReason }); if(!error) { fetchBlacklist(); setBanId(''); setBanReason('') } else { alert("Hata") } }
+  // --- BLACKLIST ---
+  const handleBan = async () => { await supabase.from('blacklist').insert({ tmdb_id: parseInt(banId), reason: banReason }); fetchBlacklist(); setBanId('') }
   const handleUnban = async (id: number) => { await supabase.from('blacklist').delete().eq('id', id); fetchBlacklist() }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 font-sans flex flex-col items-center">
-      <div className="max-w-6xl w-full">
-        <h1 className="text-3xl font-bold mb-8 flex items-center gap-3 text-yellow-500">
-          <ShieldCheck size={32} /> Mutfak Kontrol Paneli
-        </h1>
+    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 font-sans flex flex-col items-center pb-24">
+      <div className="max-w-7xl w-full">
+        <h1 className="text-3xl font-bold mb-8 flex items-center gap-3 text-yellow-500"><ShieldCheck size={32} /> Mutfak Kontrol</h1>
         
-        <div className="flex gap-4 mb-8 border-b border-gray-700 pb-1">
-          <button onClick={() => setActiveTab('videos')} className={`px-6 py-3 rounded-t-lg font-bold transition-colors ${activeTab === 'videos' ? 'bg-gray-800 text-white border-t border-x border-gray-700' : 'text-gray-400 hover:text-white'}`}>YouTube & Onaylar</button>
-          <button onClick={() => setActiveTab('blacklist')} className={`px-6 py-3 rounded-t-lg font-bold transition-colors ${activeTab === 'blacklist' ? 'bg-red-900/30 text-red-400 border-t border-x border-red-900/50' : 'text-gray-400 hover:text-white'}`}>Yasaklı İçerik</button>
+        {/* TABS */}
+        <div className="flex gap-2 mb-8 border-b border-gray-700">
+          <button onClick={() => setActiveTab('videos')} className={`px-6 py-3 font-bold ${activeTab === 'videos' ? 'bg-gray-800 text-white border-t border-x border-gray-700 rounded-t-lg' : 'text-gray-500'}`}>Videolar</button>
+          <button onClick={() => setActiveTab('safe_channels')} className={`px-6 py-3 font-bold ${activeTab === 'safe_channels' ? 'bg-gray-800 text-white border-t border-x border-gray-700 rounded-t-lg' : 'text-gray-500'}`}>Güvenli Kanallar</button>
+          <button onClick={() => setActiveTab('blacklist')} className={`px-6 py-3 font-bold ${activeTab === 'blacklist' ? 'bg-gray-800 text-white border-t border-x border-gray-700 rounded-t-lg' : 'text-gray-500'}`}>Blacklist</button>
         </div>
 
+        {statusMsg && <div className="bg-blue-900/30 text-blue-300 p-3 rounded-lg mb-6 border border-blue-500/30 animate-pulse">{statusMsg}</div>}
+
+        {/* ================= VIDEOS TAB ================= */}
         {activeTab === 'videos' && (
-          <div className="animate-in fade-in duration-300">
-            
-            {/* OTOMASYON BAR */}
-            <div className="flex flex-wrap gap-4 mb-8 p-4 bg-gray-800/50 border border-gray-700 rounded-xl items-center">
-               <button onClick={handleBot} disabled={loading} className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition disabled:opacity-50 text-sm">
-                 <Bot size={18}/> {loading ? 'Çalışıyor...' : 'İçerik Botunu Çalıştır'}
-               </button>
-               <button onClick={handleClean} disabled={loading} className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition disabled:opacity-50 text-sm">
-                 <AlertTriangle size={18}/> {loading ? '...' : 'Ölü Linkleri Sil'}
-               </button>
-               {statusMsg && <span className="text-green-400 font-mono text-xs">{statusMsg}</span>}
+          <div className="animate-in fade-in">
+            <div className="flex justify-between items-center mb-4">
+                <div className="flex gap-2">
+                   <button onClick={() => setVideoFilter('all')} className={`px-3 py-1 rounded border ${videoFilter==='all' ? 'bg-white text-black' : 'border-gray-600'}`}>Tümü</button>
+                   <button onClick={() => setVideoFilter('pending')} className={`px-3 py-1 rounded border ${videoFilter==='pending' ? 'bg-yellow-500 text-black' : 'border-gray-600'}`}>Bekleyenler</button>
+                </div>
+                <button onClick={handleHealthCheck} disabled={loading} className="bg-red-900/50 text-red-300 border border-red-800 px-4 py-2 rounded hover:bg-red-900 transition flex items-center gap-2">
+                    <Stethoscope size={16}/> Video Sağlık Kontrolü
+                </button>
             </div>
 
-            {/* MANUEL KANAL EKLEME (GÜNCELLENDİ) */}
-            <div className="flex flex-col md:flex-row gap-4 mb-8">
-              <div className="flex gap-2 bg-gray-800 p-2 rounded-xl flex-1 border border-gray-700 relative">
-                <div className="flex items-center pl-3 text-gray-500"><LinkIcon size={20}/></div>
-                <input 
-                  value={channelInput} 
-                  onChange={e => setChannelInput(e.target.value)} 
-                  placeholder="YouTube Kanal Linki veya ID (Örn: youtube.com/@BarisOzcan)" 
-                  className="bg-transparent border-none p-2 text-white flex-1 outline-none"
-                  onKeyDown={(e) => e.key === 'Enter' && handleImportChannel()}
-                />
-                <button onClick={handleImportChannel} disabled={loading} className="bg-yellow-600 hover:bg-yellow-500 text-white px-4 rounded-lg font-bold transition-colors flex items-center gap-2">
-                  {loading ? <Loader2 className="animate-spin" size={18}/> : 'Bul ve Ekle'}
-                </button>
-              </div>
-
-              <div className="flex bg-gray-800 p-1 rounded-xl border border-gray-700">
-                <button onClick={() => setVideoFilter('all')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${videoFilter === 'all' ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-white'}`}>Tümü</button>
-                <button onClick={() => setVideoFilter('pending')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${videoFilter === 'pending' ? 'bg-yellow-600 text-white' : 'text-gray-400 hover:text-white'}`}>
-                   <Eye size={16}/> Onay Bekleyen
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 shadow-xl">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-gray-900/50 text-gray-400 text-xs uppercase"><tr><th className="p-4">Durum</th><th className="p-4">Video</th><th className="p-4 text-right">İşlemler</th></tr></thead>
-                <tbody className="divide-y divide-gray-700 text-sm">
+            <div className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 shadow-xl overflow-x-auto">
+              <table className="w-full text-left text-sm min-w-[800px]">
+                <thead className="bg-gray-900/50 text-gray-400 uppercase">
+                  <tr>
+                    <th className="p-4 w-10"><button onClick={toggleSelectAll}>{selectedIds.length === videos.length && videos.length > 0 ? <CheckSquare size={18}/> : <Square size={18}/>}</button></th>
+                    <th className="p-4">Durum</th>
+                    <th className="p-4">Video</th>
+                    <th className="p-4">Süre</th>
+                    <th className="p-4">Mood</th>
+                    <th className="p-4 text-right">Link</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-700">
                   {videos.map(v => (
-                    <tr key={v.id} className="hover:bg-gray-700/40 transition-colors group">
-                      <td className="p-4">{v.is_approved ? <span className="text-green-400 flex items-center gap-1"><CheckCircle size={14}/> Yayında</span> : <span className="text-yellow-400 flex items-center gap-1"><Loader2 size={14}/> Bekliyor</span>}</td>
-                      <td className="p-4 max-w-md"><div className="font-medium text-white truncate" title={v.title}>{v.title || 'Başlıksız'}</div><a href={v.url} target="_blank" className="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1 mt-1 opacity-50 group-hover:opacity-100"><ExternalLink size={12}/> İzle</a></td>
-                      <td className="p-4 text-right"><div className="flex items-center justify-end gap-2">{!v.is_approved && <button onClick={() => handleApprove(v.id)} className="bg-green-600 hover:bg-green-500 text-white p-2 rounded-lg"><CheckCircle size={16}/></button>}<button onClick={() => deleteVideo(v.id)} className="bg-gray-700 hover:bg-red-600 text-gray-300 hover:text-white p-2 rounded-lg"><Trash2 size={16}/></button></div></td>
+                    <tr key={v.id} className={`hover:bg-gray-700/40 transition-colors ${selectedIds.includes(v.id) ? 'bg-blue-900/20' : ''}`}>
+                      <td className="p-4"><button onClick={() => toggleSelect(v.id)}>{selectedIds.includes(v.id) ? <CheckSquare size={18} className="text-blue-400"/> : <Square size={18} className="text-gray-600"/>}</button></td>
+                      <td className="p-4">{v.is_approved ? <CheckCircle size={16} className="text-green-500"/> : <Loader2 size={16} className="text-yellow-500"/>}</td>
+                      <td className="p-4 max-w-xs truncate font-medium">{v.title}</td>
+                      
+                      {/* INLINE EDITING */}
+                      <td className="p-4">
+                        <select value={v.duration_category} onChange={(e) => handleSingleUpdate(v.id, 'duration_category', e.target.value)} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs outline-none">
+                            <option value="snack">Atıştırmalık</option><option value="meal">Yemek</option><option value="feast">Ziyafet</option>
+                        </select>
+                      </td>
+                      <td className="p-4">
+                        <select value={v.mood} onChange={(e) => handleSingleUpdate(v.id, 'mood', e.target.value)} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs outline-none">
+                            <option value="funny">Komik</option><option value="relax">Rahat</option><option value="learn">Bilgi</option><option value="drama">Dram</option>
+                        </select>
+                      </td>
+
+                      <td className="p-4 text-right"><a href={v.url} target="_blank" className="text-blue-400 hover:text-blue-300"><ExternalLink size={16}/></a></td>
                     </tr>
                   ))}
                 </tbody>
@@ -156,25 +164,65 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* ================= SAFE CHANNELS TAB ================= */}
+        {activeTab === 'safe_channels' && (
+          <div className="animate-in fade-in">
+             <div className="bg-gray-800 p-6 rounded-xl mb-8 border border-gray-700">
+                <h2 className="text-xl font-bold mb-4 text-green-400 flex items-center gap-2"><ShieldCheck/> Güvenli Kanal Ekle</h2>
+                <div className="flex gap-2">
+                   <input value={newSafeInput} onChange={e=>setNewSafeInput(e.target.value)} placeholder="Kanal Linki veya ID" className="bg-gray-900 border border-gray-600 p-3 rounded-lg text-white flex-1 outline-none"/>
+                   <button onClick={handleAddSafe} disabled={loading} className="bg-green-600 hover:bg-green-500 text-white px-6 rounded-lg font-bold">{loading ? '...' : 'Ekle'}</button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">Bu listedeki kanallardan düzenli olarak otomatik video çekilir.</p>
+             </div>
+
+             <div className="flex justify-end mb-4">
+                <button onClick={handleFetchSafe} disabled={loading} className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2">
+                    <RefreshCw size={18} className={loading ? 'animate-spin' : ''}/> Kanalları Tara & Video Çek
+                </button>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {safeChannels.map(c => (
+                    <div key={c.id} className="bg-gray-800 p-4 rounded-xl border border-gray-700 flex justify-between items-center">
+                        <div>
+                            <div className="font-bold text-white">{c.channel_name || 'İsimsiz Kanal'}</div>
+                            <div className="text-xs text-gray-500 font-mono">{c.channel_id}</div>
+                        </div>
+                        <button onClick={async () => { await removeSafeChannel(c.id); fetchSafeChannels(); }} className="text-red-500 hover:bg-red-500/10 p-2 rounded"><Trash2 size={18}/></button>
+                    </div>
+                ))}
+                {safeChannels.length === 0 && <p className="text-gray-500">Listeniz boş.</p>}
+             </div>
+          </div>
+        )}
+
+        {/* ================= BLACKLIST TAB ================= */}
         {activeTab === 'blacklist' && (
-          <div className="animate-in fade-in duration-300">
-            <div className="bg-gray-800 p-6 rounded-xl mb-8 border border-gray-700 shadow-lg">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-red-500"><Ban /> Film/Dizi Engelle</h2>
-              <div className="flex gap-3">
-                <input type="number" value={banId} onChange={e => setBanId(e.target.value)} placeholder="TMDb ID" className="bg-gray-900 border border-gray-600 p-3 rounded-lg text-white outline-none w-32 focus:border-red-500" />
-                <input type="text" value={banReason} onChange={e => setBanReason(e.target.value)} placeholder="Sebep" className="bg-gray-900 border border-gray-600 p-3 rounded-lg text-white outline-none flex-1 focus:border-red-500" />
-                <button onClick={handleBan} disabled={!banId} className="bg-red-600 hover:bg-red-700 disabled:bg-gray-700 text-white px-6 rounded-lg font-bold flex items-center gap-2"><Plus size={18}/> Ekle</button>
-              </div>
-            </div>
-            <div className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-gray-900/50 text-gray-400 uppercase"><tr><th className="p-4">ID</th><th className="p-4">Sebep</th><th className="p-4 text-right">İşlem</th></tr></thead>
-                <tbody className="divide-y divide-gray-700">{blacklist.map(item => (<tr key={item.id} className="hover:bg-gray-700/30"><td className="p-4 font-mono text-yellow-500">{item.tmdb_id}</td><td className="p-4 text-gray-300">{item.reason || '-'}</td><td className="p-4 text-right"><button onClick={() => handleUnban(item.id)} className="text-gray-400 hover:text-green-400 text-xs font-bold border border-gray-600 hover:border-green-400 px-3 py-1 rounded">Kaldır</button></td></tr>))}</tbody>
-              </table>
-            </div>
+          <div className="animate-in fade-in">
+             <div className="bg-gray-800 p-6 rounded-xl mb-8 border border-gray-700"><div className="flex gap-3"><input type="number" value={banId} onChange={e => setBanId(e.target.value)} placeholder="TMDb ID" className="bg-gray-900 border border-gray-600 p-3 rounded-lg text-white outline-none w-32" /><input type="text" value={banReason} onChange={e => setBanReason(e.target.value)} placeholder="Sebep" className="bg-gray-900 border border-gray-600 p-3 rounded-lg text-white outline-none flex-1" /><button onClick={handleBan} className="bg-red-600 hover:bg-red-700 px-6 rounded-lg font-bold">Banla</button></div></div>
+             <div className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700"><table className="w-full text-left text-sm"><thead className="bg-gray-900/50 text-gray-400"><tr><th className="p-4">ID</th><th className="p-4">Sebep</th><th className="p-4 text-right">İşlem</th></tr></thead><tbody className="divide-y divide-gray-700">{blacklist.map(item => (<tr key={item.id} className="hover:bg-gray-700/30"><td className="p-4 font-mono text-yellow-500">{item.tmdb_id}</td><td className="p-4 text-gray-300">{item.reason || '-'}</td><td className="p-4 text-right"><button onClick={() => handleUnban(item.id)} className="text-gray-400 hover:text-green-400 border border-gray-600 px-3 py-1 rounded">Kaldır</button></td></tr>))}</tbody></table></div>
           </div>
         )}
       </div>
+
+      {/* STICKY BULK ACTION BAR (Sadece seçim yapıldıysa görünür) */}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-blue-900 text-white p-4 rounded-xl shadow-2xl flex flex-wrap items-center gap-4 border border-blue-700 animate-in slide-in-from-bottom-10 z-50 w-[90%] max-w-3xl justify-between">
+          <div className="flex items-center gap-2 font-bold border-r border-blue-700 pr-4"><Layers size={20} /> <span>{selectedIds.length} Seçildi</span></div>
+          
+          <div className="flex gap-2 flex-1 justify-center">
+             <select onChange={(e) => handleBulkUpdate('duration_category', e.target.value)} className="bg-blue-800 border border-blue-600 rounded px-2 py-1 text-sm outline-none" defaultValue=""><option value="" disabled>Süre...</option><option value="snack">Atıştırmalık</option><option value="meal">Yemek</option><option value="feast">Ziyafet</option></select>
+             <select onChange={(e) => handleBulkUpdate('mood', e.target.value)} className="bg-blue-800 border border-blue-600 rounded px-2 py-1 text-sm outline-none" defaultValue=""><option value="" disabled>Mood...</option><option value="funny">Komik</option><option value="relax">Rahat</option><option value="learn">Bilgi</option><option value="drama">Dram</option></select>
+          </div>
+
+          <div className="flex gap-2">
+             <button onClick={() => handleBulkAction('approve')} className="bg-green-600 hover:bg-green-500 p-2 rounded text-white" title="Hepsini Onayla"><CheckCircle size={20}/></button>
+             <button onClick={() => handleBulkAction('delete')} className="bg-red-600 hover:bg-red-500 p-2 rounded text-white" title="Hepsini Sil"><Trash2 size={20}/></button>
+             <button onClick={() => setSelectedIds([])} className="text-blue-300 underline text-sm ml-2">İptal</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
