@@ -5,7 +5,8 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
 import { getDiscoverBatch } from '@/lib/tmdb'
 import MovieSwiper from '@/components/MovieSwiper'
-import { Users, Copy, ArrowRight, Loader2, Sparkles } from 'lucide-react'
+import { Users, Copy, ArrowRight, Loader2, Sparkles, Film, Play } from 'lucide-react'
+import Image from 'next/image' // Hız ve Hata Önleme İçin
 
 export default function MatchPage() {
   const supabase = createClientComponentClient()
@@ -50,7 +51,7 @@ export default function MatchPage() {
             if (count && count >= 2) {
               setMatchResult({
                 title: newVote.movie_title,
-                poster_path: newVote.poster_path
+                poster_path: newVote.poster_path // Null olabilir, aşağıda kontrol edeceğiz
               })
               setView('matched')
             }
@@ -86,7 +87,7 @@ export default function MatchPage() {
   }
 
   const loadMovies = async () => {
-    // Rastgelelik için 1-5 arası bir sayfa seçelim ki hep aynı filmler gelmesin
+    // Rastgelelik için 1-5 arası bir sayfa seçelim
     const randomPage = Math.floor(Math.random() * 5) + 1;
     const data = await getDiscoverBatch(randomPage) 
     setMovies(data)
@@ -94,12 +95,14 @@ export default function MatchPage() {
 
   const handleSwipe = async (direction: 'left' | 'right', movie: any) => {
     if (!user || !roomCode) return;
+    
+    // Hata önleyici: Veritabanına yazarken null kontrolü
     await supabase.from('match_votes').insert({
       room_code: roomCode,
       user_id: user.id,
       movie_id: movie.id,
-      movie_title: movie.title,
-      poster_path: movie.poster_path,
+      movie_title: movie.title || 'İsimsiz Film',
+      poster_path: movie.poster_path || null,
       vote_type: direction === 'right' ? 'like' : 'dislike'
     })
   }
@@ -113,9 +116,9 @@ export default function MatchPage() {
         <ArrowRight className="rotate-180"/> Ana Sayfa
       </div>
 
-      {/* LOBİ */}
+      {/* --- LOBİ --- */}
       {view === 'lobby' && (
-        <div className="w-full max-w-md bg-gray-900 p-8 rounded-3xl border border-gray-800 text-center animate-in zoom-in">
+        <div className="w-full max-w-md bg-gray-900 p-8 rounded-3xl border border-gray-800 text-center animate-in zoom-in duration-300">
           <div className="bg-purple-900/30 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
             <Users size={40} className="text-purple-400" />
           </div>
@@ -146,7 +149,7 @@ export default function MatchPage() {
         </div>
       )}
 
-      {/* SWIPE */}
+      {/* --- SWIPE --- */}
       {view === 'swiping' && (
         <div className="w-full max-w-lg flex flex-col items-center animate-in fade-in">
           <div className="flex items-center gap-3 mb-8 bg-gray-800/50 px-6 py-3 rounded-full border border-gray-700 backdrop-blur-md">
@@ -155,6 +158,7 @@ export default function MatchPage() {
             <button onClick={() => navigator.clipboard.writeText(roomCode)} className="text-gray-500 hover:text-white ml-2"><Copy size={16}/></button>
           </div>
           
+          {/* MovieSwiper Bileşeni Güvenli Şekilde Çağrılıyor */}
           <MovieSwiper movies={movies} onSwipe={handleSwipe} />
           
           <div className="mt-8 flex items-center gap-2 text-sm text-purple-400 animate-pulse">
@@ -163,24 +167,34 @@ export default function MatchPage() {
         </div>
       )}
 
-      {/* MATCHED */}
+      {/* --- MATCHED (SONUÇ) --- */}
       {view === 'matched' && matchResult && (
         <div className="w-full max-w-md bg-gradient-to-br from-purple-600 to-pink-600 p-1 rounded-3xl shadow-2xl animate-in zoom-in duration-500">
           <div className="bg-[#0f1014] p-8 rounded-[22px] text-center h-full relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 pointer-events-none"></div>
-            
             <div className="text-6xl mb-4 animate-bounce">🎉</div>
             <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-2">EŞLEŞME!</h2>
             <p className="text-gray-400 mb-6 text-sm">İkiniz de bunu beğendiniz:</p>
             
-            <div className="relative aspect-[2/3] w-48 mx-auto rounded-xl overflow-hidden shadow-2xl mb-6 border-2 border-purple-500/50 group">
-              <img src={`https://image.tmdb.org/t/p/w500${matchResult.poster_path}`} className="w-full h-full object-cover" />
+            <div className="relative aspect-[2/3] w-48 mx-auto rounded-xl overflow-hidden shadow-2xl mb-6 border-2 border-purple-500/50 bg-gray-900 flex items-center justify-center">
+              {/* HATA ÇÖZÜMÜ: Image bileşeni ile güvenli gösterim */}
+              {matchResult.poster_path ? (
+                <Image 
+                  src={`https://image.tmdb.org/t/p/w500${matchResult.poster_path}`} 
+                  alt={matchResult.title}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <Film size={48} className="text-gray-600" />
+              )}
             </div>
             
-            <h3 className="text-xl font-bold text-white mb-8 px-2">{matchResult.title}</h3>
+            <h3 className="text-xl font-bold text-white mb-8 px-2 line-clamp-2">{matchResult.title}</h3>
             
             <div className="flex gap-3">
-                <button onClick={() => window.open(`https://www.google.com/search?q=${matchResult.title}+izle`, '_blank')} className="flex-1 bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition">Hemen İzle</button>
+                <button onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(matchResult.title)}+izle`, '_blank')} className="flex-1 bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition flex items-center justify-center gap-2">
+                  <Play size={20} fill="currentColor"/> Hemen İzle
+                </button>
                 <button onClick={() => { setMatchResult(null); setView('swiping') }} className="px-6 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-700 transition">Devam Et</button>
             </div>
           </div>

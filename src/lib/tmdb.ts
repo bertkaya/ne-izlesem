@@ -169,3 +169,28 @@ export async function getMoviesByTitles(list: { title: string, type: 'movie' | '
   }
   return results;
 }
+// ... (Üstteki kodlar aynı kalsın)
+// --- 5. SWIPE MODU (AKILLI AKIŞ) ---
+export async function getDiscoverBatch(page: number = 1, preferredGenres: string = '') {
+  // Eğer kullanıcının sevdiği türler varsa, onları filtreye ekle
+  // Yoksa rastgele popüler filmleri getir
+  
+  const params: any = {
+    sort_by: 'popularity.desc',
+    'vote_count.gte': '100',
+    page: page.toString(),
+    with_original_language: 'en|tr'
+  };
+
+  // Eğer favori türleri varsa, %70 ihtimalle o türlerden getir, %30 rastgele (Filtre balonu oluşmasın diye)
+  if (preferredGenres && Math.random() > 0.3) {
+    params.with_genres = preferredGenres;
+  }
+
+  // Sayfa sayısını rastgeleştirelim ki hep aynı sıra gelmesin
+  const randomOffset = Math.floor(Math.random() * 5);
+  params.page = (page + randomOffset).toString();
+
+  const data = await fetchTMDB('/discover/movie', params);
+  return data.results || [];
+}
