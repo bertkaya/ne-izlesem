@@ -33,9 +33,14 @@ const POPULAR_SHOWS = [
 ];
 
 const AI_CHIPS = [
-  "😭 Hüngür hüngür ağlamak istiyorum", "🤯 Beyin yakan bir film bul", "🤣 Gülmekten karnıma ağrılar girsin", 
-  "👻 Gece uyutmayacak bir korku filmi", "🚀 Uzay ve bilim kurgu olsun", "🕵️‍♂️ Katil kim temalı gizem", 
-  "🦁 Vahşi yaşam belgeseli", "🎥 Yeşilçam filmi öner"
+  "😭 Hüngür hüngür ağlamak istiyorum",
+  "🤯 Beyin yakan bir film bul",
+  "🤣 Gülmekten karnıma ağrılar girsin",
+  "👻 Gece uyutmayacak bir korku filmi",
+  "🚀 Uzay ve bilim kurgu olsun",
+  "🕵️‍♂️ Katil kim temalı gizem",
+  "🦁 Vahşi yaşam belgeseli",
+  "🎥 Yeşilçam filmi öner"
 ];
 
 const YOUTUBE_MOODS = [
@@ -47,12 +52,6 @@ const YOUTUBE_MOODS = [
   { id: 'learn', label: '🧠 Öğren', color: 'indigo' },
   { id: 'drama', label: '🎬 Hikaye', color: 'pink' }
 ];
-
-// TÜRKÇE TÜR İSİMLERİ (Ekranda görünenler)
-const GENRE_LABELS: Record<string, string> = {
-  funny: 'Komedi', scary: 'Korku & Gerilim', emotional: 'Dram & Romantik', 
-  action: 'Aksiyon & Macera', scifi: 'Bilim Kurgu', crime: 'Suç & Polisiye', relax: 'Belgesel'
-};
 
 const getYoutubeId = (url: string) => {
   const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
@@ -85,7 +84,7 @@ export default function Home() {
   const [onlyTurkish, setOnlyTurkish] = useState(false) 
   const [aiPrompt, setAiPrompt] = useState('')
 
-  // DROPDOWN (AUTOCOMPLETE)
+  // DROPDOWN
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
 
@@ -125,26 +124,21 @@ export default function Home() {
     loadSwipeCards(1)
   }, [])
 
-  // --- SEARCH AUTOCOMPLETE ---
+  // SEARCH AUTOCOMPLETE
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       if (searchQuery.length > 2) {
         const results = await searchTvShowsList(searchQuery);
         setSearchResults(results);
         setShowDropdown(true);
-      } else {
-        setShowDropdown(false);
-      }
+      } else { setShowDropdown(false); }
     }, 300);
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
   const handleSearchSelect = async (show: any) => {
-    setSearchQuery(show.name);
-    setShowDropdown(false);
-    setTmdbLoading(true);
-    // Seçilen diziyi detaylarıyla getir
-    const s = await searchTvShow(show.name); // searchTvShow artık id ile de çalışabilir ama isimle devam edelim
+    setSearchQuery(show.name); setShowDropdown(false); setTmdbLoading(true);
+    const s = await searchTvShow(show.name);
     if(s) {
       const g = selectedGenres.length > 0 ? selectedGenres.join(',') : '35';
       const e = await getRandomEpisode(s.id, g, platforms.join('|'));
@@ -153,94 +147,74 @@ export default function Home() {
     setTmdbLoading(false);
   }
 
-  // --- SWIPE LOGIC ---
   const loadSwipeCards = async (pageNum: number) => {
-    if (isSwipingLoading) return;
-    setIsSwipingLoading(true);
+    if (isSwipingLoading) return; setIsSwipingLoading(true);
     try {
       const movies = await getDiscoverBatch(pageNum, selectedGenres.join(','))
       const uniqueMovies = movies.filter((m: any) => !swipeMovies.some(sm => sm.id === m.id) && !watchedIds.includes(m.id) && !blacklistedIds.includes(m.id));
-      setSwipeMovies(prev => [...prev, ...uniqueMovies])
-      setSwipePage(p => p + 1)
+      setSwipeMovies(prev => [...prev, ...uniqueMovies]); setSwipePage(p => p + 1)
     } catch (e) { console.error(e) } finally { setIsSwipingLoading(false) }
   }
   const handleSwipe = async (direction: 'left' | 'right', movie: any) => {
     if (swipeMovies.length < 8) loadSwipeCards(swipePage); 
-    if (direction === 'right' && user) {
-        supabase.from('favorites').insert({ user_id: user.id, tmdb_id: movie.id, media_type: 'movie', title: movie.title, poster_path: movie.poster_path, vote_average: movie.vote_average }).then(() => setFavorites(prev => [...prev, movie.id]));
-    }
+    if (direction === 'right' && user) supabase.from('favorites').insert({ user_id: user.id, tmdb_id: movie.id, media_type: 'movie', title: movie.title, poster_path: movie.poster_path, vote_average: movie.vote_average }).then(() => setFavorites(prev => [...prev, movie.id]));
   }
   const handleSwipeWatch = (movie: any) => { setTmdbResult(movie); setTmdbType('movie'); setAppMode('tmdb'); }
 
-  // --- YOUTUBE LOGIC ---
   const fetchYoutubeVideo = async () => { 
     setYtLoading(true); setYtVideo(null); 
     if (myChannels.length > 0 && Math.random() > 0.5) { 
-      const randomChannel = myChannels[Math.floor(Math.random() * myChannels.length)]; 
-      const r = await getVideoFromChannel(randomChannel); 
+      const r = await getVideoFromChannel(myChannels[Math.floor(Math.random() * myChannels.length)]); 
       if(r) { setYtVideo(r); setYtLoading(false); return } 
     } 
     const { data } = await supabase.rpc('get_random_video', { chosen_duration: duration, chosen_mood: mood }); 
-    if (data && data.length > 0) { 
-      setYtVideo(data[0]); 
-      // YouTube'u geçmişe kaydetmek opsiyonel, kullanıcı butona basarsa kaydedeceğiz
-    } else alert("Video bulunamadı."); 
+    if (data && data.length > 0) setYtVideo(data[0]); else alert("Video bulunamadı."); 
     setYtLoading(false) 
   }
-  const handleReport = async () => { if(ytVideo && confirm("Yanlış kategori mi? Bildirilsin mi?")) { await reportVideo(ytVideo.id, 'wrong_category'); alert("Bildirildi!"); fetchYoutubeVideo(); } }
-  
-  // YouTube için İzledim Fonksiyonu
-  const markYoutubeWatched = async () => {
-    if(!ytVideo || !user) return;
-    await supabase.from('user_history').insert({
-        user_id: user.id, tmdb_id: 0, media_type: 'youtube', title: ytVideo.title
-    });
-    fetchYoutubeVideo();
-  }
+  const handleReport = async () => { if(ytVideo && confirm("Yanlış kategori mi?")) { await reportVideo(ytVideo.id, 'wrong'); alert("Bildirildi!"); fetchYoutubeVideo(); } }
+  const markYoutubeWatched = async () => { if(!ytVideo || !user) return; await supabase.from('user_history').insert({ user_id: user.id, tmdb_id: 0, media_type: 'youtube', title: ytVideo.title }); fetchYoutubeVideo(); }
 
-  // --- TMDB LOGIC ---
   const toggleGenre = (id: string) => { setSelectedGenres(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]); }
   const fetchTmdbContent = async () => { 
     setTmdbLoading(true); setTmdbResult(null); const pStr = platforms.join('|'); 
     try { 
       if (tmdbType === 'movie') { 
-        const g = selectedGenres.length > 0 ? selectedGenres.join(',') : (MOOD_TO_MOVIE_GENRE[tmdbMood as keyof typeof MOOD_TO_MOVIE_GENRE] || '35');
+        const g = selectedGenres.length > 0 ? selectedGenres.join(',') : '35';
         const m = await getSmartRecommendation(g, pStr, 'movie', watchedIds, blacklistedIds, onlyTurkish); 
         if(m) setTmdbResult(m); else alert("Kriterlere uygun film bulunamadı.") 
       } else { 
-        // Dizi için arama yapıldıysa onun ID'sini kullan
-        let tId = null;
-        if (searchQuery) {
-           // Eğer dropdown'dan seçilmediyse ve direkt entera basıldıysa
-           const s = await searchTvShow(searchQuery);
-           if(s) tId = s.id;
-           else { alert("Dizi bulunamadı"); setTmdbLoading(false); return }
-        }
+        let tId = null; 
+        if (searchQuery) { const s = await searchTvShow(searchQuery); if(s) tId = s.id; else { alert("Dizi bulunamadı"); setTmdbLoading(false); return } } 
         const g = selectedGenres.length > 0 ? selectedGenres.join(',') : '35';
         const e = await getRandomEpisode(tId, g, pStr); 
         if(e) setTmdbResult(e); else alert("Bölüm bulunamadı.") 
       } 
-    } catch(e) { console.error(e) } 
-    finally { setTmdbLoading(false) } 
+    } catch(e) { console.error(e) } finally { setTmdbLoading(false) } 
   }
 
+  // --- AI LOGIC (GÜNCELLENMİŞ) ---
   const fetchAiRecommendation = async (overridePrompt?: string) => {
-    const promptToUse = overridePrompt || aiPrompt; if(!promptToUse) return;
+    const promptToUse = overridePrompt || aiPrompt;
+    if(!promptToUse) return;
     setTmdbLoading(true); setTmdbResult(null); const pStr = platforms.join('|');
+    
     const aiRes = await askGemini(promptToUse);
+    
     if (aiRes.success) {
-      if (aiRes.recommendations?.length) {
+      if (aiRes.recommendations && aiRes.recommendations.length > 0) {
          const enrichedMovies = await getMoviesByTitles(aiRes.recommendations);
-         if(enrichedMovies.length > 0) { setSwipeMovies(enrichedMovies); setAppMode('swipe'); alert(`AI ${enrichedMovies.length} öneri buldu!`); } else alert("Veritabanında bulunamadı.");
+         if(enrichedMovies.length > 0) { setSwipeMovies(enrichedMovies); setAppMode('swipe'); alert(`AI ${enrichedMovies.length} film buldu!`); } else alert("Veritabanında bulunamadı.");
       } else if (aiRes.params) {
-         const p = aiRes.params; const safeType: 'movie' | 'tv' = (p.type === 'tv' || p.type === 'movie') ? p.type : 'movie';
+         const p = aiRes.params; 
+         const safeType: 'movie' | 'tv' = (p.type === 'tv' || p.type === 'movie') ? p.type : 'movie';
          const gArray = p.genre_ids ? p.genre_ids.split(',') : [];
          const m = await getSmartRecommendation(gArray, pStr, safeType, watchedIds, blacklistedIds, false, p.year_range, p.sort_by);
          if(m) { setTmdbResult(m); setAppMode('tmdb'); setTmdbType(safeType); } else alert("Film bulunamadı.");
       }
     } else {
+      // Yedek
       const { genreIds, sort, year } = analyzePrompt(promptToUse); 
-      const m = await getSmartRecommendation([genreIds], pStr, 'movie', watchedIds, blacklistedIds, false, year, sort);
+      const m = await getSmartRecommendation(genreIds, pStr, 'movie', watchedIds, blacklistedIds, false, year, sort);
       if(m) { setTmdbResult(m); setAppMode('tmdb'); setTmdbType('movie'); } else alert("Bulunamadı.");
     }
     setTmdbLoading(false); setAiPrompt('');
@@ -258,11 +232,7 @@ export default function Home() {
       
       <nav className="flex justify-between items-center p-6 max-w-7xl mx-auto border-b border-gray-800/50 backdrop-blur-md sticky top-0 z-40 bg-[#0f1014]/80">
         <h1 className="text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-yellow-500 cursor-pointer" onClick={() => window.location.href='/'}>NE İZLESEM?</h1>
-        {user ? (
-          <div className="flex items-center gap-4"><a href="/profile" className="flex items-center gap-2 text-sm font-bold text-gray-300 hover:text-white transition bg-gray-800 hover:bg-gray-700 py-2 px-4 rounded-full border border-gray-700"><User size={18} /> <span className="hidden md:inline">Profilim</span></a></div>
-        ) : (
-           <a href="/login" className="flex items-center gap-2 text-sm font-bold bg-white text-black px-4 py-2 rounded-full hover:bg-gray-200 transition"><User size={18} /> Giriş Yap</a>
-        )}
+        {user ? (<div className="flex items-center gap-4"><a href="/profile" className="flex items-center gap-2 text-sm font-bold text-gray-300 hover:text-white transition bg-gray-800 hover:bg-gray-700 py-2 px-4 rounded-full border border-gray-700"><User size={18} /> <span className="hidden md:inline">Profilim</span></a></div>) : (<a href="/login" className="flex items-center gap-2 text-sm font-bold bg-white text-black px-4 py-2 rounded-full hover:bg-gray-200 transition"><User size={18} /> Giriş Yap</a>)}
       </nav>
 
       <div className="flex justify-center mt-6 px-4">
@@ -275,11 +245,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* AI MODU */}
       {appMode === 'ai' && (
         <div className="flex flex-col items-center mt-12 px-4 animate-in fade-in duration-500 w-full max-w-lg mx-auto text-center">
           <h2 className="text-3xl font-black mb-2 text-cyan-400">Film Sommelier 🤖</h2>
-          <p className="text-gray-400 mb-8">Ne hissettiğini söyle, film veya dizi bulayım.</p>
+          <p className="text-gray-400 mb-8">Ne hissettiğini söyle veya aşağıdan seç.</p>
           <div className="w-full relative mb-8">
             <textarea value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} placeholder="Örn: 90'larda geçen, beni ağlatacak bir dram..." className="w-full bg-gray-900 border border-gray-700 rounded-2xl p-4 text-white outline-none focus:border-cyan-500 min-h-[120px] resize-none text-lg" />
             <button onClick={() => fetchAiRecommendation()} disabled={!aiPrompt || tmdbLoading} className="absolute bottom-4 right-4 bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl transition-all shadow-lg shadow-cyan-900/50 disabled:opacity-50">{tmdbLoading ? <Loader2 className="animate-spin" /> : <Sparkles size={24} />}</button>
@@ -288,7 +257,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* YOUTUBE MODU */}
       {appMode === 'youtube' && (
         <div className="flex flex-col items-center mt-8 px-4 animate-in fade-in duration-500">
            <div className="bg-gray-900/80 p-6 rounded-3xl shadow-2xl w-full max-w-lg border border-gray-800">
@@ -338,7 +306,6 @@ export default function Home() {
              {tmdbType === 'tv' && (
                <div className="flex flex-col gap-2 mb-6 relative">
                  <input value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder="Dizi Ara..." className="bg-gray-800 border border-gray-700 p-3 rounded-xl flex-1 text-white"/>
-                 {/* AUTOCOMPLETE LISTESI */}
                  {showDropdown && searchResults.length > 0 && (
                    <ul className="absolute top-full left-0 w-full bg-gray-900 border border-gray-700 rounded-xl mt-1 z-50 shadow-2xl overflow-hidden">
                      {searchResults.map((show) => (
@@ -360,7 +327,7 @@ export default function Home() {
                <div className="flex flex-wrap gap-2">
                  {Object.entries(tmdbType === 'movie' ? MOOD_TO_MOVIE_GENRE : MOOD_TO_TV_GENRE).map(([key, val]) => (
                    <button key={key} onClick={() => toggleGenre(val)} className={`px-3 py-2 rounded-lg border text-sm font-bold transition-all ${selectedGenres.includes(val) ? 'bg-green-900/50 border-green-500 text-green-400' : 'bg-gray-800 border-gray-700 text-gray-400'}`}>
-                     {selectedGenres.includes(val) && <Check size={12} className="inline mr-1"/>} {GENRE_LABELS[key] || key.toUpperCase()}
+                     {key.toUpperCase()}
                    </button>
                  ))}
                </div>
@@ -405,6 +372,7 @@ export default function Home() {
         </div>
       )}
 
+      {/* MODAL: VIDEO ÖNERİ */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
            <div className="bg-gray-900 p-6 rounded-2xl w-full max-w-md border border-gray-700 relative">
