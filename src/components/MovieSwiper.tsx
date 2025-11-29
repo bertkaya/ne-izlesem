@@ -8,7 +8,7 @@ import Image from 'next/image'
 interface Movie {
   id: number;
   title: string;
-  poster_path: string | null; // Null olabilir
+  poster_path: string | null;
   vote_average: number;
   overview: string;
 }
@@ -20,60 +20,86 @@ interface Props {
 
 export default function MovieSwiper({ movies, onSwipe }: Props) {
   const [cards, setCards] = useState<Movie[]>(movies)
+  const [exitX, setExitX] = useState<number>(0) // Kartın uçacağı yön (Animasyon için)
 
-  // Parent'tan yeni veri gelince güncelle
   useEffect(() => {
     setCards(movies)
   }, [movies])
 
-  const removeCard = (id: number, direction: 'left' | 'right') => {
-    // Sadece görsel olarak kaldır, asıl işlem Parent'ta (page.tsx) yapılacak
-    const movie = cards.find(c => c.id === id)
-    if (movie) onSwipe(direction, movie)
+  // Klavye Kontrolü
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (cards.length === 0) return;
+      if (e.key === 'ArrowRight') triggerSwipe('right');
+      if (e.key === 'ArrowLeft') triggerSwipe('left');
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cards]); // Cards değişince listener güncellensin
+
+  const triggerSwipe = (direction: 'left' | 'right') => {
+    if (cards.length === 0) return;
+    
+    // 1. Animasyon yönünü belirle (-1000 sol, +1000 sağ)
+    setExitX(direction === 'left' ? -1000 : 1000);
+    
+    // 2. En üstteki kartı al
+    const topCard = cards[cards.length - 1];
+    
+    // 3. State güncellemesini bir sonraki döngüye bırak ki animasyon yönü (exitX) algılansın
+    setTimeout(() => {
+      onSwipe(direction, topCard);
+      setCards((prev) => prev.filter((c) => c.id !== topCard.id));
+    }, 50);
   }
 
   return (
     <div className="flex flex-col items-center gap-8 w-full max-w-sm">
       <div className="relative w-full h-[500px] flex items-center justify-center">
-        <AnimatePresence>
+        <AnimatePresence custom={exitX}>
           {cards.map((movie, index) => (
             <Card 
               key={movie.id} 
               movie={movie} 
               isTop={index === cards.length - 1} 
-              onRemove={removeCard} 
+              onRemove={(dir) => triggerSwipe(dir)} // Drag bitince tetiklenir
+              customExitX={exitX}
             />
           ))}
         </AnimatePresence>
         
-        {/* Yükleniyor veya Bitti Ekranı */}
         {cards.length === 0 && (
           <div className="flex flex-col items-center justify-center text-gray-500 animate-pulse text-center">
             <Loader2 size={48} className="animate-spin mb-4 text-purple-500"/>
             <p>Yeni filmler yükleniyor...</p>
-            <p className="text-xs mt-2">Biraz bekle veya sayfayı yenile.</p>
           </div>
         )}
       </div>
 
-      {/* BUTONLAR (Manuel Kontrol) */}
+      {/* BUTONLAR */}
       <div className="flex gap-6 z-10">
-        <button onClick={() => { if(cards.length>0) removeCard(cards[cards.length-1].id, 'left') }} className="p-4 bg-gray-800 rounded-full text-red-500 border border-red-500/30 hover:bg-red-500 hover:text-white transition-all shadow-lg active:scale-95"><X size={32} /></button>
-        <button onClick={() => { if(cards.length>0) removeCard(cards[cards.length-1].id, 'right') }} className="p-4 bg-gray-800 rounded-full text-green-500 border border-green-500/30 hover:bg-green-500 hover:text-white transition-all shadow-lg active:scale-95"><Heart size={32} fill="currentColor" /></button>
+        <button onClick={() => triggerSwipe('left')} className="p-4 bg-gray-800 rounded-full text-red-500 border border-red-500/30 hover:bg-red-500 hover:text-white transition-all shadow-lg active:scale-95 group">
+           <X size={32} className="group-hover:scale-110 transition-transform"/>
+        </button>
+        <button onClick={() => triggerSwipe('right')} className="p-4 bg-gray-800 rounded-full text-green-500 border border-green-500/30 hover:bg-green-500 hover:text-white transition-all shadow-lg active:scale-95 group">
+           <Heart size={32} fill="currentColor" className="group-hover:scale-110 transition-transform"/>
+        </button>
       </div>
+      
+      <p className="text-gray-600 text-xs mt-2">Klavye ok tuşlarını kullanabilirsiniz ⬅️ ➡️</p>
     </div>
   )
 }
 
-function Card({ movie, isTop, onRemove }: { movie: Movie, isTop: boolean, onRemove: any }) {
+function Card({ movie, isTop, onRemove, customExitX }: { movie: Movie, isTop: boolean, onRemove: (dir: 'left'|'right') => void, customExitX: number }) {
   const x = useMotionValue(0)
   const rotate = useTransform(x, [-200, 200], [-25, 25])
   const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0])
   const overlayColor = useTransform(x, [-200, 0, 200], ['rgba(239, 68, 68, 0.5)', 'rgba(0,0,0,0)', 'rgba(34, 197, 94, 0.5)'])
 
   const handleDragEnd = (_: any, info: any) => {
-    if (info.offset.x > 100) onRemove(movie.id, 'right')
-    else if (info.offset.x < -100) onRemove(movie.id, 'left')
+    if (info.offset.x > 100) onRemove('right')
+    else if (info.offset.x < -100) onRemove('left')
   }
 
   return (
@@ -84,11 +110,15 @@ function Card({ movie, isTop, onRemove }: { movie: Movie, isTop: boolean, onRemo
       onDragEnd={handleDragEnd}
       initial={{ scale: 0.95, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      exit={{ x: x.get() < 0 ? -200 : 200, opacity: 0, transition: { duration: 0.2 } }}
+      // EXIT MANTIĞI: Eğer sürükleniyorsa (x.get() != 0) sürüklenen yöne git, butona basıldıysa customExitX'e git
+      exit={{ 
+        x: customExitX !== 0 ? customExitX : (x.get() < 0 ? -1000 : 1000), 
+        opacity: 0, 
+        transition: { duration: 0.3 } 
+      }}
       className="absolute top-0 w-full h-full bg-gray-800 rounded-3xl shadow-2xl border border-gray-700 cursor-grab active:cursor-grabbing overflow-hidden"
     >
       <div className="relative h-3/4 pointer-events-none bg-gray-900 flex items-center justify-center">
-        {/* HATA ÇÖZÜMÜ: Poster yoksa varsayılan ikon göster */}
         {movie.poster_path ? (
           <Image 
             src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`} 
