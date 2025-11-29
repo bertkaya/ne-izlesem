@@ -157,3 +157,31 @@ export async function getDiscoverBatch(page: number = 1) {
   });
   return data.results || [];
 }
+// ... (Mevcut kodların altına)
+
+// --- AI SONUÇLARINI DETAYLANDIRMA ---
+export async function getMoviesByTitles(list: { title: string, type: 'movie' | 'tv' }[]) {
+  const results = [];
+
+  for (const item of list) {
+    try {
+      // 1. İsme göre ara
+      const searchRes = await fetchTMDB(`/search/${item.type}`, { query: item.title });
+      
+      if (searchRes.results && searchRes.results.length > 0) {
+        // En iyi eşleşmeyi al
+        const bestMatch = searchRes.results[0];
+        
+        // 2. Detaylarını (Platform, Fragman) çek
+        const details = await getDetails(bestMatch.id, item.type);
+        
+        // Listeye ekle
+        results.push({ ...bestMatch, ...details });
+      }
+    } catch (e) {
+      console.error(`Hata (${item.title}):`, e);
+    }
+  }
+  
+  return results;
+}

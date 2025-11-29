@@ -120,37 +120,42 @@ export async function checkAndCleanDeadLinks() {
 }
 
 // ==========================================
-// 3. AI ASİSTANI (GEMINI)
-// ==========================================
+// --- 3. AI ASİSTANI (GEMINI - İSİM BAZLI) ---
 export async function askGemini(prompt: string) {
-  if (!GEMINI_API_KEY) return { success: false, params: null };
+  if (!GEMINI_API_KEY) return { success: false, recommendations: [] };
 
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const systemInstruction = `
-      You are a movie/TV show recommendation expert.
-      Convert user prompt: "${prompt}" into JSON parameters for TMDb API.
+      You are a movie expert. The user will ask for a recommendation.
+      You MUST return a JSON object containing an array of exactly 5 specific recommendations based on their request.
       
-      JSON Keys:
-      - genre_ids: string (28=Action, 12=Adventure, 35=Comedy, 80=Crime, 99=Docu, 18=Drama, 10751=Family, 14=Fantasy, 36=History, 27=Horror, 9648=Mystery, 10749=Romance, 878=SciFi, 53=Thriller)
-      - sort_by: 'popularity.desc' | 'vote_average.desc'
-      - type: 'movie' | 'tv' (Detect context. "Dizi" -> 'tv', "Film" -> 'movie'. Default 'movie')
-      - year_range: 'YYYY-YYYY' (Optional)
-      
-      Return ONLY valid JSON. Do not use markdown blocks.
+      User Request: "${prompt}"
+
+      If the user asks for "Yeşilçam", suggest classic Turkish movies like Tosun Paşa, Süt Kardeşler, etc.
+      If the user asks for specific actors/directors, suggest their best works.
+
+      Return format (JSON only, no markdown):
+      {
+        "recommendations": [
+          { "title": "Movie Name 1", "type": "movie" },
+          { "title": "Series Name 1", "type": "tv" },
+          ...
+        ]
+      }
     `;
 
     const result = await model.generateContent(systemInstruction);
     const response = await result.response;
     const text = response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-    const params = JSON.parse(text);
+    const data = JSON.parse(text);
 
-    return { success: true, params };
+    return { success: true, recommendations: data.recommendations };
   } catch (error) {
     console.error("AI Error:", error);
-    return { success: false, params: null };
+    return { success: false, recommendations: [] };
   }
 }
 
