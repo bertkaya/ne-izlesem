@@ -26,7 +26,7 @@ function getCategory(minutes: number) {
 }
 
 // ==========================================
-// 1. YOUTUBE İÇERİK BOTU (AUTO POPULATE)
+// 1. YOUTUBE İÇERİK BOTU
 // ==========================================
 export async function autoPopulateYouTube() {
   if (!YOUTUBE_API_KEY) return { success: false, message: 'API Key eksik.' };
@@ -49,7 +49,6 @@ export async function autoPopulateYouTube() {
 
       if (data.items) {
         const videoIds = data.items.map((i: any) => i.id.videoId).join(',');
-        
         const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&id=${videoIds}&key=${YOUTUBE_API_KEY}`;
         const detailsRes = await fetch(detailsUrl);
         const detailsData = await detailsRes.json();
@@ -57,7 +56,6 @@ export async function autoPopulateYouTube() {
         if (detailsData.items) {
           for (const item of detailsData.items) {
              const videoUrl = `https://www.youtube.com/watch?v=${item.id}`;
-             
              const { data: existing } = await supabase.from('videos').select('id').eq('url', videoUrl).single();
              
              if (!existing) {
@@ -87,7 +85,6 @@ export async function autoPopulateYouTube() {
       console.error(`Bot Hatası (${query}):`, e);
     }
   }
-
   return { success: true, message: `Bot tamamlandı. ${totalAdded} yeni video eklendi!` };
 }
 
@@ -99,7 +96,6 @@ export async function checkAndCleanDeadLinks() {
   if (!videos) return { success: false, message: 'Video yok.' };
 
   let deletedCount = 0;
-  
   const chunkSize = 5;
   for (let i = 0; i < videos.length; i += chunkSize) {
       const chunk = videos.slice(i, i + chunkSize);
@@ -120,31 +116,27 @@ export async function checkAndCleanDeadLinks() {
 }
 
 // ==========================================
-// --- 3. AI ASİSTANI (GEMINI - İSİM BAZLI) ---
+// 3. AI ASİSTANI (GEMINI - HİBRİT)
+// ==========================================
 export async function askGemini(prompt: string) {
-  if (!GEMINI_API_KEY) return { success: false, recommendations: [] };
+  if (!GEMINI_API_KEY) return { success: false, recommendations: null, params: null };
 
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const systemInstruction = `
-      You are a movie expert. The user will ask for a recommendation.
-      You MUST return a JSON object containing an array of exactly 5 specific recommendations based on their request.
+      You are a movie expert assistant. Analyze the user request: "${prompt}"
+
+      SCENARIO 1: If the user asks for specific recommendations or a niche category (e.g., "Yeşilçam", "Movies like Matrix", "Best of Tom Cruise"), return a list of titles.
+      Output JSON format: { "recommendations": [{ "title": "Movie Name", "type": "movie" }, ...] }
+
+      SCENARIO 2: If the user describes a mood, genre, or era (e.g., "Sad drama from 90s", "Something scary"), return TMDb discovery filters.
+      Output JSON format: { "params": { "genre_ids": "...", "sort_by": "...", "year_range": "...", "type": "..." } }
       
-      User Request: "${prompt}"
+      (genre_ids: 28=Action, 12=Adventure, 35=Comedy, 80=Crime, 99=Docu, 18=Drama, 10751=Family, 27=Horror, 10749=Romance, 878=SciFi, 53=Thriller)
 
-      If the user asks for "Yeşilçam", suggest classic Turkish movies like Tosun Paşa, Süt Kardeşler, etc.
-      If the user asks for specific actors/directors, suggest their best works.
-
-      Return format (JSON only, no markdown):
-      {
-        "recommendations": [
-          { "title": "Movie Name 1", "type": "movie" },
-          { "title": "Series Name 1", "type": "tv" },
-          ...
-        ]
-      }
+      Return ONLY valid JSON.
     `;
 
     const result = await model.generateContent(systemInstruction);
@@ -152,10 +144,17 @@ export async function askGemini(prompt: string) {
     const text = response.text().replace(/```json/g, '').replace(/```/g, '').trim();
     const data = JSON.parse(text);
 
-    return { success: true, recommendations: data.recommendations };
+    // HATA ÇÖZÜMÜ: Her iki ihtimali de döndürüyoruz, biri boş olsa bile.
+    // Böylece TypeScript 'params' yok diye kızmaz.
+    return { 
+      success: true, 
+      recommendations: data.recommendations || null, 
+      params: data.params || null 
+    };
+
   } catch (error) {
     console.error("AI Error:", error);
-    return { success: false, recommendations: [] };
+    return { success: false, recommendations: null, params: null };
   }
 }
 
@@ -188,13 +187,11 @@ export async function checkBadges(userId: string) {
 }
 
 // ==========================================
-// 5. YOUTUBE KANAL BULUCU (PROFİL İÇİN)
+// 5. YOUTUBE KANAL BULUCU
 // ==========================================
 export async function resolveYouTubeChannel(input: string) {
   if (!YOUTUBE_API_KEY) return { success: false, message: 'API Key eksik.' };
-
   if (input.startsWith('UC') && input.length === 24) return { success: true, id: input };
-
   const handleMatch = input.match(/@([\w\-.]+)/);
   if (handleMatch && handleMatch[1]) {
     try {
@@ -203,54 +200,34 @@ export async function resolveYouTubeChannel(input: string) {
       if (data.items?.[0]) return { success: true, id: data.items[0].id };
     } catch (e) { console.error(e) }
   }
-
   return { success: false, message: 'Kanal bulunamadı.' };
 }
 
 // ==========================================
-// 6. TEKİL KANAL VİDEOLARI (ADMİN İÇİN)
+// 6. TEKİL KANAL VİDEOLARI
 // ==========================================
 export async function fetchAndSaveChannelVideos(channelId: string) {
   if (!YOUTUBE_API_KEY) return { success: false, message: 'API Key eksik.' }
-
   try {
     const searchUrl = `https://www.googleapis.com/youtube/v3/search?key=${YOUTUBE_API_KEY}&channelId=${channelId}&part=snippet,id&order=date&maxResults=20&type=video`
     const searchRes = await fetch(searchUrl)
     const searchData = await searchRes.json()
-
     if (!searchData.items) return { success: false, message: 'Kanal bulunamadı.' }
-
     const videoIds = searchData.items.map((item: any) => item.id.videoId).join(',')
     const videosRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?key=${YOUTUBE_API_KEY}&id=${videoIds}&part=contentDetails,snippet`)
     const videosData = await videosRes.json()
-
     let count = 0;
     for (const item of videosData.items) {
       const videoUrl = `https://www.youtube.com/watch?v=${item.id}`;
       const { data } = await supabase.from('videos').select('id').eq('url', videoUrl).single()
       if(!data) {
          const min = parseDuration(item.contentDetails.duration);
-         await supabase.from('videos').insert({
-            title: item.snippet.title,
-            url: videoUrl,
-            duration_category: getCategory(min),
-            mood: 'relax',
-            is_approved: true
-         })
+         await supabase.from('videos').insert({ title: item.snippet.title, url: videoUrl, duration_category: getCategory(min), mood: 'relax', is_approved: true })
          count++
       }
     }
     return { success: true, message: `${count} video eklendi.` }
-  } catch (error) {
-    return { success: false, message: 'Hata.' }
-  }
+  } catch (error) { return { success: false, message: 'Hata.' } }
 }
 
-// ==========================================
-// 7. YOUTUBE TRENDLERİ ÇEKME (HATA VERMEMESİ İÇİN EKLENDİ)
-// ==========================================
-export async function fetchYouTubeTrends() {
-  // Bu fonksiyon Admin sayfasında kullanıldığı için export edilmesi şart
-  // Şimdilik autoPopulateYouTube ile benzer işi yapıyor ama tek bir butona bağlı olabilir.
-  return await autoPopulateYouTube();
-}
+export async function fetchYouTubeTrends() { return await autoPopulateYouTube(); }
