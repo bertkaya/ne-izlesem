@@ -2,12 +2,12 @@ const BASE_URL = 'https://api.themoviedb.org/3';
 const API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY;
 
-// --- GÜNCELLENMİŞ PLATFORMLAR ---
+// --- PLATFORMLAR ---
 export const PROVIDERS = [
   { id: 8, name: 'Netflix', color: 'border-red-600 text-red-500' },
   { id: 119, name: 'Prime Video', color: 'border-blue-500 text-blue-500' },
   { id: 337, name: 'Disney+', color: 'border-blue-400 text-blue-400' },
-  { id: 342, name: 'BluTV (HBO)', color: 'border-teal-500 text-teal-500' },
+  { id: 342, name: 'HBO Max (BluTV)', color: 'border-teal-500 text-teal-500' },
   { id: 365, name: 'TV+', color: 'border-yellow-500 text-yellow-500' },
   { id: 345, name: 'TOD', color: 'border-purple-500 text-purple-500' }
 ];
@@ -20,7 +20,39 @@ export const MOOD_TO_TV_GENRE = {
   funny: '35', scary: '9648,10765', emotional: '18', action: '10759', scifi: '10765', crime: '80', relax: '99,10764'
 };
 
-// --- FETCH HELPER ---
+// --- YENİ: YOUTUBE KATEGORİ HAVUZU (GENİŞLETİLMİŞ) ---
+export const MOOD_TO_YOUTUBE_KEYWORDS = {
+  funny: [
+    'Komik Videolar Derlemesi', 'Stand Up Türkiye', 'En Komik Anlar', 'Güldür Güldür Skeç', // TR
+    'Funny Fails Compilation', 'Try Not To Laugh', 'Best Stand Up Comedy', 'Comedy Skits' // EN
+  ],
+  eat: [
+    'Sokak Lezzetleri Türkiye', 'Hatay Dürüm', 'En İyi Burger', 'Kebap Nerede Yenir', // TR
+    'Street Food World', 'Mukbang ASMR', 'Gordon Ramsay Cooking', 'Best Pizza Review' // EN
+  ],
+  classic: [
+    'Unutulmaz Vine Videoları', 'Efsane Türk Dizisi Sahneleri', 'Beyaz Show Komik', 'Flash TV Oyunculuk', // TR
+    'Classic Vines', 'Old Internet Memes', 'Viral Videos History', 'Best Movie Scenes' // EN
+  ],
+  pets: [
+    'Komik Kedi Videoları', 'Yavru Köpekler', 'Hayvanlar Alemi Komik', // TR
+    'Funny Cats Compilation', 'Cute Dogs Doing Funny Things', 'Animals Being Derps' // EN
+  ],
+  relax: [
+    'Rahatlatıcı Video', 'Manzara 4K', 'Kamp Videoları', 'Restorasyon Videoları', // TR
+    'Satisfying Videos', 'Nature 4K', 'Lofi Hip Hop Radio', 'Restoration ASMR' // EN
+  ],
+  learn: [
+    'Nasıl Yapılır?', 'Belgesel Tadında', 'Tarih Videoları', 'Bilim ve Teknoloji', // TR
+    'TED Talks', 'How It\'s Made', 'Science Documentary', 'History Facts' // EN
+  ],
+  drama: [
+    'Kısa Film Ödüllü', 'Dramatik Sahneler', 'Hayat Hikayeleri', // TR
+    'Short Film Award Winning', 'Emotional Commercials', 'Touching Stories' // EN
+  ]
+};
+
+// --- HELPER FUNCTIONS ---
 async function fetchTMDB(endpoint: string, params: Record<string, string> = {}) {
   if (!API_KEY) return {};
   const query = new URLSearchParams({ api_key: API_KEY, language: 'tr-TR', ...params }).toString();
@@ -31,7 +63,7 @@ async function getDetails(id: number, type: 'movie' | 'tv') {
   return await fetchTMDB(`/${type}/${id}`, { append_to_response: 'external_ids,credits,watch/providers,videos' });
 }
 
-// --- 1. AKILLI ÖNERİ (GELİŞMİŞ FALLBACK MANTIĞI) ---
+// --- TMDB FUNCTIONS ---
 export async function getSmartRecommendation(
   genreIds: string, providers: string, type: 'movie' | 'tv', 
   watchedIds: number[] = [], blacklistedIds: number[] = [], 
@@ -40,29 +72,25 @@ export async function getSmartRecommendation(
   const randomPage = Math.floor(Math.random() * 5) + 1;
   const validProviders = providers.split('|').filter(id => id !== '0').join('|');
 
-  const baseParams: any = {
-    with_genres: genreIds,
-    watch_region: 'TR',
-    sort_by: sortBy,
-    page: randomPage.toString(),
-    'vote_count.gte': '20'
+  const params: any = {
+    with_genres: genreIds, with_watch_providers: validProviders, watch_region: 'TR',
+    sort_by: sortBy, page: randomPage.toString(), 'vote_count.gte': '20'
   };
 
-  if (onlyTurkish) baseParams.with_original_language = 'tr';
+  if (onlyTurkish) params.with_original_language = 'tr';
   if (yearRange) {
-    if(yearRange === '2023-2025') baseParams['primary_release_date.gte'] = '2023-01-01';
-    else if(yearRange.includes('-')) { const [s, e] = yearRange.split('-'); baseParams['primary_release_date.gte'] = `${s}-01-01`; baseParams['primary_release_date.lte'] = `${e}-12-31`; }
+    if(yearRange === '2023-2025') params['primary_release_date.gte'] = '2023-01-01';
+    else if(yearRange.includes('-')) { const [s, e] = yearRange.split('-'); params['primary_release_date.gte'] = `${s}-01-01`; params['primary_release_date.lte'] = `${e}-12-31`; }
   }
 
-  // 1. Deneme: Platformlu
-  let data = await fetchTMDB(`/discover/${type}`, { ...baseParams, with_watch_providers: validProviders });
-
-  // 2. Deneme: Fallback (Platformsuz)
+  // Fallback Logic
+  let data = await fetchTMDB(`/discover/${type}`, { ...params, with_watch_providers: validProviders });
   let fromFallback = false;
   if (!data.results || data.results.length === 0) {
     if (validProviders) {
-      data = await fetchTMDB(`/discover/${type}`, baseParams);
-      fromFallback = true;
+       delete params.with_watch_providers;
+       data = await fetchTMDB(`/discover/${type}`, params);
+       fromFallback = true;
     }
   }
 
@@ -77,14 +105,12 @@ export async function getSmartRecommendation(
   return { ...randomItem, ...details, fromFallback };
 }
 
-// --- 2. DİZİ ARAMA ---
 export async function searchTvShow(query: string) {
   const data = await fetchTMDB('/search/tv', { query: query });
   if (!data.results || data.results.length === 0) return null;
   return await getDetails(data.results[0].id, 'tv');
 }
 
-// --- 3. RASTGELE BÖLÜM ---
 export async function getRandomEpisode(tvId: number | null = null, genreId: string | null = null, providers: string = '') {
   let selectedShowId = tvId;
   let showNameOverride = '';
@@ -94,10 +120,7 @@ export async function getRandomEpisode(tvId: number | null = null, genreId: stri
     const validProviders = providers.split('|').filter(id => id !== '0').join('|');
     
     let discoverData = await fetchTMDB('/discover/tv', { with_genres: genreId || '35', with_watch_providers: validProviders, watch_region: 'TR', sort_by: 'popularity.desc', page: randomPage.toString() });
-    
-    if (!discoverData.results || discoverData.results.length === 0) {
-       discoverData = await fetchTMDB('/discover/tv', { with_genres: genreId || '35', watch_region: 'TR', sort_by: 'popularity.desc', page: randomPage.toString() });
-    }
+    if (!discoverData.results || discoverData.results.length === 0) discoverData = await fetchTMDB('/discover/tv', { with_genres: genreId || '35', watch_region: 'TR', sort_by: 'popularity.desc', page: randomPage.toString() });
 
     if (!discoverData.results || discoverData.results.length === 0) return null;
     const randomShow = discoverData.results[Math.floor(Math.random() * discoverData.results.length)];
@@ -120,7 +143,6 @@ export async function getRandomEpisode(tvId: number | null = null, genreId: stri
   };
 }
 
-// --- 4. YOUTUBE KANAL ---
 export async function getVideoFromChannel(channelId: string) {
   if (!YOUTUBE_API_KEY) return null;
   try {
@@ -139,27 +161,15 @@ export async function getVideoFromChannel(channelId: string) {
   } catch (e) { return null; }
 }
 
-// --- 5. SWIPE MODU (AKILLI BATCH) ---
 export async function getDiscoverBatch(page: number = 1, preferredGenres: string = '') {
-  const params: any = {
-    sort_by: 'popularity.desc',
-    'vote_count.gte': '100',
-    page: page.toString(),
-    with_original_language: 'en|tr'
-  };
-
-  if (preferredGenres && Math.random() > 0.3) {
-    params.with_genres = preferredGenres;
-  }
-
+  const params: any = { sort_by: 'popularity.desc', 'vote_count.gte': '100', page: page.toString(), with_original_language: 'en|tr' };
+  if (preferredGenres && Math.random() > 0.3) params.with_genres = preferredGenres;
   const randomOffset = Math.floor(Math.random() * 5);
   params.page = (page + randomOffset).toString();
-
   const data = await fetchTMDB('/discover/movie', params);
   return data.results || [];
 }
 
-// --- 6. AI İÇİN İSİMDEN BULMA ---
 export async function getMoviesByTitles(list: { title: string, type: 'movie' | 'tv' }[]) {
   const results = [];
   for (const item of list) {
