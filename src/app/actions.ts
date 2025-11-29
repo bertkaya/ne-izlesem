@@ -26,7 +26,7 @@ function getCategory(minutes: number) {
 }
 
 // ==========================================
-// 1. YOUTUBE İÇERİK BOTU
+// 1. YOUTUBE İÇERİK BOTU (AUTO POPULATE)
 // ==========================================
 export async function autoPopulateYouTube() {
   if (!YOUTUBE_API_KEY) return { success: false, message: 'API Key eksik.' };
@@ -144,8 +144,6 @@ export async function askGemini(prompt: string) {
     const text = response.text().replace(/```json/g, '').replace(/```/g, '').trim();
     const data = JSON.parse(text);
 
-    // HATA ÇÖZÜMÜ: Her iki ihtimali de döndürüyoruz, biri boş olsa bile.
-    // Böylece TypeScript 'params' yok diye kızmaz.
     return { 
       success: true, 
       recommendations: data.recommendations || null, 
@@ -187,24 +185,55 @@ export async function checkBadges(userId: string) {
 }
 
 // ==========================================
-// 5. YOUTUBE KANAL BULUCU
+// 5. YOUTUBE KANAL BULUCU (GÜÇLENDİRİLMİŞ)
 // ==========================================
 export async function resolveYouTubeChannel(input: string) {
   if (!YOUTUBE_API_KEY) return { success: false, message: 'API Key eksik.' };
-  if (input.startsWith('UC') && input.length === 24) return { success: true, id: input };
-  const handleMatch = input.match(/@([\w\-.]+)/);
-  if (handleMatch && handleMatch[1]) {
-    try {
-      const res = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${handleMatch[1]}&key=${YOUTUBE_API_KEY}`);
-      const data = await res.json();
-      if (data.items?.[0]) return { success: true, id: data.items[0].id };
-    } catch (e) { console.error(e) }
+
+  // 1. DURUM: Kullanıcı direkt ID yapıştırdıysa (UC...)
+  if (input.startsWith('UC') && input.length === 24) {
+    return { success: true, id: input };
   }
-  return { success: false, message: 'Kanal bulunamadı.' };
+
+  let handle = '';
+
+  // 2. DURUM: Linkten Handle Ayıklama (@kullaniciadi)
+  const handleMatch = input.match(/@([^\/\?]+)/);
+  
+  if (handleMatch && handleMatch[1]) {
+    handle = handleMatch[1]; // "ilker.ayrık" veya "DMAXTurkiye"
+  } else {
+    handle = input; 
+  }
+
+  try {
+    // A PLAN: 'forHandle' ile direkt sorgula
+    const res = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(handle)}&key=${YOUTUBE_API_KEY}`);
+    const data = await res.json();
+    
+    if (data.items && data.items.length > 0) {
+      return { success: true, id: data.items[0].id };
+    }
+
+    // B PLAN: Eğer Handle ile bulunamadıysa, normal ARAMA yap
+    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=id&q=${encodeURIComponent(handle)}&type=channel&maxResults=1&key=${YOUTUBE_API_KEY}`;
+    const searchRes = await fetch(searchUrl);
+    const searchData = await searchRes.json();
+
+    if (searchData.items && searchData.items.length > 0) {
+      return { success: true, id: searchData.items[0].id.channelId };
+    }
+
+  } catch (e) {
+    console.error("Kanal Bulma Hatası:", e);
+    return { success: false, message: 'YouTube bağlantı hatası.' };
+  }
+
+  return { success: false, message: 'Kanal bulunamadı. Linki veya ismi kontrol edin.' };
 }
 
 // ==========================================
-// 6. TEKİL KANAL VİDEOLARI
+// 6. TEKİL KANAL VİDEOLARI (ADMİN İÇİN)
 // ==========================================
 export async function fetchAndSaveChannelVideos(channelId: string) {
   if (!YOUTUBE_API_KEY) return { success: false, message: 'API Key eksik.' }
@@ -230,58 +259,9 @@ export async function fetchAndSaveChannelVideos(channelId: string) {
   } catch (error) { return { success: false, message: 'Hata.' } }
 }
 
-export async function fetchYouTubeTrends() { return await autoPopulateYouTube(); }
-// ... (Diğer kodlar aynı kalsın)
-
 // ==========================================
-// 5. YOUTUBE KANAL BULUCU (GÜÇLENDİRİLMİŞ)
+// 7. YOUTUBE TRENDLERİ ÇEKME (ADMİN İÇİN WRAPPER)
 // ==========================================
-export async function resolveYouTubeChannel(input: string) {
-  if (!YOUTUBE_API_KEY) return { success: false, message: 'API Key eksik.' };
-
-  // 1. DURUM: Kullanıcı direkt ID yapıştırdıysa (UC...)
-  if (input.startsWith('UC') && input.length === 24) {
-    return { success: true, id: input };
-  }
-
-  let handle = '';
-
-  // 2. DURUM: Linkten Handle Ayıklama (@kullaniciadi)
-  // Eski Regex: /@([\w\-.]+)/ -> Türkçe karakterleri (ı, ş vb.) görmüyordu.
-  // Yeni Regex: /@([^\/\?]+)/ -> @ işaretinden sonraki eğik çizgiye veya soru işaretine kadar her şeyi alır.
-  const handleMatch = input.match(/@([^\/\?]+)/);
-  
-  if (handleMatch && handleMatch[1]) {
-    handle = handleMatch[1]; // "ilker.ayrık" veya "DMAXTurkiye"
-  } else {
-    // Link değil de düz isim yazdıysa (Örn: "Barış Özcan") onu handle gibi değil, arama terimi gibi kullanalım.
-    handle = input; 
-  }
-
-  try {
-    // A PLAN: 'forHandle' ile direkt sorgula
-    // encodeURIComponent kullanarak Türkçe karakterlerin URL'i bozmasını engelliyoruz.
-    const res = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(handle)}&key=${YOUTUBE_API_KEY}`);
-    const data = await res.json();
-    
-    if (data.items && data.items.length > 0) {
-      return { success: true, id: data.items[0].id };
-    }
-
-    // B PLAN: Eğer Handle ile bulunamadıysa (DMAX gibi durumlarda), normal ARAMA yap
-    // "type=channel" diyerek sadece kanalları aratıyoruz.
-    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=id&q=${encodeURIComponent(handle)}&type=channel&maxResults=1&key=${YOUTUBE_API_KEY}`;
-    const searchRes = await fetch(searchUrl);
-    const searchData = await searchRes.json();
-
-    if (searchData.items && searchData.items.length > 0) {
-      return { success: true, id: searchData.items[0].id.channelId };
-    }
-
-  } catch (e) {
-    console.error("Kanal Bulma Hatası:", e);
-    return { success: false, message: 'YouTube bağlantı hatası.' };
-  }
-
-  return { success: false, message: 'Kanal bulunamadı. Linki veya ismi kontrol edin.' };
+export async function fetchYouTubeTrends() {
+  return await autoPopulateYouTube();
 }
