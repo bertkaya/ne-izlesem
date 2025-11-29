@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { useRouter } from 'next/navigation' // Router importu
+import { useRouter } from 'next/navigation'
 import { 
   getSmartRecommendation, getRandomEpisode, searchTvShow, 
-  getVideoFromChannel, getDiscoverBatch, 
+  getVideoFromChannel, getDiscoverBatch, getMoviesByTitles,
   MOOD_TO_MOVIE_GENRE, MOOD_TO_TV_GENRE, PROVIDERS 
 } from '@/lib/tmdb'
 import { analyzePrompt } from '@/lib/smart-search'
@@ -17,11 +17,6 @@ import {
 } from 'lucide-react'
 import MovieSwiper from '@/components/MovieSwiper'
 import dynamic from 'next/dynamic'
-import { 
-  getSmartRecommendation, getRandomEpisode, searchTvShow, 
-  getVideoFromChannel, getDiscoverBatch, getMoviesByTitles, // <-- EKLENDİ
-  MOOD_TO_MOVIE_GENRE, MOOD_TO_TV_GENRE, PROVIDERS 
-} from '@/lib/tmdb'
 
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false }) as any;
 
@@ -43,7 +38,8 @@ const AI_CHIPS = [
   "👻 Gece uyutmayacak bir korku filmi",
   "🚀 Uzay ve bilim kurgu olsun",
   "🕵️‍♂️ Katil kim temalı gizem",
-  "🦁 Vahşi yaşam belgeseli"
+  "🦁 Vahşi yaşam belgeseli",
+  "🎥 Yeşilçam filmi öner"
 ];
 
 const getYoutubeId = (url: string) => url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/)?.[2];
@@ -51,19 +47,20 @@ const calculateRottenScore = (tmdbScore: number) => Math.min(100, Math.round(tmd
 
 export default function Home() {
   const supabase = createClientComponentClient()
-  // --- HATA DÜZELTME: Router Tanımlandı ---
-  const router = useRouter() 
-  
+  const router = useRouter()
   const [user, setUser] = useState<any>(null)
+  
+  // MODLAR
   const [appMode, setAppMode] = useState<'youtube' | 'tmdb' | 'swipe' | 'ai'>('youtube')
   
-  // States
+  // YOUTUBE STATE
   const [ytVideo, setYtVideo] = useState<any>(null)
   const [ytLoading, setYtLoading] = useState(false)
   const [duration, setDuration] = useState('meal')
   const [mood, setMood] = useState('funny')
   const [myChannels, setMyChannels] = useState<string[]>([])
 
+  // TMDB STATE
   const [tmdbResult, setTmdbResult] = useState<any>(null)
   const [tmdbLoading, setTmdbLoading] = useState(false)
   const [tmdbType, setTmdbType] = useState<'movie' | 'tv'>('movie')
@@ -73,27 +70,38 @@ export default function Home() {
   const [onlyTurkish, setOnlyTurkish] = useState(false) 
   const [aiPrompt, setAiPrompt] = useState('')
 
+  // SWIPE STATE
   const [swipeMovies, setSwipeMovies] = useState<any[]>([])
   const [swipePage, setSwipePage] = useState(1)
   const [isSwipingLoading, setIsSwipingLoading] = useState(false)
 
+  // DATA
   const [watchedIds, setWatchedIds] = useState<number[]>([])
   const [blacklistedIds, setBlacklistedIds] = useState<number[]>([])
   const [favorites, setFavorites] = useState<number[]>([])
 
+  // MODALS
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [suggestUrl, setSuggestUrl] = useState('')
   const [suggestStatus, setSuggestStatus] = useState('')
   const [trailerId, setTrailerId] = useState<string | null>(null)
 
+  // INIT
   useEffect(() => {
     const initData = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
-      const { data: blacklist } = await supabase.from('blacklist').select('tmdb_id'); if (blacklist) setBlacklistedIds(blacklist.map(b => b.tmdb_id))
+      
+      const { data: blacklist } = await supabase.from('blacklist').select('tmdb_id')
+      if (blacklist) setBlacklistedIds(blacklist.map(b => b.tmdb_id))
+
       if (user) {
-        const { data: history } = await supabase.from('user_history').select('tmdb_id').eq('user_id', user.id); if (history) setWatchedIds(history.map(h => h.tmdb_id))
-        const { data: favs } = await supabase.from('favorites').select('tmdb_id').eq('user_id', user.id); if (favs) setFavorites(favs.map(f => f.tmdb_id))
+        const { data: history } = await supabase.from('user_history').select('tmdb_id').eq('user_id', user.id)
+        if (history) setWatchedIds(history.map(h => h.tmdb_id))
+
+        const { data: favs } = await supabase.from('favorites').select('tmdb_id').eq('user_id', user.id)
+        if (favs) setFavorites(favs.map(f => f.tmdb_id))
+
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
         if (profile) {
            if(profile.selected_platforms) setPlatforms(profile.selected_platforms.map((p: string) => parseInt(p)))
@@ -107,67 +115,124 @@ export default function Home() {
 
   // --- SWIPE LOGIC ---
   const loadSwipeCards = async (pageNum: number) => {
-    if (isSwipingLoading) return; setIsSwipingLoading(true);
+    if (isSwipingLoading) return;
+    setIsSwipingLoading(true);
+
     try {
       const movies = await getDiscoverBatch(pageNum)
-      const uniqueMovies = movies.filter((m: any) => !swipeMovies.some(sm => sm.id === m.id) && !watchedIds.includes(m.id) && !blacklistedIds.includes(m.id));
-      setSwipeMovies(prev => [...prev, ...uniqueMovies]); setSwipePage(p => p + 1)
-    } catch (e) { console.error(e) } finally { setIsSwipingLoading(false) }
-  }
-  const handleSwipe = async (d: 'left' | 'right', m: any) => {
-    if (swipeMovies.length < 8) loadSwipeCards(swipePage); 
-    if (d === 'right' && user) supabase.from('favorites').insert({ user_id: user.id, tmdb_id: m.id, media_type: 'movie', title: m.title, poster_path: m.poster_path, vote_average: m.vote_average }).then(() => setFavorites(prev => [...prev, m.id]));
+      const uniqueMovies = movies.filter((m: any) => 
+        !swipeMovies.some(sm => sm.id === m.id) && 
+        !watchedIds.includes(m.id) &&
+        !blacklistedIds.includes(m.id)
+      );
+
+      setSwipeMovies(prev => [...prev, ...uniqueMovies])
+      setSwipePage(p => p + 1)
+    } catch (e) {
+      console.error("Swipe yükleme hatası", e)
+    } finally {
+      setIsSwipingLoading(false)
+    }
   }
 
-  // --- AI LOGIC ---
- // --- AI ASİSTAN MANTIĞI (GÜNCELLENDİ) ---
+  const handleSwipe = async (direction: 'left' | 'right', movie: any) => {
+    if (swipeMovies.length < 8) {
+      loadSwipeCards(swipePage); 
+    }
+
+    if (direction === 'right') {
+      if (user) {
+        supabase.from('favorites').insert({
+          user_id: user.id, tmdb_id: movie.id, media_type: 'movie', 
+          title: movie.title, poster_path: movie.poster_path, vote_average: movie.vote_average
+        }).then(() => setFavorites(prev => [...prev, movie.id]));
+      }
+    }
+  }
+
+  // --- AI LOGIC (HATA DÜZELTİLDİ) ---
   const fetchAiRecommendation = async (overridePrompt?: string) => {
     const promptToUse = overridePrompt || aiPrompt;
     if(!promptToUse) return;
     
-    // Loading başlat
     setTmdbLoading(true); 
-    
-    // 1. Gemini'ye sor (Bize 5 film ismi ver)
+    setTmdbResult(null); 
+    const pStr = platforms.join('|');
+
+    // Gemini'ye sor
     const aiRes = await askGemini(promptToUse);
     
-    if (aiRes.success && aiRes.recommendations.length > 0) {
-      // 2. Gelen isimleri TMDb'de aratıp detaylarını al (Poster, Platform vs.)
-      // Bu fonksiyonu tmdb.ts'de oluşturmuştuk, import etmeyi unutma!
-      const enrichedMovies = await getMoviesByTitles(aiRes.recommendations);
+    if (aiRes.success) {
+      // DURUM 1: İsim listesi döndü (Yeşilçam vb.)
+      if (aiRes.recommendations && aiRes.recommendations.length > 0) {
+         const enrichedMovies = await getMoviesByTitles(aiRes.recommendations);
+         if(enrichedMovies.length > 0) {
+            setSwipeMovies(enrichedMovies);
+            setAppMode('swipe');
+            alert(`AI senin için ${enrichedMovies.length} film buldu! Kartları kaydırarak keşfet.`);
+         } else alert("Önerilen filmler veritabanında bulunamadı.");
       
-      if (enrichedMovies.length > 0) {
-        // 3. Bu filmleri Swipe (Keşfet) listesine yükle
-        setSwipeMovies(enrichedMovies);
-        
-        // 4. Modu "Swipe" yap ki kullanıcı kartları görsün
-        setAppMode('swipe');
-        
-        // Kullanıcıya bilgi ver
-        alert(`AI senin için ${enrichedMovies.length} harika öneri buldu! Kartları kaydır.`);
-      } else {
-        alert("AI önerdi ama veritabanında detayları bulamadım.");
+      // DURUM 2: Filtre döndü (Genel öneri)
+      } else if (aiRes.params) {
+         const p = aiRes.params;
+         // HATA ÇÖZÜMÜ: Gelen türü 'tv' veya 'movie' olarak zorluyoruz
+         const safeType: 'movie' | 'tv' = (p.type === 'tv' || p.type === 'movie') ? p.type : 'movie';
+         
+         const m = await getSmartRecommendation(
+           p.genre_ids || '', 
+           pStr, 
+           safeType, 
+           watchedIds, 
+           blacklistedIds, 
+           false, 
+           p.year_range, 
+           p.sort_by
+         );
+         
+         if(m) { 
+           setTmdbResult(m); 
+           setAppMode('tmdb'); 
+           setTmdbType(safeType); // Burada artık hata vermez
+         } else { 
+           alert("Kriterlere uygun film bulunamadı."); 
+         }
       }
     } else {
-      alert("AI şu an cevap veremiyor veya uygun öneri bulamadı.");
+       // Yedek Plan
+       const { genreIds, sort, year } = analyzePrompt(promptToUse); 
+       const m = await getSmartRecommendation(genreIds, pStr, 'movie', watchedIds, blacklistedIds, false, year, sort);
+       if(m) { setTmdbResult(m); setAppMode('tmdb'); setTmdbType('movie'); } else alert("Bulunamadı.");
     }
-    
     setTmdbLoading(false);
-    setAiPrompt(''); // Kutuyu temizle
+    setAiPrompt('');
   }
 
+  // --- YOUTUBE LOGIC ---
   const fetchYoutubeVideo = async () => { setYtLoading(true); setYtVideo(null); if (myChannels.length > 0 && Math.random() > 0.5) { const r = await getVideoFromChannel(myChannels[Math.floor(Math.random() * myChannels.length)]); if(r) { setYtVideo(r); setYtLoading(false); return } } const { data } = await supabase.rpc('get_random_video', { chosen_duration: duration, chosen_mood: mood }); if (data && data.length > 0) { setYtVideo(data[0]); if(user) await supabase.from('user_history').insert({ user_id: user.id, tmdb_id: 0, media_type: 'youtube', title: data[0].title }) } else alert("Video bulunamadı."); setYtLoading(false) }
+  
+  // --- TMDB LOGIC ---
   const fetchTmdbContent = async () => { setTmdbLoading(true); setTmdbResult(null); const pStr = platforms.join('|'); try { if (tmdbType === 'movie') { const g = MOOD_TO_MOVIE_GENRE[tmdbMood as keyof typeof MOOD_TO_MOVIE_GENRE] || '35'; const m = await getSmartRecommendation(g, pStr, 'movie', watchedIds, blacklistedIds, onlyTurkish); if(m) setTmdbResult(m); else alert("Film bulunamadı.") } else { let tId = null; if (searchQuery) { const s = await searchTvShow(searchQuery); if(s) tId = s.id; else { alert("Dizi bulunamadı"); setTmdbLoading(false); return } } const g = MOOD_TO_TV_GENRE[tmdbMood as keyof typeof MOOD_TO_TV_GENRE] || '35'; const e = await getRandomEpisode(tId, g, pStr); if(e) setTmdbResult(e); else alert("Bölüm bulunamadı.") } } catch(e) { console.error(e) } finally { setTmdbLoading(false) } }
+
+  // --- ACTIONS ---
+  const openTrailer = () => { if (tmdbResult && tmdbResult.videos && tmdbResult.videos.results) { const trailer = tmdbResult.videos.results.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube'); if (trailer) setTrailerId(trailer.key); else alert("Fragman bulunamadı."); } else alert("Fragman bulunamadı."); }
   const markAsWatched = async () => { if(!tmdbResult || !user) { if(!user && confirm("Giriş?")) window.location.href='/login'; return; } await supabase.from('user_history').insert({ user_id: user.id, tmdb_id: tmdbResult.id, media_type: tmdbType, title: tmdbResult.title || tmdbResult.name, poster_path: tmdbResult.poster_path, vote_average: tmdbResult.vote_average }); setWatchedIds([...watchedIds, tmdbResult.id]); fetchTmdbContent(); const { newBadges } = await checkBadges(user.id); if (newBadges?.length) alert(`🎉 Yeni Rozet: ${newBadges.join(', ')}`); }
   const toggleFavorite = async () => { if(!tmdbResult || !user) { alert("Giriş yap."); return; } if(favorites.includes(tmdbResult.id)) { await supabase.from('favorites').delete().eq('user_id', user.id).eq('tmdb_id', tmdbResult.id); setFavorites(favorites.filter(id => id !== tmdbResult.id)) } else { await supabase.from('favorites').insert({ user_id: user.id, tmdb_id: tmdbResult.id, media_type: tmdbType, title: tmdbResult.title || tmdbResult.name, poster_path: tmdbResult.poster_path, vote_average: tmdbResult.vote_average }); setFavorites([...favorites, tmdbResult.id]) } }
   const handleSuggest = async (e: React.FormEvent) => { e.preventDefault(); setSuggestStatus('sending'); const v = getYoutubeId(suggestUrl); if (!v) { setSuggestStatus('error'); return } const { error } = await supabase.from('videos').insert({ title: 'Kullanıcı Önerisi', url: suggestUrl, duration_category: 'meal', mood: 'funny', is_approved: false }); if (!error) { setSuggestStatus('success'); setTimeout(() => { setIsModalOpen(false); setSuggestStatus(''); setSuggestUrl('') }, 2000) } else { setSuggestStatus('db_error') } }
   const togglePlatform = async (id: number) => { const n = platforms.includes(id) ? platforms.filter(p => p !== id) : [...platforms, id]; setPlatforms(n); if(user) await supabase.from('profiles').update({ selected_platforms: n.map(String) }).eq('id', user.id) }
-  const getWatchLink = () => { if (!tmdbResult) return '#'; if (tmdbResult['watch/providers']?.results?.TR?.link) return tmdbResult['watch/providers'].results.TR.link; const t = tmdbResult.title || tmdbResult.name; if (platforms.includes(8)) return `https://www.netflix.com/search?q=${encodeURIComponent(t)}`; if (platforms.includes(119)) return `https://www.primevideo.com/search/ref=atv_nb_sr?phrase=${encodeURIComponent(t)}`; return `https://www.google.com/search?q=${encodeURIComponent(t)}+izle`; }
-  const openTrailer = () => { if (tmdbResult?.videos?.results) { const t = tmdbResult.videos.results.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube'); if (t) setTrailerId(t.key); else alert("Fragman yok."); } else alert("Fragman yok."); }
+  
+  const getWatchLink = () => {
+    if (!tmdbResult) return '#';
+    if (tmdbResult['watch/providers']?.results?.TR?.link) return tmdbResult['watch/providers'].results.TR.link;
+    const t = tmdbResult.title || tmdbResult.name;
+    if (platforms.includes(8)) return `https://www.netflix.com/search?q=${encodeURIComponent(t)}`;
+    if (platforms.includes(119)) return `https://www.primevideo.com/search/ref=atv_nb_sr?phrase=${encodeURIComponent(t)}`;
+    return `https://www.google.com/search?q=${encodeURIComponent(t)}+izle`;
+  }
 
   return (
     <div className="min-h-screen bg-[#0f1014] text-white font-sans pb-20 selection:bg-red-500">
       
+      {/* NAVBAR */}
       <nav className="flex justify-between items-center p-6 max-w-7xl mx-auto border-b border-gray-800/50 backdrop-blur-md sticky top-0 z-40 bg-[#0f1014]/80">
         <h1 className="text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-yellow-500 cursor-pointer" onClick={() => window.location.href='/'}>NE İZLESEM?</h1>
         {user ? (
@@ -177,6 +242,7 @@ export default function Home() {
         )}
       </nav>
 
+      {/* MOD SEÇİCİ */}
       <div className="flex justify-center mt-6 px-4">
         <div className="bg-gray-900 p-1 rounded-2xl border border-gray-800 flex flex-wrap justify-center w-full max-w-xl shadow-lg">
           <button onClick={() => setAppMode('youtube')} className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${appMode === 'youtube' ? 'bg-gray-800 text-yellow-500 shadow-lg' : 'text-gray-500 hover:text-white'}`}><Utensils size={18} /> Yemek</button>
@@ -187,10 +253,11 @@ export default function Home() {
         </div>
       </div>
 
+      {/* AI MODU */}
       {appMode === 'ai' && (
         <div className="flex flex-col items-center mt-12 px-4 animate-in fade-in duration-500 w-full max-w-lg mx-auto text-center">
           <h2 className="text-3xl font-black mb-2 text-cyan-400">Film Sommelier 🤖</h2>
-          <p className="text-gray-400 mb-8">Ne hissettiğini söyle, film veya dizi bulayım.</p>
+          <p className="text-gray-400 mb-8">Ne hissettiğini söyle veya aşağıdan seç.</p>
           <div className="w-full relative mb-8">
             <textarea value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} placeholder="Örn: 90'larda geçen, beni ağlatacak bir dram..." className="w-full bg-gray-900 border border-gray-700 rounded-2xl p-4 text-white outline-none focus:border-cyan-500 min-h-[120px] resize-none text-lg" />
             <button onClick={() => fetchAiRecommendation()} disabled={!aiPrompt || tmdbLoading} className="absolute bottom-4 right-4 bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl transition-all shadow-lg shadow-cyan-900/50 disabled:opacity-50">{tmdbLoading ? <Loader2 className="animate-spin" /> : <Sparkles size={24} />}</button>
@@ -199,6 +266,7 @@ export default function Home() {
         </div>
       )}
 
+      {/* YOUTUBE MODU */}
       {appMode === 'youtube' && (
         <div className="flex flex-col items-center mt-8 px-4 animate-in fade-in duration-500">
           <div className="bg-gray-900/80 backdrop-blur-lg p-6 rounded-3xl shadow-2xl w-full max-w-lg mb-8 border border-gray-800 relative">
@@ -268,7 +336,6 @@ export default function Home() {
                   <p className="text-gray-400 text-sm leading-relaxed mb-6 line-clamp-4">{tmdbResult.overview || 'Özet yok.'}</p>
                   <div className="grid grid-cols-2 gap-3 mb-6">
                     <button onClick={openTrailer} className="bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold transition flex items-center justify-center gap-2"><Video size={18}/> Fragman</button>
-                    {/* DİREKT LİNK */}
                     <button onClick={() => window.open(getWatchLink(), '_blank')} className="bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition flex items-center justify-center gap-2"><Play size={20} /> İzleme Sayfası</button>
                   </div>
                   <div className="flex gap-3">
