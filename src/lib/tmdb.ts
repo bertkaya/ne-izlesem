@@ -2,7 +2,7 @@ const BASE_URL = 'https://api.themoviedb.org/3';
 const API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY;
 
-// --- GÜNCELLENMİŞ PLATFORMLAR (YouTube Premium Kaldırıldı) ---
+// --- GÜNCELLENMİŞ PLATFORMLAR ---
 export const PROVIDERS = [
   { id: 8, name: 'Netflix', color: 'border-red-600 text-red-500' },
   { id: 119, name: 'Prime Video', color: 'border-blue-500 text-blue-500' },
@@ -40,7 +40,6 @@ export async function getSmartRecommendation(
   const randomPage = Math.floor(Math.random() * 5) + 1;
   const validProviders = providers.split('|').filter(id => id !== '0').join('|');
 
-  // Temel Parametreler
   const baseParams: any = {
     with_genres: genreIds,
     watch_region: 'TR',
@@ -55,15 +54,15 @@ export async function getSmartRecommendation(
     else if(yearRange.includes('-')) { const [s, e] = yearRange.split('-'); baseParams['primary_release_date.gte'] = `${s}-01-01`; baseParams['primary_release_date.lte'] = `${e}-12-31`; }
   }
 
-  // 1. DENEME: Seçili Platformlarda Ara
+  // 1. Deneme: Platformlu
   let data = await fetchTMDB(`/discover/${type}`, { ...baseParams, with_watch_providers: validProviders });
 
-  // 2. DENEME (FALLBACK): Eğer sonuç yoksa ve platform seçiliyse, platformsuz (Genel) ara ama kullanıcıya belirt
+  // 2. Deneme: Fallback (Platformsuz)
   let fromFallback = false;
   if (!data.results || data.results.length === 0) {
     if (validProviders) {
-      data = await fetchTMDB(`/discover/${type}`, baseParams); // Platform kısıtlamasını kaldır
-      fromFallback = true; // Bu bayrağı işaretle
+      data = await fetchTMDB(`/discover/${type}`, baseParams);
+      fromFallback = true;
     }
   }
 
@@ -75,7 +74,7 @@ export async function getSmartRecommendation(
   const randomItem = filtered[Math.floor(Math.random() * filtered.length)];
   const details = await getDetails(randomItem.id, type);
   
-  return { ...randomItem, ...details, fromFallback }; // fromFallback bilgisini ekledik
+  return { ...randomItem, ...details, fromFallback };
 }
 
 // --- 2. DİZİ ARAMA ---
@@ -94,11 +93,9 @@ export async function getRandomEpisode(tvId: number | null = null, genreId: stri
     const randomPage = Math.floor(Math.random() * 5) + 1;
     const validProviders = providers.split('|').filter(id => id !== '0').join('|');
     
-    // Dizi keşfi için de Fallback mantığı
     let discoverData = await fetchTMDB('/discover/tv', { with_genres: genreId || '35', with_watch_providers: validProviders, watch_region: 'TR', sort_by: 'popularity.desc', page: randomPage.toString() });
     
     if (!discoverData.results || discoverData.results.length === 0) {
-       // Platformda yoksa genelden çek
        discoverData = await fetchTMDB('/discover/tv', { with_genres: genreId || '35', watch_region: 'TR', sort_by: 'popularity.desc', page: randomPage.toString() });
     }
 
@@ -142,19 +139,27 @@ export async function getVideoFromChannel(channelId: string) {
   } catch (e) { return null; }
 }
 
-// --- 5. SWIPE MODU (HIZLANDIRILMIŞ BATCH) ---
-export async function getDiscoverBatch(page: number = 1) {
-  // Her seferinde farklı sayfalardan çekelim
-  const data = await fetchTMDB('/discover/movie', {
+// --- 5. SWIPE MODU (AKILLI BATCH) ---
+export async function getDiscoverBatch(page: number = 1, preferredGenres: string = '') {
+  const params: any = {
     sort_by: 'popularity.desc',
-    'vote_count.gte': '50', // Filtreyi biraz gevşettik (daha çok film gelsin)
+    'vote_count.gte': '100',
     page: page.toString(),
     with_original_language: 'en|tr'
-  });
+  };
+
+  if (preferredGenres && Math.random() > 0.3) {
+    params.with_genres = preferredGenres;
+  }
+
+  const randomOffset = Math.floor(Math.random() * 5);
+  params.page = (page + randomOffset).toString();
+
+  const data = await fetchTMDB('/discover/movie', params);
   return data.results || [];
 }
 
-// --- AI İSİM BAZLI ---
+// --- 6. AI İÇİN İSİMDEN BULMA ---
 export async function getMoviesByTitles(list: { title: string, type: 'movie' | 'tv' }[]) {
   const results = [];
   for (const item of list) {
@@ -168,29 +173,4 @@ export async function getMoviesByTitles(list: { title: string, type: 'movie' | '
     } catch (e) { console.error(e); }
   }
   return results;
-}
-// ... (Üstteki kodlar aynı kalsın)
-// --- 5. SWIPE MODU (AKILLI AKIŞ) ---
-export async function getDiscoverBatch(page: number = 1, preferredGenres: string = '') {
-  // Eğer kullanıcının sevdiği türler varsa, onları filtreye ekle
-  // Yoksa rastgele popüler filmleri getir
-  
-  const params: any = {
-    sort_by: 'popularity.desc',
-    'vote_count.gte': '100',
-    page: page.toString(),
-    with_original_language: 'en|tr'
-  };
-
-  // Eğer favori türleri varsa, %70 ihtimalle o türlerden getir, %30 rastgele (Filtre balonu oluşmasın diye)
-  if (preferredGenres && Math.random() > 0.3) {
-    params.with_genres = preferredGenres;
-  }
-
-  // Sayfa sayısını rastgeleştirelim ki hep aynı sıra gelmesin
-  const randomOffset = Math.floor(Math.random() * 5);
-  params.page = (page + randomOffset).toString();
-
-  const data = await fetchTMDB('/discover/movie', params);
-  return data.results || [];
 }
