@@ -22,7 +22,7 @@ export default function SwipeSection({
             <h2 className="text-2xl font-black mb-6 text-purple-500">Keşfet</h2>
             <MovieSwiper movies={swipeMovies} onSwipe={handleSwipe} onWatch={handleSwipeWatch} />
             <div className="mt-8 flex gap-4">
-                <button onClick={() => supabase.from('favorites').select('*').then(({ data }: any) => console.log(data))} className="text-gray-500 text-xs hover:text-white flex items-center gap-1"><Heart size={12} /> Favorilerime Kaydet (Otomatik)</button>
+                <p className="text-gray-400 text-xs flex items-center gap-1"><Heart size={12} /> Beğendiklerin otomatik favorilere ekleniyor</p>
             </div>
         </div>
     )
