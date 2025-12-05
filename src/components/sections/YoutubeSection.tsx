@@ -34,8 +34,9 @@ export default function YoutubeSection({
     ytVideo, loading, duration, setDuration, mood, setMood, ytLang, setYtLang,
     fetchYoutubeVideo, markYoutubeWatched, handleReport
 }: YoutubeSectionProps) {
-    const [autoPlay, setAutoPlay] = useState(false);
+    const [autoPlay, setAutoPlay] = useState(true);
     const [autoNext, setAutoNext] = useState(false);
+    const [isMuted, setIsMuted] = useState(true);
 
     useEffect(() => {
         if (autoNext && !ytVideo && !loading) {
@@ -110,11 +111,18 @@ export default function YoutubeSection({
                             height="100%"
                             controls
                             playing={autoPlay}
+                            muted={isMuted}
                             onEnded={() => {
                                 if (autoNext) fetchYoutubeVideo();
                                 else markYoutubeWatched();
                             }}
                         />
+                        <button
+                            onClick={() => setIsMuted(!isMuted)}
+                            className="absolute top-4 right-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/70 z-10"
+                        >
+                            {isMuted ? "🔇 Sesi Aç" : "🔊 Sesi Kapat"}
+                        </button>
                     </div>
                     <div className="p-4 bg-gray-900/50 rounded-b-3xl mb-4 border-x border-b border-gray-800">
                         <h2 className="text-lg font-bold text-white mb-2">{ytVideo.title}</h2>

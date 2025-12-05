@@ -36,13 +36,15 @@ interface TmdbSectionProps {
     getWatchLink: () => string;
     markAsWatched: () => void;
     onTryAgain?: () => void;
+    aiSuggestions?: any[];
+    setTmdbResult?: (result: any) => void;
 }
 
 export default function TmdbSection({
     tmdbType, setTmdbType, platforms, togglePlatform, searchQuery, setSearchQuery,
     showDropdown, searchResults, handleSearchSelect, onlyTurkish, setOnlyTurkish,
     toggleGenre, selectedGenres, fetchTmdbContent, loading, tmdbResult,
-    openTrailer, getWatchLink, markAsWatched, onTryAgain
+    openTrailer, getWatchLink, markAsWatched, onTryAgain, aiSuggestions, setTmdbResult
 }: TmdbSectionProps) {
     return (
         <div className="flex flex-col items-center mt-8 px-4 animate-in fade-in duration-500">
@@ -122,9 +124,30 @@ export default function TmdbSection({
                 </button>
             </div>
 
+            {/* AI LISTESİ */}
+            {aiSuggestions && aiSuggestions.length > 0 && (
+                <div className="w-full max-w-4xl mt-6">
+                    <p className="text-gray-400 text-sm mb-3 font-bold px-2">Gemini'nin Seçimleri:</p>
+                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide px-2">
+                        {aiSuggestions.map((m) => (
+                            <button
+                                key={m.id}
+                                onClick={() => setTmdbResult && setTmdbResult(m)}
+                                className={`flex-shrink-0 w-24 md:w-32 group relative rounded-xl overflow-hidden transition-all ${tmdbResult?.id === m.id ? 'ring-2 ring-red-500 scale-105' : 'opacity-70 hover:opacity-100 hover:scale-105'}`}
+                            >
+                                <img src={`https://image.tmdb.org/t/p/w300${m.poster_path}`} className="w-full h-36 md:h-48 object-cover" />
+                                <div className="absolute inset-0 bg-black/60 flex items-end p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span className="text-white text-xs font-bold line-clamp-2">{m.title || m.name}</span>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* SONUÇ KARTI */}
             {tmdbResult && (
-                <div className="w-full max-w-4xl mt-8 animate-in slide-in-from-bottom-4">
+                <div className="w-full max-w-4xl mt-4 animate-in slide-in-from-bottom-4">
                     <div className="bg-gray-800 rounded-3xl overflow-hidden shadow-2xl border border-gray-700 flex flex-col md:flex-row">
                         <div className="md:w-1/3 relative h-96 md:h-auto group cursor-pointer" onClick={openTrailer}>
                             <img src={`https://image.tmdb.org/t/p/w500${tmdbResult.still_path || tmdbResult.poster_path}`} className="w-full h-full object-cover" />
@@ -157,7 +180,7 @@ export default function TmdbSection({
                             </div>
                             <div className="flex justify-center gap-4">
                                 <button onClick={fetchTmdbContent} className="text-gray-400 hover:text-white text-sm flex gap-1"><RotateCcw size={14} /> Pas Geç</button>
-                                {onTryAgain && <button onClick={onTryAgain} className="text-gray-400 hover:text-yellow-400 text-sm flex gap-1"><RotateCcw size={14} /> Beğenmedim, Başka Öner</button>}
+                                {onTryAgain && <button onClick={onTryAgain} className="text-gray-400 hover:text-yellow-400 text-sm flex gap-1"><RotateCcw size={14} /> Başka Öner</button>}
                                 <button onClick={markAsWatched} className="text-gray-400 hover:text-green-400 text-sm flex gap-1"><EyeOff size={14} /> İzledim</button>
                             </div>
                         </div>

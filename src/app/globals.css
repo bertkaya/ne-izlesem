@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@variant dark (&:where(.dark, .dark *));
 
 :root {
   --background: #f8fafc;
@@ -26,7 +27,7 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --font-sans: var(--font-inter);
-  --font-display: var(--font-bebas); 
+  --font-display: var(--font-bebas);
 }
 
 body {
@@ -35,7 +36,12 @@ body {
   font-family: var(--font-sans), sans-serif;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-display), sans-serif;
   letter-spacing: 0.05em;
 }

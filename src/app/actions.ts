@@ -2,7 +2,8 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { MOOD_TO_YOUTUBE_KEYWORDS } from '@/lib/tmdb' // Kelime havuzunu al
+
+import { MOOD_TO_YOUTUBE_KEYWORDS, getMoviesByTitles } from '@/lib/tmdb' // Kelime havuzunu al
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
@@ -151,3 +152,12 @@ export async function checkVideoHealth() { return await checkAndCleanDeadLinks()
 export async function fetchYouTubeTrends() { return await autoPopulateYouTube(); }
 // Raporlama
 export async function reportVideo(id: number, r: string) { await supabase.from('videos').update({ is_approved: false }).eq('id', id); return { success: true } }
+
+export async function getAiSuggestions(prompt: string) {
+  const { success, recommendations } = await askGemini(prompt);
+  if (success && recommendations && recommendations.length > 0) {
+    const movies = await getMoviesByTitles(recommendations);
+    return { success: true, results: movies };
+  }
+  return { success: false, results: [] };
+}

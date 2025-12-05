@@ -9,7 +9,7 @@ import {
   MOOD_TO_MOVIE_GENRE, MOOD_TO_TV_GENRE
 } from '@/lib/tmdb'
 import { analyzePrompt } from '@/lib/smart-search'
-import { checkBadges, askGemini, reportVideo } from './actions'
+import { checkBadges, askGemini, reportVideo, getAiSuggestions } from './actions'
 import { X } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
@@ -39,6 +39,7 @@ export default function Home() {
 
   // TMDB
   const [tmdbResult, setTmdbResult] = useState<any>(null)
+  const [aiSuggestions, setAiSuggestions] = useState<any[]>([])
   const [tmdbLoading, setTmdbLoading] = useState(false)
   const [tmdbType, setTmdbType] = useState<'movie' | 'tv'>('movie')
   const [platforms, setPlatforms] = useState<number[]>([8])
@@ -185,25 +186,38 @@ export default function Home() {
     } catch (e) { console.error(e) } finally { setTmdbLoading(false) }
   }
 
-  const fetchAiRecommendation = async (overridePrompt?: string) => {
-    const promptToUse = overridePrompt || aiPrompt; if (!promptToUse) return;
-    setTmdbLoading(true); setTmdbResult(null); const pStr = platforms.join('|');
-    const aiRes = await askGemini(promptToUse);
-    if (aiRes.success) {
-      if (aiRes.recommendations?.length) {
-        const enrichedMovies = await getMoviesByTitles(aiRes.recommendations);
-        if (enrichedMovies.length > 0) { setSwipeMovies(enrichedMovies); setAppMode('swipe'); alert(`AI ${enrichedMovies.length} film buldu!`); } else alert("Bulunamadı.");
-      } else if (aiRes.params) {
-        const p = aiRes.params; const safeType = (p.type === 'tv' || p.type === 'movie') ? p.type : 'movie';
-        const gArray = p.genre_ids ? p.genre_ids.split(',') : [];
-        const m = await getSmartRecommendation(gArray, pStr, safeType, watchedIds, blacklistedIds, false, p.year_range, p.sort_by);
-        if (m) { setTmdbResult(m); setAppMode('tmdb'); setTmdbType(safeType); } else alert("Film bulunamadı.");
-      }
-    } else {
-      const { genreIds, sort, year } = analyzePrompt(promptToUse); const m = await getSmartRecommendation(genreIds, pStr, 'movie', watchedIds, blacklistedIds, false, year, sort);
-      if (m) { setTmdbResult(m); setAppMode('tmdb'); setTmdbType('movie'); } else alert("Bulunamadı.");
+  const fetchAiRecommendation = async (promptOverride?: string) => {
+    setTmdbLoading(true);
+    setTmdbResult(null);
+    setAiSuggestions([]);
+
+    const promptToUse = promptOverride || aiPrompt;
+    if (!promptToUse) { alert("Bir şeyler yaz."); setTmdbLoading(false); return }
+
+    // 1. Yeni AI Modu (Liste Döndürür)
+    const { success, results } = await getAiSuggestions(promptToUse);
+
+    if (success && results && results.length > 0) {
+      setAiSuggestions(results);
+      setTmdbResult(results[0]); // İlkini göster
+      setAppMode('tmdb');
+      setTmdbLoading(false);
+      setAiPrompt('');
+      return;
     }
-    setTmdbLoading(false); setAiPrompt('');
+
+    // 2. Fallback: Eski mantık (eğer AI listesi boşsa)
+    const { genreIds, sort, year } = analyzePrompt(promptToUse);
+    const m = await getSmartRecommendation(genreIds, platforms.join('|'), 'movie', watchedIds, blacklistedIds, false, year, sort);
+    if (m) {
+      setTmdbResult(m);
+      setAppMode('tmdb');
+      setTmdbType('movie');
+    } else {
+      alert("Bulunamadı.");
+    }
+    setTmdbLoading(false);
+    setAiPrompt('');
   }
 
   const openTrailer = () => { if (tmdbResult?.videos?.results) { const t = tmdbResult.videos.results.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube'); if (t) setTrailerId(t.key); else alert("Fragman yok."); } else alert("Fragman yok."); }
@@ -211,7 +225,25 @@ export default function Home() {
   const toggleFavorite = async () => { if (!tmdbResult || !user) { alert("Giriş yap."); return; } if (favorites.includes(tmdbResult.id)) { await supabase.from('favorites').delete().eq('user_id', user.id).eq('tmdb_id', tmdbResult.id); setFavorites(favorites.filter(id => id !== tmdbResult.id)) } else { await supabase.from('favorites').insert({ user_id: user.id, tmdb_id: tmdbResult.id, media_type: tmdbType, title: tmdbResult.title || tmdbResult.name, poster_path: tmdbResult.poster_path, vote_average: tmdbResult.vote_average }); setFavorites([...favorites, tmdbResult.id]) } }
   const handleSuggest = async (e: React.FormEvent) => { e.preventDefault(); setSuggestStatus('sending'); const v = getYoutubeId(suggestUrl); if (!v) { setSuggestStatus('error'); return } const { error } = await supabase.from('videos').insert({ title: 'Kullanıcı Önerisi', url: suggestUrl, duration_category: 'meal', mood: 'funny', is_approved: false }); if (!error) { setSuggestStatus('success'); setTimeout(() => { setIsModalOpen(false); setSuggestStatus(''); setSuggestUrl('') }, 2000) } else { setSuggestStatus('db_error') } }
   const togglePlatform = async (id: number) => { const n = platforms.includes(id) ? platforms.filter(p => p !== id) : [...platforms, id]; setPlatforms(n); if (user) await supabase.from('profiles').update({ selected_platforms: n.map(String) }).eq('id', user.id) }
-  const getWatchLink = () => { if (!tmdbResult) return '#'; if (tmdbResult['watch/providers']?.results?.TR?.link) return tmdbResult['watch/providers'].results.TR.link; const t = tmdbResult.title || tmdbResult.name; if (platforms.includes(8)) return `https://www.netflix.com/search?q=${encodeURIComponent(t)}`; if (platforms.includes(119)) return `https://www.primevideo.com/search/ref=atv_nb_sr?phrase=${encodeURIComponent(t)}`; return `https://www.google.com/search?q=${encodeURIComponent(t)}+izle`; }
+  const getWatchLink = () => {
+    if (!tmdbResult) return '#';
+    const t = tmdbResult.title || tmdbResult.name;
+    const q = encodeURIComponent(t);
+
+    // 1. Kullanıcının seçtiği platformlara öncelik ver
+    if (platforms.includes(8)) return `https://www.netflix.com/search?q=${q}`;
+    if (platforms.includes(119)) return `https://www.primevideo.com/search/ref=atv_nb_sr?phrase=${q}`;
+    if (platforms.includes(337)) return `https://www.disneyplus.com/search?q=${q}`;
+    if (platforms.includes(342)) return `https://www.blutv.com/arama?q=${q}`;
+    if (platforms.includes(365)) return `https://tvplus.com.tr/arama?keyword=${q}`; // TV+
+    if (platforms.includes(345)) return `https://www.todtv.com.tr/ara?q=${q}`; // TOD
+
+    // 2. TMDB Smart Link
+    if (tmdbResult['watch/providers']?.results?.TR?.link) return tmdbResult['watch/providers'].results.TR.link;
+
+    // 3. Fallback
+    return `https://www.google.com/search?q=${q}+izle`;
+  }
 
   // Helper for YouTube ID
   const getYoutubeId = (url: string) => { const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/); return (match && match[2].length === 11) ? match[2] : null; }
@@ -269,6 +301,8 @@ export default function Home() {
           getWatchLink={getWatchLink}
           markAsWatched={markAsWatched}
           onTryAgain={() => fetchAiRecommendation(aiPrompt + " (farklı bir şey öner)")}
+          aiSuggestions={aiSuggestions}
+          setTmdbResult={setTmdbResult}
         />
       )}
 
