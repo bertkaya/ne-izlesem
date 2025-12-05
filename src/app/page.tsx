@@ -233,10 +233,11 @@ export default function Home() {
     // 1. Kullanıcının seçtiği platformlara öncelik ver
     if (platforms.includes(8)) return `https://www.netflix.com/search?q=${q}`;
     if (platforms.includes(119)) return `https://www.primevideo.com/search/ref=atv_nb_sr?phrase=${q}`;
-    if (platforms.includes(337)) return `https://www.disneyplus.com/search?q=${q}`;
-    if (platforms.includes(342)) return `https://www.blutv.com/arama?q=${q}`;
-    if (platforms.includes(365)) return `https://tvplus.com.tr/arama?keyword=${q}`; // TV+
-    if (platforms.includes(345)) return `https://www.todtv.com.tr/ara?q=${q}`; // TOD
+    if (platforms.includes(337)) return `https://www.google.com/search?q=${q}+Disney+Plus+izle`;
+    if (platforms.includes(342)) return `https://www.google.com/search?q=${q}+BluTV+izle`;
+    if (platforms.includes(365)) return `https://www.google.com/search?q=${q}+TV+Plus+izle`; // TV+
+    if (platforms.includes(345)) return `https://www.google.com/search?q=${q}+TOD+TV+izle`; // TOD
+    if (platforms.includes(118) || platforms.includes(283)) return `https://www.google.com/search?q=${q}+HBO+izle`; // HBO legacy
 
     // 2. TMDB Smart Link
     if (tmdbResult['watch/providers']?.results?.TR?.link) return tmdbResult['watch/providers'].results.TR.link;

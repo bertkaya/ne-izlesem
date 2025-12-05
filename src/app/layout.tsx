@@ -43,7 +43,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="tr" suppressHydrationWarning>
-      <body className={`${inter.variable} ${bebas.variable} font-sans antialiased text-foreground bg-background transition-colors duration-300`}>
+      <body className={`${inter.variable} ${bebas.variable} font-sans antialiased text-foreground bg-gray-50 dark:bg-[#0f1014] transition-colors duration-300`}>
         <Providers>
           {children}
         </Providers>

@@ -22,9 +22,9 @@ export const MOOD_TO_TV_GENRE = {
 
 export const MOOD_TO_YOUTUBE_KEYWORDS = {
   funny: ['Güldür Güldür', 'Konuşanlar', 'Stand up', 'Komik Anlar', 'Cem Yılmaz'],
-  eat:   ['Sokak Lezzetleri', 'Yemek Yeme', 'Mukbang', 'Gurme', 'Kebap', 'Burger'], 
+  eat: ['Sokak Lezzetleri', 'Yemek Yeme', 'Mukbang', 'Gurme', 'Kebap', 'Burger'],
   classic: ['Vine Compilation', 'Efsane Replikler', 'Beyaz Show Komik', 'Unutulmaz Anlar'],
-  pets:  ['Komik Kediler', 'Yavru Köpek', 'Sevimli Hayvanlar', 'Kedi Videoları'],
+  pets: ['Komik Kediler', 'Yavru Köpek', 'Sevimli Hayvanlar', 'Kedi Videoları'],
   relax: ['Doğa Yürüyüşü', 'Rahatlatıcı Müzik', 'Manzara 4K', 'Restorasyon'],
   learn: ['Barış Özcan', 'Ruhi Çenet', 'Belgesel', 'Nasıl Yapılır', 'TEDx'],
   drama: ['Kısa Film', 'Dramatik Sahne', 'Hayat Hikayesi']
@@ -42,8 +42,8 @@ async function getDetails(id: number, type: 'movie' | 'tv') {
 
 // --- 1. AKILLI ÖNERİ ---
 export async function getSmartRecommendation(
-  genreIds: string | string[], providers: string, type: 'movie' | 'tv', 
-  watchedIds: number[] = [], blacklistedIds: number[] = [], 
+  genreIds: string | string[], providers: string, type: 'movie' | 'tv',
+  watchedIds: number[] = [], blacklistedIds: number[] = [],
   onlyTurkish: boolean = false, yearRange: string = '', sortBy: string = 'popularity.desc'
 ) {
   const randomPage = Math.floor(Math.random() * 5) + 1;
@@ -57,8 +57,8 @@ export async function getSmartRecommendation(
 
   if (onlyTurkish) params.with_original_language = 'tr';
   if (yearRange) {
-    if(yearRange === '2023-2025') params['primary_release_date.gte'] = '2023-01-01';
-    else if(yearRange.includes('-')) { const [s, e] = yearRange.split('-'); params['primary_release_date.gte'] = `${s}-01-01`; params['primary_release_date.lte'] = `${e}-12-31`; }
+    if (yearRange === '2023-2025') params['primary_release_date.gte'] = '2023-01-01';
+    else if (yearRange.includes('-')) { const [s, e] = yearRange.split('-'); params['primary_release_date.gte'] = `${s}-01-01`; params['primary_release_date.lte'] = `${e}-12-31`; }
   }
 
   let data = await fetchTMDB(`/discover/${type}`, params);
@@ -66,9 +66,9 @@ export async function getSmartRecommendation(
 
   if (!data.results || data.results.length === 0) {
     if (validProviders) {
-       delete params.with_watch_providers;
-       data = await fetchTMDB(`/discover/${type}`, params);
-       fromFallback = true;
+      delete params.with_watch_providers;
+      data = await fetchTMDB(`/discover/${type}`, params);
+      fromFallback = true;
     }
   }
 
@@ -78,10 +78,10 @@ export async function getSmartRecommendation(
 
   const randomItem = filtered[Math.floor(Math.random() * filtered.length)];
   const details = await getDetails(randomItem.id, type);
-  
+
   if (!fromFallback && validProviders) {
     const trProviders = details['watch/providers']?.results?.TR;
-    if (!trProviders || !trProviders.flatrate) fromFallback = true; 
+    if (!trProviders || !trProviders.flatrate) fromFallback = true;
   }
 
   return { ...randomItem, ...details, fromFallback };
@@ -159,34 +159,46 @@ export async function getDiscoverBatch(page: number = 1, preferredGenres: string
   };
 
   if (preferredGenres && Math.random() > 0.3) params.with_genres = preferredGenres;
-  
+
   const randomOffset = Math.floor(Math.random() * 5);
   params.page = (page + randomOffset).toString();
 
   const data = await fetchTMDB(`/discover/${type}`, params);
-  
+
   if (!data.results) return [];
 
   // DİZİ/FİLM FARKINI DÜZELTME: Dizilerde 'title' yoktur, 'name' vardır.
   // UI bozulmasın diye hepsini 'title' özelliğine map ediyoruz.
   return data.results.map((item: any) => ({
-      ...item,
-      title: item.title || item.name, // İsim standardizasyonu
-      original_title: item.original_title || item.original_name
+    ...item,
+    title: item.title || item.name, // İsim standardizasyonu
+    original_title: item.original_title || item.original_name
   }));
 }
 
-export async function getMoviesByTitles(list: { title: string, type: 'movie' | 'tv' }[]) {
+export async function getMoviesByTitles(list: { title: string, type: 'movie' | 'tv', year?: string }[]) {
   const results = [];
   for (const item of list) {
     try {
-      const searchRes = await fetchTMDB(`/search/${item.type}`, { query: item.title });
+      const params: any = { query: item.title };
+      if (item.year) {
+        if (item.type === 'movie') params.year = item.year;
+        else params.first_air_date_year = item.year;
+      }
+
+      const searchRes = await fetchTMDB(`/search/${item.type}`, params);
+
       if (searchRes.results && searchRes.results.length > 0) {
-        const bestMatch = searchRes.results[0];
+        // Find best match (prefer exact title match if possible)
+        const bestMatch = searchRes.results[0]; // Default to first
+        // Optional: Loop through to find exact title match if strictness needed
+
         const details = await getDetails(bestMatch.id, item.type);
         results.push({ ...bestMatch, ...details });
       }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(`Error fetching matching title for ${item.title}:`, e);
+    }
   }
   return results;
 }

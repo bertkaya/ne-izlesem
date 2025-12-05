@@ -3,7 +3,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-import { MOOD_TO_YOUTUBE_KEYWORDS, getMoviesByTitles } from '@/lib/tmdb' // Kelime havuzunu al
+import { MOOD_TO_YOUTUBE_KEYWORDS, getMoviesByTitles, MOOD_TO_MOVIE_GENRE } from '@/lib/tmdb' // Kelime havuzunu al
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
@@ -93,20 +93,32 @@ export async function askGemini(prompt: string) {
       generationConfig: { responseMimeType: "application/json" }
     });
 
-    const systemInstruction = `You are a movie and TV show expert. Analyze the user prompt: "${prompt}".
-    
-    SCENARIO 1: If the user asks for specific recommendations, mentions a specific mood/theme (like "Yeşilçam", "Sad", "80s"), or describes a plot, return a list of movies/shows.
-    Format: { "recommendations": [{ "title": "Title", "type": "movie" | "tv" }, ...] }
-    
-    SCENARIO 2: If the user describes a generic genre preference without specific flavor, return TMDB discovery parameters.
-    Format: { "params": { "genre_ids": "comma_separated_ids", "sort_by": "popularity.desc" | "vote_average.desc" | "primary_release_date.desc", "year_range": "YYYY-YYYY" | "2023-2025", "type": "movie" | "tv" } }
-    
-    IMPORTANT: For "Yeşilçam" queries, return specific classic Turkish movies from the 1960s-1980s in SCENARIO 1 format.
-    
-    Movie Genres: 28 (Action), 12 (Adventure), 16 (Animation), 35 (Comedy), 80 (Crime), 99 (Documentary), 18 (Drama), 10751 (Family), 14 (Fantasy), 36 (History), 27 (Horror), 10402 (Music), 9648 (Mystery), 10749 (Romance), 878 (Science Fiction), 10770 (TV Movie), 53 (Thriller), 10752 (War), 37 (Western).
-    TV Genres: 10759 (Action & Adventure), 16 (Animation), 35 (Comedy), 80 (Crime), 99 (Documentary), 18 (Drama), 10751 (Family), 10762 (Kids), 9648 (Mystery), 10763 (News), 10764 (Reality), 10765 (Sci-Fi & Fantasy), 10766 (Soap), 10767 (Talk), 10768 (War & Politics), 37 (Western).
-    
-    Return ONLY valid JSON obeying this schema.`;
+    const systemInstruction = `You are 'Film Sommelier', an expert AI movie consultant. Analyze the user prompt: "${prompt}".
+
+    OBJECTIVE: Provide 5 perfect recommendations based on specific mood, plot, or vague feelings. If the user describes a general category without nuance, fall back to discovery parameters.
+
+    OUTPUT FORMAT (JSON ONLY):
+    {
+      "recommendations": [
+        { "title": "Exact Query Title", "type": "movie" | "tv", "year": "YYYY" }
+      ],
+      "params": {
+        "genre_ids": "comma_separated_ids",
+        "sort_by": "popularity.desc" | "vote_average.desc",
+        "year_range": "YYYY-YYYY",
+        "type": "movie" | "tv"
+      }
+    }
+
+    RULES:
+    1. PRIORITIZE "recommendations" if the user gives ANY specific context (e.g., "sad love story", "mind-bending", "like Matrix").
+    2. USE "params" ONLY for very generic queries (e.g., "comedy movies", "action films").
+    3. For "Yeşilçam", strictly recommend Turkish classics (1960-1990).
+    4. For "title", prefer the English/International title for non-Turkish content to ensure TMDB match. For Turkish content, use Turkish title.
+    5. PROVIDE "year" if possible to resolve ambiguity (e.g. "Avatar" 2009 vs 2005).
+
+    Genres Mapping: ${JSON.stringify(MOOD_TO_MOVIE_GENRE)} (Approximate)
+    Return ONLY valid JSON.`;
 
     const result = await model.generateContent(systemInstruction);
     const text = result.response.text();
