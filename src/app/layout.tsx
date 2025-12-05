@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Bebas_Neue } from 'next/font/google'
 import './globals.css'
+import { Providers } from '@/components/Providers'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const bebas = Bebas_Neue({ weight: '400', subsets: ['latin'], variable: '--font-bebas' })
 
 export const metadata: Metadata = {
   title: 'Ne İzlesem? | Yapay Zeka Destekli Film ve Dizi Önerisi',
@@ -12,11 +14,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Ne İzlesem? - Karar Yorgunluğuna Son',
     description: 'Yemek yerken veya akşam film ararken en iyi dostun.',
-    url: 'https://ne-izlesem.vercel.app', // Kendi linkinle değiştir
+    url: 'https://ne-izlesem.vercel.app',
     siteName: 'Ne İzlesem',
     images: [
       {
-        url: 'https://ne-izlesem.vercel.app/og-image.jpg', // Public klasörüne bir resim koyabilirsin
+        url: 'https://ne-izlesem.vercel.app/og-image.jpg',
         width: 1200,
         height: 630,
       },
@@ -40,8 +42,12 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="tr">
-      <body className={inter.className}>{children}</body>
+    <html lang="tr" suppressHydrationWarning>
+      <body className={`${inter.variable} ${bebas.variable} font-sans antialiased text-foreground bg-background transition-colors duration-300`}>
+        <Providers>
+          {children}
+        </Providers>
+      </body>
     </html>
   )
 }

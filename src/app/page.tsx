@@ -268,6 +268,7 @@ export default function Home() {
           openTrailer={openTrailer}
           getWatchLink={getWatchLink}
           markAsWatched={markAsWatched}
+          onTryAgain={() => fetchAiRecommendation(aiPrompt + " (farklı bir şey öner)")}
         />
       )}
 

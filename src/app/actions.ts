@@ -94,11 +94,13 @@ export async function askGemini(prompt: string) {
 
     const systemInstruction = `You are a movie and TV show expert. Analyze the user prompt: "${prompt}".
     
-    SCENARIO 1: If the user asks for specific recommendations or describes a very specific plot, return a list of movies/shows.
+    SCENARIO 1: If the user asks for specific recommendations, mentions a specific mood/theme (like "Yeşilçam", "Sad", "80s"), or describes a plot, return a list of movies/shows.
     Format: { "recommendations": [{ "title": "Title", "type": "movie" | "tv" }, ...] }
     
-    SCENARIO 2: If the user describes a mood, genre, or general preference, return TMDB discovery parameters.
+    SCENARIO 2: If the user describes a generic genre preference without specific flavor, return TMDB discovery parameters.
     Format: { "params": { "genre_ids": "comma_separated_ids", "sort_by": "popularity.desc" | "vote_average.desc" | "primary_release_date.desc", "year_range": "YYYY-YYYY" | "2023-2025", "type": "movie" | "tv" } }
+    
+    IMPORTANT: For "Yeşilçam" queries, return specific classic Turkish movies from the 1960s-1980s in SCENARIO 1 format.
     
     Movie Genres: 28 (Action), 12 (Adventure), 16 (Animation), 35 (Comedy), 80 (Crime), 99 (Documentary), 18 (Drama), 10751 (Family), 14 (Fantasy), 36 (History), 27 (Horror), 10402 (Music), 9648 (Mystery), 10749 (Romance), 878 (Science Fiction), 10770 (TV Movie), 53 (Thriller), 10752 (War), 37 (Western).
     TV Genres: 10759 (Action & Adventure), 16 (Animation), 35 (Comedy), 80 (Crime), 99 (Documentary), 18 (Drama), 10751 (Family), 10762 (Kids), 9648 (Mystery), 10763 (News), 10764 (Reality), 10765 (Sci-Fi & Fantasy), 10766 (Soap), 10767 (Talk), 10768 (War & Politics), 37 (Western).

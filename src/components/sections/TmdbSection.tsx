@@ -1,3 +1,4 @@
+
 import {
     Loader2, Play, Check, Flag, Video, RotateCcw, EyeOff, AlertTriangle
 } from 'lucide-react'
@@ -34,24 +35,14 @@ interface TmdbSectionProps {
     openTrailer: () => void;
     getWatchLink: () => string;
     markAsWatched: () => void;
-    // toggleFavorite: () => void; // Not used in the UI provided in page.tsx except logic, but let's check. 
-    // In page.tsx: toggleFavorite is defined but NOT USED in the JSX for TmdbSection? 
-    // Let me re-read page.tsx JSX for TmdbSection...
-    // It has "Pas Geç" and "İzledim". No favorite button in the Result Card logic in page.tsx lines 386-389.
-    // Wait, line 241 defines toggleFavorite, but is it used?
-    // Searching page.tsx content...
-    // It seems it wasn't used in the main TMDB card in the provided snippet?
-    // Let's check the JSX again. 
-    // Lines 386-389: RotateCcw (Pas Geç), EyeOff (İzledim). 
-    // So toggleFavorite is maybe unused or I missed it.
-    // I will skip adding it to props if it's not used.
+    onTryAgain?: () => void;
 }
 
 export default function TmdbSection({
     tmdbType, setTmdbType, platforms, togglePlatform, searchQuery, setSearchQuery,
     showDropdown, searchResults, handleSearchSelect, onlyTurkish, setOnlyTurkish,
     toggleGenre, selectedGenres, fetchTmdbContent, loading, tmdbResult,
-    openTrailer, getWatchLink, markAsWatched
+    openTrailer, getWatchLink, markAsWatched, onTryAgain
 }: TmdbSectionProps) {
     return (
         <div className="flex flex-col items-center mt-8 px-4 animate-in fade-in duration-500">
@@ -118,7 +109,7 @@ export default function TmdbSection({
                             <button
                                 key={key}
                                 onClick={() => toggleGenre(val)}
-                                className={`px-3 py-2 rounded-lg border text-sm font-bold transition-all ${selectedGenres.includes(val) ? 'bg-green-900/50 border-green-500 text-green-400' : 'bg-gray-800 border-gray-700 text-gray-400'}`}
+                                className={`px-3 py-2 rounded-lg border text-sm font-bold transition-all ${selectedGenres.includes(val) ? 'bg-green-900/50 border-green-500 text-green-400' : 'border-gray-700 text-gray-400'}`}
                             >
                                 {selectedGenres.includes(val) && <Check size={12} className="inline mr-1" />} {GENRE_LABELS[key]}
                             </button>
@@ -136,7 +127,7 @@ export default function TmdbSection({
                 <div className="w-full max-w-4xl mt-8 animate-in slide-in-from-bottom-4">
                     <div className="bg-gray-800 rounded-3xl overflow-hidden shadow-2xl border border-gray-700 flex flex-col md:flex-row">
                         <div className="md:w-1/3 relative h-96 md:h-auto group cursor-pointer" onClick={openTrailer}>
-                            <img src={`https://image.tmdb.org/t/p/w500${tmdbResult.poster_path}`} className="w-full h-full object-cover" />
+                            <img src={`https://image.tmdb.org/t/p/w500${tmdbResult.still_path || tmdbResult.poster_path}`} className="w-full h-full object-cover" />
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-all">
                                 <div className="bg-red-600 text-white p-4 rounded-full shadow-xl scale-90 group-hover:scale-110 transition-transform">
                                     <Play fill="currentColor" size={32} />
@@ -146,8 +137,18 @@ export default function TmdbSection({
                         <div className="p-8 md:w-2/3 relative flex flex-col justify-center">
                             {tmdbResult.fromFallback && <div className="absolute top-0 left-0 w-full bg-yellow-600/20 text-yellow-500 text-xs font-bold p-2 flex items-center gap-2"><AlertTriangle size={12} /> Seçtiğin platformda yok, genel öneri.</div>}
 
-                            <h2 className="text-3xl font-black text-white mb-2">{tmdbResult.title || tmdbResult.name}</h2>
-                            {/* AÇIKLAMA HER ZAMAN GÖRÜNÜR */}
+                            <div className="mb-2">
+                                <h2 className="text-3xl font-black text-white leading-tight">{tmdbResult.title || tmdbResult.name}</h2>
+                                {tmdbResult.season && (
+                                    <span className="inline-block bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded-md mt-1">
+                                        S{tmdbResult.season} B{tmdbResult.episode}
+                                    </span>
+                                )}
+                                {tmdbResult.showName && tmdbResult.showName !== tmdbResult.title && (
+                                    <p className="text-purple-400 font-bold text-sm">{tmdbResult.showName}</p>
+                                )}
+                            </div>
+
                             <p className="text-gray-400 text-sm leading-relaxed mb-6 line-clamp-4 md:line-clamp-6">{tmdbResult.overview || 'Özet bilgisi bulunamadı.'}</p>
 
                             <div className="flex gap-3 mb-4">
@@ -156,6 +157,7 @@ export default function TmdbSection({
                             </div>
                             <div className="flex justify-center gap-4">
                                 <button onClick={fetchTmdbContent} className="text-gray-400 hover:text-white text-sm flex gap-1"><RotateCcw size={14} /> Pas Geç</button>
+                                {onTryAgain && <button onClick={onTryAgain} className="text-gray-400 hover:text-yellow-400 text-sm flex gap-1"><RotateCcw size={14} /> Beğenmedim, Başka Öner</button>}
                                 <button onClick={markAsWatched} className="text-gray-400 hover:text-green-400 text-sm flex gap-1"><EyeOff size={14} /> İzledim</button>
                             </div>
                         </div>
