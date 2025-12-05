@@ -158,10 +158,93 @@ export async function resolveYouTubeChannel(input: string) {
 export async function fetchAndSaveChannelVideos(id: string) { return { success: true, message: '-' } }
 export async function addSafeChannel(id: string, t: string) { await supabase.from('safe_channels').insert({ channel_id: id, channel_name: t }); return { success: true }; }
 export async function removeSafeChannel(id: number) { await supabase.from('safe_channels').delete().eq('id', id); return { success: true }; }
-export async function fetchFromSafeChannels() { return { success: true, message: "Bot çalıştı." }; } // Bot artık autoPopulateYouTube içinde
+export async function fetchFromSafeChannels() {
+  if (!YOUTUBE_API_KEY) return { success: false, message: 'API Key eksik.' };
+
+  const { data: channels } = await supabase.from('safe_channels').select('channel_id');
+  if (!channels || channels.length === 0) return { success: false, message: 'Güvenli kanal listeniz boş.' };
+
+  let totalAdded = 0;
+
+  for (const channel of channels) {
+    try {
+      // Kanalın son videolarını çek
+      const url = `https://www.googleapis.com/youtube/v3/search?key=${YOUTUBE_API_KEY}&channelId=${channel.channel_id}&part=snippet,id&order=date&maxResults=3&type=video`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.items) {
+        const videoIds = data.items.map((i: any) => i.id.videoId).join(',');
+        // Detayları (süre vb) çek
+        const detailsRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&id=${videoIds}&key=${YOUTUBE_API_KEY}`);
+        const detailsData = await detailsRes.json();
+
+        if (detailsData.items) {
+          for (const item of detailsData.items) {
+            const videoUrl = `https://www.youtube.com/watch?v=${item.id}`;
+            const { data: existing } = await supabase.from('videos').select('id').eq('url', videoUrl).single();
+
+            if (!existing) {
+              const min = parseDuration(item.contentDetails.duration);
+              await supabase.from('videos').insert({
+                title: item.snippet.title,
+                url: videoUrl,
+                duration_category: getCategory(min),
+                mood: 'relax', // Varsayılan mood (Admin panelden değiştirilebilir)
+                is_approved: true // Güvenli kanaldan geldiği için onaylı
+              });
+              totalAdded++;
+            }
+          }
+        }
+      }
+    } catch (e) { console.error(`Safe Channel Fetch Error (${channel.channel_id}):`, e); }
+  }
+
+  return { success: true, message: `Tarama bitti. safe_channels listesinden ${totalAdded} yeni video eklendi.` };
+}
+
 export async function bulkUpdateVideos(ids: number[], u: any) { await supabase.from('videos').update(u).in('id', ids); return { success: true }; }
 export async function checkVideoHealth() { return await checkAndCleanDeadLinks(); }
-export async function fetchYouTubeTrends() { return await autoPopulateYouTube(); }
+
+export async function fetchYouTubeTrends() {
+  if (!YOUTUBE_API_KEY) return { success: false, message: 'API Key eksik.' };
+
+  try {
+    // TR için popüler videoları çek (Video Category 24 = Entertainment, 23 = Comedy, 22 = People & Blogs, 10 = Music vs. - Kategori belirtmezsek genel trendler gelir)
+    // RegionCode=TR. Chart=mostPopular.
+    const url = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&chart=mostPopular&regionCode=TR&maxResults=10&key=${YOUTUBE_API_KEY}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    let totalAdded = 0;
+
+    if (data.items) {
+      for (const item of data.items) {
+        const videoUrl = `https://www.youtube.com/watch?v=${item.id}`;
+        const { data: existing } = await supabase.from('videos').select('id').eq('url', videoUrl).single();
+
+        if (!existing) {
+          const min = parseDuration(item.contentDetails.duration);
+          // Çok kısa (shorts vb) veya çok uzun videoları elemek isteyebiliriz ama şimdilik hepsini alıyoruz.
+
+          await supabase.from('videos').insert({
+            title: item.snippet.title,
+            url: videoUrl,
+            duration_category: getCategory(min),
+            mood: 'funny', // Trendler genellikle eğlencelidir, varsayılan funny.
+            is_approved: true
+          });
+          totalAdded++;
+        }
+      }
+    }
+    return { success: true, message: `Trendlerden ${totalAdded} yeni video eklendi.` };
+
+  } catch (e) {
+    console.error("Trends Fetch Error:", e);
+    return { success: false, message: 'Hata oluştu.' };
+  }
+}
 // Raporlama
 export async function reportVideo(id: number, r: string) { await supabase.from('videos').update({ is_approved: false }).eq('id', id); return { success: true } }
 

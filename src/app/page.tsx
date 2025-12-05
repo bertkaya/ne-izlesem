@@ -247,20 +247,18 @@ export default function Home() {
     const t = tmdbResult.title || tmdbResult.name;
     const q = encodeURIComponent(t);
 
-    // 1. Kullanıcının seçtiği platformlara öncelik ver
+    // 1. Netflix (Özel Durum)
     if (platforms.includes(8)) return `https://www.netflix.com/search?q=${q}`;
-    if (platforms.includes(119)) return `https://www.primevideo.com/search/ref=atv_nb_sr?phrase=${q}`;
-    if (platforms.includes(337)) return `https://www.google.com/search?q=${q}+Disney+Plus+izle`;
-    if (platforms.includes(342)) return `https://www.google.com/search?q=${q}+BluTV+izle`;
-    if (platforms.includes(365)) return `https://www.google.com/search?q=${q}+TV+Plus+izle`; // TV+
-    if (platforms.includes(345)) return `https://www.google.com/search?q=${q}+TOD+TV+izle`; // TOD
-    if (platforms.includes(118) || platforms.includes(283)) return `https://www.google.com/search?q=${q}+HBO+izle`; // HBO legacy
 
-    // 2. TMDB Smart Link
-    if (tmdbResult['watch/providers']?.results?.TR?.link) return tmdbResult['watch/providers'].results.TR.link;
+    // 2. Diğer Her Şey -> TMDB
+    // Eğer TMDB sonuçlarında direct link varsa onu kullan, yoksa TMDB ana sayfasına yönlendir
+    const tmdbLink = tmdbResult['watch/providers']?.results?.TR?.link;
+    if (tmdbLink) return tmdbLink;
 
-    // 3. Fallback
-    return `https://www.google.com/search?q=${q}+izle`;
+    // TMDB Movie/TV Page
+    const type = tmdbResult.name ? 'tv' : 'movie';
+    // Türkçe arayüzü zorlamak için TR ekleyebiliriz ama varsayılan iyidir.
+    return `https://www.themoviedb.org/${type}/${tmdbResult.id}/watch`;
   }
 
   // Helper for YouTube ID
