@@ -12,6 +12,7 @@ import { analyzePrompt } from '@/lib/smart-search'
 import { checkBadges, askGemini, reportVideo, getAiSuggestions } from './actions'
 import { X } from 'lucide-react'
 import dynamic from 'next/dynamic'
+import Image from 'next/image'
 
 // Components
 import Navigation from '@/components/Navigation'
@@ -265,61 +266,79 @@ export default function Home() {
   // Helper for YouTube ID
   const getYoutubeId = (url: string) => { const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/); return (match && match[2].length === 11) ? match[2] : null; }
 
+  // --- TRAILER AUTO FETCH ---
+  useEffect(() => {
+    if (tmdbResult) {
+      if (tmdbResult.videos?.results) {
+        const t = tmdbResult.videos.results.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube');
+        if (t) setTrailerId(t.key); else setTrailerId(null);
+      } else {
+        setTrailerId(null);
+      }
+    }
+  }, [tmdbResult]);
+
   return (
-    <div className="min-h-screen bg-[#0f1014] text-white font-sans pb-20 selection:bg-red-500">
+    <main className="min-h-screen text-white pb-20 relative overflow-x-hidden">
+      {/* Dynamic Background */}
+      <div className="fixed inset-0 z-[-1] transition-opacity duration-1000 ease-in-out">
+        {(tmdbResult?.backdrop_path || aiSuggestions[0]?.backdrop_path) ? (
+          <>
+            <Image
+              src={`https://image.tmdb.org/t/p/original${tmdbResult?.backdrop_path || aiSuggestions[0]?.backdrop_path}`}
+              alt="Background"
+              fill
+              className="object-cover opacity-30 blur-sm scale-105"
+              priority
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0f1014] via-[#0f1014]/80 to-transparent" />
+          </>
+        ) : (
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/40 via-[#0f1014] to-[#0f1014]" />
+        )}
+      </div>
 
       <Navigation user={user} />
-      <ModeSelector appMode={appMode} setAppMode={setAppMode} />
+
+      {/* Trailer Modal (Auto or Manual) */}
+      {isModalOpen && trailerId && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in">
+          <div className="relative w-full max-w-5xl aspect-video bg-black rounded-3xl overflow-hidden shadow-2xl border border-gray-800">
+            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 z-10 bg-black/50 p-2 rounded-full text-white hover:bg-white hover:text-black transition"><X size={24} /></button>
+            <ReactPlayer url={`https://www.youtube.com/watch?v=${trailerId}`} width="100%" height="100%" playing controls />
+          </div>
+        </div>
+      )}
+
+      {!tmdbResult && !ytVideo && appMode !== 'swipe' && (
+        <ModeSelector appMode={appMode} setAppMode={setAppMode} />
+      )}
+
+      {/* CONTENT SWITCHER */}
+      {appMode === 'youtube' && (
+        <YoutubeSection
+          ytVideo={ytVideo} loading={ytLoading} duration={duration} setDuration={setDuration}
+          mood={mood} setMood={setMood} ytLang={ytLang} setYtLang={setYtLang}
+          fetchYoutubeVideo={fetchYoutubeVideo} markYoutubeWatched={markYoutubeWatched} handleReport={handleReport}
+        />
+      )}
 
       {appMode === 'ai' && (
         <AiSection
-          aiPrompt={aiPrompt}
-          setAiPrompt={setAiPrompt}
           fetchAiRecommendation={fetchAiRecommendation}
           loading={tmdbLoading}
         />
       )}
 
-      {appMode === 'youtube' && (
-        <YoutubeSection
-          ytVideo={ytVideo}
-          loading={ytLoading}
-          duration={duration}
-          setDuration={setDuration}
-          mood={mood}
-          setMood={setMood}
-          ytLang={ytLang}
-          setYtLang={setYtLang}
-          fetchYoutubeVideo={fetchYoutubeVideo}
-          markYoutubeWatched={markYoutubeWatched}
-          handleReport={handleReport}
-        />
-      )}
-
       {appMode === 'tmdb' && (
         <TmdbSection
-          tmdbType={tmdbType}
-          setTmdbType={setTmdbType}
-          platforms={platforms}
-          togglePlatform={togglePlatform}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          showDropdown={showDropdown}
-          searchResults={searchResults}
-          handleSearchSelect={handleSearchSelect}
-          onlyTurkish={onlyTurkish}
-          setOnlyTurkish={setOnlyTurkish}
-          toggleGenre={toggleGenre}
-          selectedGenres={selectedGenres}
-          fetchTmdbContent={fetchTmdbContent}
-          loading={tmdbLoading}
-          tmdbResult={tmdbResult}
-          openTrailer={openTrailer}
-          getWatchLink={getWatchLink}
-          markAsWatched={markAsWatched}
-          onTryAgain={() => fetchAiRecommendation(aiPrompt + " (farklı bir şey öner)")}
-          aiSuggestions={aiSuggestions}
-          setTmdbResult={setTmdbResult}
+          tmdbType={tmdbType} setTmdbType={setTmdbType} platforms={platforms} togglePlatform={togglePlatform}
+          searchQuery={searchQuery} setSearchQuery={setSearchQuery} showDropdown={showDropdown} searchResults={searchResults}
+          handleSearchSelect={handleSearchSelect} onlyTurkish={onlyTurkish} setOnlyTurkish={setOnlyTurkish}
+          toggleGenre={toggleGenre} selectedGenres={selectedGenres} fetchTmdbContent={fetchTmdbContent} loading={tmdbLoading}
+          tmdbResult={tmdbResult} openTrailer={() => { if (trailerId) setIsModalOpen(true); else openTrailer(); }}
+          getWatchLink={getWatchLink} markAsWatched={markAsWatched} onTryAgain={() => { setTmdbResult(null); setAppMode('ai'); }}
+          aiSuggestions={aiSuggestions} setTmdbResult={(m) => { setTmdbResult(m); if (m.media_type) setTmdbType(m.media_type); }}
         />
       )}
 
@@ -333,22 +352,6 @@ export default function Home() {
           supabase={supabase}
         />
       )}
-
-      {/* MODAL: VIDEO ÖNERİ */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-gray-900 p-6 rounded-2xl w-full max-w-md border border-gray-700 relative">
-            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X size={24} /></button>
-            <h2 className="text-xl font-bold mb-4 text-white">Video Öner</h2>
-            <form onSubmit={handleSuggest} className="space-y-4">
-              <input required placeholder="YouTube Linki" value={suggestUrl} onChange={e => setSuggestUrl(e.target.value)} className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white outline-none" />
-              <button disabled={suggestStatus === 'sending'} type="submit" className="w-full bg-yellow-600 text-white font-bold py-3 rounded-lg">Gönder</button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {trailerId && <div className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4"><div className="w-full max-w-4xl aspect-video"><button onClick={() => setTrailerId(null)} className="absolute top-4 right-4 text-white"><X size={32} /></button><ReactPlayer url={`https://www.youtube.com/watch?v=${trailerId}`} width="100%" height="100%" playing controls /></div></div>}
-    </div>
+    </main>
   )
 }

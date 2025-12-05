@@ -160,15 +160,36 @@ export default function TmdbSection({
                         <div className="p-8 md:w-2/3 relative flex flex-col justify-center">
                             {tmdbResult.fromFallback && <div className="absolute top-0 left-0 w-full bg-yellow-600/20 text-yellow-500 text-xs font-bold p-2 flex items-center gap-2"><AlertTriangle size={12} /> Seçtiğin platformda yok, genel öneri.</div>}
 
-                            <div className="mb-2">
-                                <h2 className="text-3xl font-black text-white leading-tight">{tmdbResult.title || tmdbResult.name}</h2>
-                                {tmdbResult.season && (
-                                    <span className="inline-block bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded-md mt-1">
-                                        S{tmdbResult.season} B{tmdbResult.episode}
-                                    </span>
-                                )}
+                            <div className="mb-4">
+                                <h2 className="text-3xl md:text-5xl font-black text-white leading-tight mb-2 drop-shadow-lg">{tmdbResult.title || tmdbResult.name}</h2>
                                 {tmdbResult.showName && tmdbResult.showName !== tmdbResult.title && (
-                                    <p className="text-purple-400 font-bold text-sm">{tmdbResult.showName}</p>
+                                    <p className="text-purple-400 font-bold text-lg mb-1">{tmdbResult.showName}</p>
+                                )}
+
+                                <div className="flex flex-wrap items-center gap-3 mt-2">
+                                    {/* IMDB */}
+                                    <div className="flex items-center gap-1.5 bg-yellow-500/20 px-2 py-1 rounded-md border border-yellow-500/50">
+                                        <span className="text-yellow-500 font-black text-xs tracking-wider">IMBD</span>
+                                        <span className="text-yellow-400 font-bold">{tmdbResult.vote_average?.toFixed(1) || '0.0'}</span>
+                                    </div>
+
+                                    {/* ROTTEN (Simulated) */}
+                                    <div className="flex items-center gap-1.5 bg-red-600/20 px-2 py-1 rounded-md border border-red-600/50">
+                                        <span className="text-red-500 font-black text-xs tracking-wider">TOMATO</span>
+                                        <span className="text-red-400 font-bold">{Math.round((tmdbResult.vote_average || 0) * 10)}%</span>
+                                    </div>
+
+                                    {/* Additional Metadata */}
+                                    {tmdbResult.release_date && <span className="text-gray-400 text-sm font-medium">{tmdbResult.release_date.split('-')[0]}</span>}
+                                    {tmdbResult.first_air_date && <span className="text-gray-400 text-sm font-medium">{tmdbResult.first_air_date.split('-')[0]}</span>}
+                                </div>
+
+                                {tmdbResult.season && (
+                                    <div className="mt-2 inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 px-3 py-1 rounded-full shadow-lg">
+                                        <span className="text-white text-xs font-bold">SEZON {tmdbResult.season}</span>
+                                        <span className="w-1 h-1 bg-white rounded-full"></span>
+                                        <span className="text-white text-xs font-bold">BÖLÜM {tmdbResult.episode}</span>
+                                    </div>
                                 )}
                             </div>
 
