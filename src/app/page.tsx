@@ -103,16 +103,32 @@ export default function Home() {
     setIsSwipingLoading(true);
 
     try {
-      const movies = await getDiscoverBatch(pageNum, selectedGenres.join(','), swipeType)
+      let currentMovies: any[] = [];
+      let attempts = 0;
+      let currentPage = pageNum;
 
-      const uniqueMovies = movies.filter((m: any) =>
-        !swipeMovies.some(sm => sm.id === m.id) &&
-        !watchedIds.includes(m.id) &&
-        !blacklistedIds.includes(m.id)
-      );
+      // Keep fetching until we have at least 5 new movies or we tried 5 times
+      while (currentMovies.length < 5 && attempts < 5) {
+        const movies = await getDiscoverBatch(currentPage, selectedGenres.join(','), swipeType)
 
-      setSwipeMovies(prev => [...prev, ...uniqueMovies])
-      setSwipePage(p => p + 1)
+        if (!movies || movies.length === 0) {
+          break; // End of list
+        }
+
+        const uniqueMovies = movies.filter((m: any) =>
+          !swipeMovies.some(sm => sm.id === m.id) &&
+          !watchedIds.includes(m.id) &&
+          !blacklistedIds.includes(m.id) &&
+          !currentMovies.some(cm => cm.id === m.id)
+        );
+
+        currentMovies = [...currentMovies, ...uniqueMovies];
+        currentPage++;
+        attempts++;
+      }
+
+      setSwipeMovies(prev => [...prev, ...currentMovies])
+      setSwipePage(currentPage) // Update global page counter
     } catch (e) { console.error("Swipe error", e) } finally { setIsSwipingLoading(false) }
   }
 

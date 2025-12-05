@@ -145,9 +145,18 @@ function Card({ movie, isTop, onDragEnd, customExitX }: { movie: Movie, isTop: b
       </div>
       <div className="h-1/4 p-6 bg-gray-900 flex flex-col justify-center relative z-10">
         <h2 className="text-lg font-black text-white line-clamp-1 mb-1">{movie.title || movie.name}</h2>
-        <div className="flex items-center gap-2 mb-2">
-          <Star size={16} className="text-yellow-400 fill-yellow-400" />
-          <span className="text-yellow-400 font-bold text-lg">{movie.vote_average?.toFixed(1) || '0.0'}</span>
+        <div className="flex items-center gap-4 mb-2">
+          {/* IMDB / TMDB Score */}
+          <div className="flex items-center gap-1">
+            <Star size={16} className="text-yellow-400 fill-yellow-400" />
+            <span className="text-yellow-400 font-bold text-lg">{movie.vote_average?.toFixed(1) || '0.0'}</span>
+          </div>
+
+          {/* Rotten Tomatoes / Match Score (Simulated) */}
+          <div className="flex items-center gap-1">
+            <div className="bg-red-600 text-white text-[10px] font-bold px-1 rounded">TOMATO</div>
+            <span className="text-white font-bold text-lg">{Math.round((movie.vote_average || 0) * 10)}%</span>
+          </div>
         </div>
         <p className="text-sm text-gray-400 line-clamp-2">{movie.overview || 'Özet bilgisi bulunmuyor.'}</p>
       </div>

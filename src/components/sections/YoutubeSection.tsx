@@ -105,31 +105,33 @@ export default function YoutubeSection({
             {ytVideo && (
                 <div className="w-full max-w-2xl mt-4 animate-in slide-in-from-bottom-4">
                     <div className="bg-black rounded-3xl overflow-hidden shadow-2xl border border-gray-800 aspect-video relative">
-                        <ReactPlayer
-                            url={ytVideo.url}
+                        <iframe
                             width="100%"
                             height="100%"
-                            controls
-                            playing={autoPlay}
-                            muted={isMuted}
-                            onEnded={() => {
-                                if (autoNext) fetchYoutubeVideo();
-                                else markYoutubeWatched();
-                            }}
-                        />
-                        <button
-                            onClick={() => setIsMuted(!isMuted)}
-                            className="absolute top-4 right-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/70 z-10"
-                        >
-                            {isMuted ? "🔇 Sesi Aç" : "🔊 Sesi Kapat"}
-                        </button>
+                            src={`https://www.youtube.com/embed/${ytVideo.videoId || ytVideo.url.split('v=')[1]}?autoplay=${autoPlay ? 1 : 0}&mute=${isMuted ? 1 : 0}`}
+                            title="YouTube video player"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                            className="w-full h-full"
+                        ></iframe>
                     </div>
-                    <div className="p-4 bg-gray-900/50 rounded-b-3xl mb-4 border-x border-b border-gray-800">
-                        <h2 className="text-lg font-bold text-white mb-2">{ytVideo.title}</h2>
-                        <div className="flex justify-center gap-3">
-                            <button onClick={fetchYoutubeVideo} className="text-xs text-gray-400 hover:text-white flex items-center gap-1 border border-gray-700 px-3 py-1 rounded-full"><RotateCcw size={12} /> Pas Geç</button>
-                            <button onClick={markYoutubeWatched} className="text-xs text-gray-400 hover:text-green-400 flex items-center gap-1 border border-gray-700 px-3 py-1 rounded-full"><EyeOff size={12} /> İzledim</button>
-                            <button onClick={handleReport} className="text-xs text-gray-400 hover:text-red-400 flex items-center gap-1 border border-gray-700 px-3 py-1 rounded-full"><AlertTriangle size={12} /> Raporla</button>
+                    <div className="p-5 bg-gray-900/50 rounded-b-3xl mb-4 border-x border-b border-gray-800">
+                        <h2 className="text-xl font-bold text-white mb-2 leading-tight">{ytVideo.title}</h2>
+                        <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                            <span className="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300 whitespace-nowrap">{ytVideo.channelTitle}</span>
+                            {ytVideo.duration_category && <span className="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300 whitespace-nowrap">{ytVideo.duration_category}</span>}
+                        </div>
+
+                        {ytVideo.description && (
+                            <div className="bg-gray-800/50 p-3 rounded-xl mb-4 max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+                                <p className="text-sm text-gray-300 whitespace-pre-wrap">{ytVideo.description}</p>
+                            </div>
+                        )}
+
+                        <div className="flex justify-center gap-3 mt-4">
+                            <button onClick={fetchYoutubeVideo} className="text-xs font-bold text-white bg-gray-700 hover:bg-gray-600 flex items-center gap-2 border border-gray-600 px-4 py-2 rounded-full transition-all"><RotateCcw size={14} /> Pas Geç</button>
+                            <button onClick={markYoutubeWatched} className="text-xs font-bold text-white bg-green-900/50 hover:bg-green-800 flex items-center gap-2 border border-green-700 px-4 py-2 rounded-full transition-all"><EyeOff size={14} /> İzledim</button>
+                            <button onClick={handleReport} className="text-xs font-bold text-white bg-red-900/50 hover:bg-red-800 flex items-center gap-2 border border-red-700 px-4 py-2 rounded-full transition-all"><AlertTriangle size={14} /> Raporla</button>
                         </div>
                     </div>
                 </div>

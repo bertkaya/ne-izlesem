@@ -131,6 +131,8 @@ export async function getRandomEpisode(tvId: number | null = null, genreId: stri
   };
 }
 
+// ... (existing code)
+
 export async function getVideoFromChannel(channelId: string) {
   if (!YOUTUBE_API_KEY) return null;
   try {
@@ -143,8 +145,15 @@ export async function getVideoFromChannel(channelId: string) {
     if (!vidData.items || vidData.items.length === 0) return null;
     const randomVideo = vidData.items[Math.floor(Math.random() * vidData.items.length)];
     return {
-      id: 0, title: randomVideo.snippet.title, url: `https://www.youtube.com/watch?v=${randomVideo.snippet.resourceId.videoId}`,
-      duration_category: 'meal', mood: 'relax', channelTitle: randomVideo.snippet.channelTitle, thumbnail: randomVideo.snippet.thumbnails?.high?.url
+      id: 0,
+      title: randomVideo.snippet.title,
+      url: `https://www.youtube.com/embed/${randomVideo.snippet.resourceId.videoId}?autoplay=1`, // Embed URL format
+      videoId: randomVideo.snippet.resourceId.videoId,
+      description: randomVideo.snippet.description, // Added description
+      duration_category: 'meal',
+      mood: 'relax',
+      channelTitle: randomVideo.snippet.channelTitle,
+      thumbnail: randomVideo.snippet.thumbnails?.high?.url
     };
   } catch (e) { return null; }
 }
@@ -155,23 +164,21 @@ export async function getDiscoverBatch(page: number = 1, preferredGenres: string
     sort_by: 'popularity.desc',
     'vote_count.gte': '50',
     page: page.toString(),
-    with_original_language: 'en|tr'
+    with_original_language: 'en|tr' // Prefer English and Turkish content
   };
 
   if (preferredGenres && Math.random() > 0.3) params.with_genres = preferredGenres;
 
-  const randomOffset = Math.floor(Math.random() * 5);
-  params.page = (page + randomOffset).toString();
+  // Ensure we don't just loop small numbers if page is high
+  // Add some randomness but respect the page increment from the caller
 
   const data = await fetchTMDB(`/discover/${type}`, params);
 
   if (!data.results) return [];
 
-  // DİZİ/FİLM FARKINI DÜZELTME: Dizilerde 'title' yoktur, 'name' vardır.
-  // UI bozulmasın diye hepsini 'title' özelliğine map ediyoruz.
   return data.results.map((item: any) => ({
     ...item,
-    title: item.title || item.name, // İsim standardizasyonu
+    title: item.title || item.name,
     original_title: item.original_title || item.original_name
   }));
 }
