@@ -245,18 +245,56 @@ export default function TmdbSection({
                                 )}
                             </div>
 
-                            {/* Providers (Şurada İzle) */}
+                            {/* Providers (Şurada İzle - Flatrate) */}
                             {tmdbResult['watch/providers']?.results?.TR?.flatrate && (
                                 <div className="mb-4">
-                                    <p className="text-xs text-gray-500 font-bold mb-2 uppercase">Şurada Mevcut:</p>
-                                    <div className="flex gap-2">
+                                    <p className="text-[10px] text-gray-500 font-black mb-2 uppercase tracking-widest">ABONELİK İLE İZLE</p>
+                                    <div className="flex gap-2 flex-wrap">
                                         {tmdbResult['watch/providers'].results.TR.flatrate.map((p: any) => (
-                                            <div key={p.provider_id} className="relative group w-8 h-8" title={p.provider_name}>
+                                            <div key={p.provider_id} className="relative group w-10 h-10" title={p.provider_name}>
                                                 <Image
                                                     src={`https://image.tmdb.org/t/p/original${p.logo_path}`}
                                                     alt={p.provider_name}
                                                     fill
-                                                    className="object-cover rounded-lg shadow-md"
+                                                    className="object-cover rounded-lg shadow-md ring-1 ring-white/10"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Rent Options */}
+                            {tmdbResult['watch/providers']?.results?.TR?.rent && (
+                                <div className="mb-4">
+                                    <p className="text-[10px] text-blue-400 font-black mb-2 uppercase tracking-widest">KİRALA</p>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {tmdbResult['watch/providers'].results.TR.rent.map((p: any) => (
+                                            <div key={p.provider_id} className="relative group w-10 h-10" title={p.provider_name}>
+                                                <Image
+                                                    src={`https://image.tmdb.org/t/p/original${p.logo_path}`}
+                                                    alt={p.provider_name}
+                                                    fill
+                                                    className="object-cover rounded-lg shadow-md ring-1 ring-blue-500/30"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Buy Options */}
+                            {tmdbResult['watch/providers']?.results?.TR?.buy && (
+                                <div className="mb-4">
+                                    <p className="text-[10px] text-green-400 font-black mb-2 uppercase tracking-widest">SATIN AL</p>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {tmdbResult['watch/providers'].results.TR.buy.map((p: any) => (
+                                            <div key={p.provider_id} className="relative group w-10 h-10" title={p.provider_name}>
+                                                <Image
+                                                    src={`https://image.tmdb.org/t/p/original${p.logo_path}`}
+                                                    alt={p.provider_name}
+                                                    fill
+                                                    className="object-cover rounded-lg shadow-md ring-1 ring-green-500/30"
                                                 />
                                             </div>
                                         ))}
