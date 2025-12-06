@@ -131,7 +131,7 @@ export async function getRandomEpisode(tvId: number | null = null, genreId: stri
     selectedShowId = randomShow.id; showNameOverride = randomShow.name;
   }
 
-  const showDetails = await fetchTMDB(`/tv/${selectedShowId}`, { append_to_response: 'external_ids,videos' });
+  const showDetails = await fetchTMDB(`/tv/${selectedShowId}`, { append_to_response: 'external_ids,videos,watch/providers' });
   if (!showDetails.seasons) return null;
   const seasons = showDetails.seasons.filter((s: any) => s.season_number > 0 && s.episode_count > 0);
   if (seasons.length === 0) return null;
@@ -143,7 +143,8 @@ export async function getRandomEpisode(tvId: number | null = null, genreId: stri
   return {
     id: selectedShowId, showName: showDetails.name || showNameOverride, season: randomSeason.season_number, episode: randomEpisode.episode_number,
     title: randomEpisode.name, overview: randomEpisode.overview, still_path: randomEpisode.still_path || showDetails.backdrop_path,
-    vote_average: randomEpisode.vote_average, imdb_id: showDetails.external_ids?.imdb_id, external_ids: showDetails.external_ids, videos: showDetails.videos
+    vote_average: randomEpisode.vote_average, imdb_id: showDetails.external_ids?.imdb_id, external_ids: showDetails.external_ids, videos: showDetails.videos,
+    'watch/providers': showDetails['watch/providers']
   };
 }
 

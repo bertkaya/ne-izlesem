@@ -244,20 +244,21 @@ export default function Home() {
   const togglePlatform = async (id: number) => { const n = platforms.includes(id) ? platforms.filter(p => p !== id) : [...platforms, id]; setPlatforms(n); if (user) await supabase.from('profiles').update({ selected_platforms: n.map(String) }).eq('id', user.id) }
   const getWatchLink = () => {
     if (!tmdbResult) return '#';
-    const t = tmdbResult.title || tmdbResult.name;
-    const q = encodeURIComponent(t);
+    // TV show (episode) logic: Use Show Name for search. Movie: Use title.
+    const queryTitle = tmdbResult.showName || tmdbResult.title || tmdbResult.name;
+    const q = encodeURIComponent(queryTitle);
 
     // 1. Netflix (Özel Durum)
     if (platforms.includes(8)) return `https://www.netflix.com/search?q=${q}`;
 
-    // 2. Diğer Her Şey -> TMDB
-    // Eğer TMDB sonuçlarında direct link varsa onu kullan, yoksa TMDB ana sayfasına yönlendir
+    // 2. Diğer Her Şey -> TMDB / JustWatch
     const tmdbLink = tmdbResult['watch/providers']?.results?.TR?.link;
     if (tmdbLink) return tmdbLink;
 
-    // TMDB Movie/TV Page
-    const type = tmdbResult.name ? 'tv' : 'movie';
-    // Türkçe arayüzü zorlamak için TR ekleyebiliriz ama varsayılan iyidir.
+    // TMDB Movie/TV Page Fallback
+    // If it has showName or season, it's definitely TV.
+    const isTv = !!(tmdbResult.showName || tmdbResult.season || tmdbResult.episode);
+    const type = isTv ? 'tv' : 'movie';
     return `https://www.themoviedb.org/${type}/${tmdbResult.id}/watch`;
   }
 
