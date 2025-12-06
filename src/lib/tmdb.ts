@@ -15,13 +15,15 @@ export const PROVIDERS = [
 export const MOOD_TO_MOVIE_GENRE = {
   funny: '35', scary: '27,53', emotional: '18,10749', action: '28,12', scifi: '878,14', crime: '80', relax: '99',
   fantasy: '14,12', history: '36', war: '10752', western: '37', music: '10402', mystery: '9648',
-  anime: '16', family: '10751', doc: '99'
+  anime: '16', family: '10751', doc: '99',
+  travel: '99,12', sport: '99,18', tech: '99,878', news: '99', popculture: '99'
 };
 
 export const MOOD_TO_TV_GENRE = {
   funny: '35', scary: '9648,10765', emotional: '18', action: '10759', scifi: '10765', crime: '80', relax: '99,10764',
   fantasy: '10765', war: '10768', soap: '10766', kids: '10762', reality: '10764',
-  anime: '16', family: '10751', doc: '99'
+  anime: '16', family: '10751', doc: '99',
+  travel: '99,10764', sport: '10764', tech: '99', news: '10763', music: '10402', popculture: '10764'
 };
 
 export const MOOD_TO_YOUTUBE_KEYWORDS = {
@@ -31,7 +33,13 @@ export const MOOD_TO_YOUTUBE_KEYWORDS = {
   pets: ['Komik Kediler', 'Yavru Köpek', 'Sevimli Hayvanlar', 'Kedi Videoları'],
   relax: ['Doğa Yürüyüşü', 'Rahatlatıcı Müzik', 'Manzara 4K', 'Restorasyon'],
   learn: ['Barış Özcan', 'Ruhi Çenet', 'Belgesel', 'Nasıl Yapılır', 'TEDx'],
-  drama: ['Kısa Film', 'Dramatik Sahne', 'Hayat Hikayesi']
+  drama: ['Kısa Film', 'Dramatik Sahne', 'Hayat Hikayesi'],
+  travel: ['Gezi Vlog', 'Dünya Turu', 'Tatil', 'Kamp', 'Şehir Rehberi', 'Rotasız Seyyah'],
+  sport: ['Maç Özetleri', 'Spor Haberleri', 'NBA Highlights', 'Formula 1', 'Goller'],
+  tech: ['Teknoloji Haberleri', 'Ürün İnceleme', 'Telefon Karşılaştırma', 'Bilgisayar Toplama', 'Webtekno'],
+  news: ['Haber Bülteni', 'Gündem', 'Tartışma Programı', 'Dünya Ekonomisi', 'Cüneyt Özdemir'],
+  music: ['Akustik Performans', 'Konser Kaydı', 'Canlı Müzik', 'Lo-Fi Hip Hop', 'Tiny Desk'],
+  popculture: ['Magazin D', 'Ünlülerin Hayatı', 'Röportaj', 'Paparazzi', 'Magazin Haberleri']
 };
 
 async function fetchTMDB(endpoint: string, params: Record<string, string> = {}) {

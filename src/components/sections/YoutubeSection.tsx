@@ -13,7 +13,13 @@ const YOUTUBE_MOODS = [
     { id: 'pets', label: '🐶 Evcil Dostlar', color: 'green' },
     { id: 'relax', label: '💆‍♂️ Rahatla', color: 'teal' },
     { id: 'learn', label: '🧠 Öğren', color: 'indigo' },
-    { id: 'drama', label: '🎬 Hikaye', color: 'pink' }
+    { id: 'drama', label: '🎬 Hikaye', color: 'pink' },
+    { id: 'travel', label: '✈️ Gezi & Tatil', color: 'yellow' },
+    { id: 'sport', label: '⚽ Spor', color: 'red' },
+    { id: 'tech', label: '💻 Teknoloji', color: 'cyan' },
+    { id: 'news', label: '📰 Gündem', color: 'zinc' },
+    { id: 'music', label: '🎵 Müzik', color: 'rose' },
+    { id: 'popculture', label: '✨ Magazin', color: 'fuchsia' }
 ];
 
 interface YoutubeSectionProps {
