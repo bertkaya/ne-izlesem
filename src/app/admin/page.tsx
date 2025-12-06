@@ -5,7 +5,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import {
   fetchAndSaveChannelVideos, resolveYouTubeChannel,
   addSafeChannel, removeSafeChannel, fetchFromSafeChannels,
-  bulkUpdateVideos, checkVideoHealth, fetchYouTubeTrends
+  bulkUpdateVideos, checkVideoHealth, fetchYouTubeTrends, fetchVideoMetadata
 } from '../actions'
 import {
   ShieldCheck, Youtube, Loader2, CheckCircle, Trash2, ExternalLink,
@@ -89,16 +89,28 @@ export default function AdminPage() {
   const [manualVideoUrl, setManualVideoUrl] = useState('')
   const handleManualAdd = async () => {
     if (!manualVideoUrl) return;
-    setLoading(true); setStatusMsg("Video ekleniyor...");
+    setLoading(true); setStatusMsg("Video bilgileri çekiliyor (YouTube)...");
+
+    const meta = await fetchVideoMetadata(manualVideoUrl);
+
+    if (!meta.success || !meta.data) {
+      setStatusMsg("Hata: " + meta.message);
+      setLoading(false);
+      return;
+    }
+
+    setStatusMsg(`Eklendi: ${meta.data.title} (${meta.data.duration_category}) - ${meta.data.language === 'tr' ? 'Türkçe 🇹🇷' : 'Yabancı 🌍'}`);
+
     const { error } = await supabase.from('videos').insert({
       url: manualVideoUrl,
-      title: 'Admin Manuel Ekleme (Lütfen Düzenleyiniz)',
-      mood: 'funny',
-      duration_category: 'meal',
-      is_approved: true // Admin eklediği için onaylı
+      title: meta.data.title,
+      mood: meta.data.mood,
+      duration_category: meta.data.duration_category,
+      is_approved: true // Manuel ekleme olduğu için onaylı
     });
-    if (error) setStatusMsg("Hata: " + error.message);
-    else { setStatusMsg("Video eklendi!"); setManualVideoUrl(''); fetchVideos(); }
+
+    if (error) setStatusMsg("DB Hatası: " + error.message);
+    else { setManualVideoUrl(''); fetchVideos(); }
     setLoading(false);
   }
 

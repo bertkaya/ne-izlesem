@@ -257,3 +257,47 @@ export async function getAiSuggestions(prompt: string) {
   }
   return { success: false, results: [] };
 }
+
+export async function fetchVideoMetadata(url: string) {
+  if (!YOUTUBE_API_KEY) return { success: false, message: 'API Key eksik.' };
+
+  const videoId = url.match(/v=([^&]+)/)?.[1] || url.match(/youtu\.be\/([^?]+)/)?.[1];
+  if (!videoId) return { success: false, message: 'Geçersiz URL' };
+
+  try {
+    const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${YOUTUBE_API_KEY}`);
+    const data = await res.json();
+    const item = data.items?.[0];
+
+    if (!item) return { success: false, message: 'Video bulunamadı' };
+
+    const min = parseDuration(item.contentDetails.duration);
+    const category = getCategory(min);
+
+    // Dil Tespiti (defaultAudioLanguage veya defaultLanguage veya title/description analizi)
+    let lang = item.snippet.defaultAudioLanguage || item.snippet.defaultLanguage;
+    if (!lang) {
+      // Fallback: Başlık veya açıklamada Türkçe karakter kontrolü
+      const trChars = /[ğüşıöçĞÜŞİÖÇ]/;
+      if (trChars.test(item.snippet.title) || trChars.test(item.snippet.description)) {
+        lang = 'tr';
+      } else {
+        lang = 'en'; // Varsayılan
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        title: item.snippet.title,
+        description: item.snippet.description,
+        duration_category: category,
+        mood: 'funny', // Varsayılan, admin değiştirebilir
+        language: lang.startsWith('tr') ? 'tr' : 'en',
+        thumbnail: item.snippet.thumbnails?.high?.url
+      }
+    };
+  } catch (e) {
+    return { success: false, message: 'YouTube API Hatası' };
+  }
+}
