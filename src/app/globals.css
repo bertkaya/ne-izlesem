@@ -45,3 +45,12 @@ h6 {
   font-family: var(--font-display), sans-serif;
   letter-spacing: 0.05em;
 }
+
+/* Responsive Text Utility */
+.text-responsive {
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
+}
+
+.header-responsive {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+}

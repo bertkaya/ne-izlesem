@@ -54,15 +54,27 @@ export default function YoutubeSection({
                     </button>
                 </div>
                 <div className="grid grid-cols-3 gap-2 mb-6">
-                    {['snack', 'meal', 'feast'].map(d => (
-                        <button
-                            key={d}
-                            onClick={() => setDuration(d)}
-                            className={`p-3 rounded-xl text-sm font-bold border ${duration === d ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500' : 'bg-gray-800 border-transparent text-gray-400'}`}
-                        >
-                            {d === 'snack' ? 'Atıştır' : d === 'meal' ? 'Doyur' : 'Ziyafet'}
-                        </button>
-                    ))}
+                    <button
+                        onClick={() => setDuration('snack')}
+                        className={`p-3 rounded-xl text-sm font-bold border flex flex-col items-center justify-center gap-1 transition-all ${duration === 'snack' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500' : 'bg-gray-800 border-transparent text-gray-400 hover:bg-gray-750'}`}
+                    >
+                        <span>Atıştır</span>
+                        <span className="text-[10px] opacity-70 font-normal">(3-15 dk)</span>
+                    </button>
+                    <button
+                        onClick={() => setDuration('meal')}
+                        className={`p-3 rounded-xl text-sm font-bold border flex flex-col items-center justify-center gap-1 transition-all ${duration === 'meal' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500' : 'bg-gray-800 border-transparent text-gray-400 hover:bg-gray-750'}`}
+                    >
+                        <span>Doyur</span>
+                        <span className="text-[10px] opacity-70 font-normal">(15-30 dk)</span>
+                    </button>
+                    <button
+                        onClick={() => setDuration('feast')}
+                        className={`p-3 rounded-xl text-sm font-bold border flex flex-col items-center justify-center gap-1 transition-all ${duration === 'feast' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500' : 'bg-gray-800 border-transparent text-gray-400 hover:bg-gray-750'}`}
+                    >
+                        <span>Ziyafet</span>
+                        <span className="text-[10px] opacity-70 font-normal">(30+ dk)</span>
+                    </button>
                 </div>
 
                 <p className="text-gray-400 mb-3 text-xs font-bold uppercase">Modun</p>
@@ -96,9 +108,9 @@ export default function YoutubeSection({
                 <button
                     onClick={fetchYoutubeVideo}
                     disabled={loading}
-                    className="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 shadow-lg active:scale-95"
+                    className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-yellow-500 to-orange-600 shadow-[0_0_30px_rgba(234,179,8,0.5)] border-4 border-yellow-400/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all group"
                 >
-                    {loading ? <Loader2 className="animate-spin" /> : <><Tv fill="currentColor" /> BUL & İZLE</>}
+                    {loading ? <Loader2 className="animate-spin text-white w-10 h-10" /> : <Play fill="currentColor" className="text-white w-10 h-10 ml-1 group-hover:drop-shadow-lg" />}
                 </button>
             </div>
 

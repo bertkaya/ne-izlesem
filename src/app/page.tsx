@@ -308,9 +308,7 @@ export default function Home() {
         </div>
       )}
 
-      {!tmdbResult && !ytVideo && appMode !== 'swipe' && (
-        <ModeSelector appMode={appMode} setAppMode={setAppMode} />
-      )}
+      <ModeSelector appMode={appMode} setAppMode={setAppMode} />
 
       {/* CONTENT SWITCHER */}
       {appMode === 'youtube' && (
@@ -350,6 +348,14 @@ export default function Home() {
           supabase={supabase}
         />
       )}
+
+
+      {/* FOOTER */}
+      <footer className="w-full text-center py-8 text-gray-500 text-xs mt-12 border-t border-gray-800/50">
+        <p className="mb-2 uppercase font-bold tracking-widest text-gray-600">Ne Yesek?</p>
+        <p>Yemek sürenize uygun YouTube videoları, Gurme film/dizi önerileri ve Yapay Zeka Sommelier.</p>
+        <p className="mt-1 opacity-50">Film verileri TMDB tarafından sağlanmaktadır.</p>
+      </footer>
     </main>
   )
 }

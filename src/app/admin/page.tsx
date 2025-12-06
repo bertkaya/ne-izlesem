@@ -15,7 +15,7 @@ import {
 const supabase = createClientComponentClient()
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'videos' | 'safe_channels' | 'blacklist'>('videos')
+  const [activeTab, setActiveTab] = useState<'videos' | 'safe_channels' | 'blacklist' | 'user_stats'>('videos')
   const [loading, setLoading] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
 
@@ -32,7 +32,15 @@ export default function AdminPage() {
   const [blacklist, setBlacklist] = useState<any[]>([])
   const [banId, setBanId] = useState(''); const [banReason, setBanReason] = useState('')
 
-  useEffect(() => { fetchVideos(); fetchSafeChannels(); fetchBlacklist(); }, [videoFilter])
+  // USER STATS TAB
+  const [userStats, setUserStats] = useState<any[]>([])
+
+  useEffect(() => {
+    if (activeTab === 'videos') fetchVideos();
+    if (activeTab === 'safe_channels') fetchSafeChannels();
+    if (activeTab === 'blacklist') fetchBlacklist();
+    if (activeTab === 'user_stats') fetchUserStats();
+  }, [activeTab, videoFilter])
 
   // --- DATA FETCHING ---
   const fetchVideos = async () => {
@@ -42,6 +50,11 @@ export default function AdminPage() {
   }
   const fetchSafeChannels = async () => { const { data } = await supabase.from('safe_channels').select('*'); if (data) setSafeChannels(data) }
   const fetchBlacklist = async () => { const { data } = await supabase.from('blacklist').select('*'); if (data) setBlacklist(data) }
+
+  const fetchUserStats = async () => {
+    const { data: history } = await supabase.from('user_history').select('*, profiles(email)').order('created_at', { ascending: false }).limit(50);
+    if (history) setUserStats(history);
+  }
 
   // --- VIDEO İŞLEMLERİ ---
   const toggleSelect = (id: number) => selectedIds.includes(id) ? setSelectedIds(selectedIds.filter(i => i !== id)) : setSelectedIds([...selectedIds, id])
@@ -72,14 +85,30 @@ export default function AdminPage() {
     setStatusMsg(res.message); setLoading(false); fetchVideos();
   }
 
+  // --- MANUAL VIDEO ADD ---
+  const [manualVideoUrl, setManualVideoUrl] = useState('')
+  const handleManualAdd = async () => {
+    if (!manualVideoUrl) return;
+    setLoading(true); setStatusMsg("Video ekleniyor...");
+    const { error } = await supabase.from('videos').insert({
+      url: manualVideoUrl,
+      title: 'Admin Manuel Ekleme (Lütfen Düzenleyiniz)',
+      mood: 'funny',
+      duration_category: 'meal',
+      is_approved: true // Admin eklediği için onaylı
+    });
+    if (error) setStatusMsg("Hata: " + error.message);
+    else { setStatusMsg("Video eklendi!"); setManualVideoUrl(''); fetchVideos(); }
+    setLoading(false);
+  }
+
   // --- SAFE CHANNEL İŞLEMLERİ ---
   const handleAddSafe = async () => {
     if (!newSafeInput) return;
     setLoading(true); setStatusMsg("Kanal aranıyor...");
     const res = await resolveYouTubeChannel(newSafeInput);
     if (res.success && res.id) {
-      // ID'yi bulduk, şimdi ismini alıp kaydedelim (Basitlik için ismi manuel veya boş geçiyoruz şimdilik)
-      await addSafeChannel(res.id, newSafeInput); // İsim olarak input'u kullandık
+      await addSafeChannel(res.id, newSafeInput);
       setNewSafeInput(''); fetchSafeChannels(); setStatusMsg("Kanal güvenli listeye eklendi.");
     } else {
       setStatusMsg("Kanal bulunamadı.");
@@ -109,10 +138,11 @@ export default function AdminPage() {
         <h1 className="text-3xl font-bold mb-8 flex items-center gap-3 text-yellow-500"><ShieldCheck size={32} /> Mutfak Kontrol</h1>
 
         {/* TABS */}
-        <div className="flex gap-2 mb-8 border-b border-gray-700">
-          <button onClick={() => setActiveTab('videos')} className={`px-6 py-3 font-bold ${activeTab === 'videos' ? 'bg-gray-800 text-white border-t border-x border-gray-700 rounded-t-lg' : 'text-gray-500'}`}>Videolar</button>
-          <button onClick={() => setActiveTab('safe_channels')} className={`px-6 py-3 font-bold ${activeTab === 'safe_channels' ? 'bg-gray-800 text-white border-t border-x border-gray-700 rounded-t-lg' : 'text-gray-500'}`}>Güvenli Kanallar</button>
-          <button onClick={() => setActiveTab('blacklist')} className={`px-6 py-3 font-bold ${activeTab === 'blacklist' ? 'bg-gray-800 text-white border-t border-x border-gray-700 rounded-t-lg' : 'text-gray-500'}`}>Blacklist</button>
+        <div className="flex gap-2 mb-8 border-b border-gray-700 overflow-x-auto pb-1">
+          <button onClick={() => setActiveTab('videos')} className={`px-6 py-3 font-bold whitespace-nowrap ${activeTab === 'videos' ? 'bg-gray-800 text-white border-t border-x border-gray-700 rounded-t-lg' : 'text-gray-500'}`}>Videolar</button>
+          <button onClick={() => setActiveTab('user_stats')} className={`px-6 py-3 font-bold whitespace-nowrap ${activeTab === 'user_stats' ? 'bg-gray-800 text-white border-t border-x border-gray-700 rounded-t-lg' : 'text-gray-500'}`}>Kullanıcı Takip</button>
+          <button onClick={() => setActiveTab('safe_channels')} className={`px-6 py-3 font-bold whitespace-nowrap ${activeTab === 'safe_channels' ? 'bg-gray-800 text-white border-t border-x border-gray-700 rounded-t-lg' : 'text-gray-500'}`}>Güvenli Kanallar</button>
+          <button onClick={() => setActiveTab('blacklist')} className={`px-6 py-3 font-bold whitespace-nowrap ${activeTab === 'blacklist' ? 'bg-gray-800 text-white border-t border-x border-gray-700 rounded-t-lg' : 'text-gray-500'}`}>Blacklist</button>
         </div>
 
         {statusMsg && <div className="bg-blue-900/30 text-blue-300 p-3 rounded-lg mb-6 border border-blue-500/30 animate-pulse">{statusMsg}</div>}
@@ -128,6 +158,13 @@ export default function AdminPage() {
               <button onClick={handleHealthCheck} disabled={loading} className="bg-red-900/50 text-red-300 border border-red-800 px-4 py-2 rounded hover:bg-red-900 transition flex items-center gap-2">
                 <Stethoscope size={16} /> Video Sağlık Kontrolü
               </button>
+            </div>
+
+            {/* Manual ADD */}
+            <div className="bg-gray-800 p-4 rounded-xl mb-4 border border-gray-700 flex gap-2 items-center">
+              <Plus size={20} className="text-gray-500" />
+              <input value={manualVideoUrl} onChange={e => setManualVideoUrl(e.target.value)} placeholder="YouTube Video Linki Yapıştır (Hızlı Ekle)" className="bg-gray-900 border border-gray-600 p-2 rounded-lg text-white flex-1 outline-none text-sm" />
+              <button onClick={handleManualAdd} disabled={loading} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm">Hızlı Ekle</button>
             </div>
 
             <div className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 shadow-xl overflow-x-auto">
@@ -164,6 +201,36 @@ export default function AdminPage() {
                       <td className="p-4 text-right"><a href={v.url} target="_blank" className="text-blue-400 hover:text-blue-300"><ExternalLink size={16} /></a></td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ================= USER STATS TAB ================= */}
+        {activeTab === 'user_stats' && (
+          <div className="animate-in fade-in">
+            <h2 className="text-xl font-bold mb-4 text-purple-400 border-b border-gray-700 pb-2">Son Kullanıcı Aktiviteleri</h2>
+            <div className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-gray-900/50 text-gray-400">
+                  <tr>
+                    <th className="p-4">Kullanıcı</th>
+                    <th className="p-4">İşlem</th>
+                    <th className="p-4">İçerik</th>
+                    <th className="p-4 text-right">Zaman</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-700">
+                  {userStats.map((stat: any) => (
+                    <tr key={stat.id} className="hover:bg-gray-700/30">
+                      <td className="p-4 text-white font-medium">{(stat.profiles && stat.profiles.email) ? stat.profiles.email.split('@')[0] : 'Anonim'}</td>
+                      <td className="p-4"><span className={`px-2 py-1 rounded text-xs font-bold ${stat.media_type === 'youtube' ? 'bg-red-900/50 text-red-300' : 'bg-blue-900/50 text-blue-300'}`}>{stat.media_type}</span></td>
+                      <td className="p-4 text-gray-300">{stat.title}</td>
+                      <td className="p-4 text-right text-gray-500 text-xs">{new Date(stat.created_at).toLocaleString('tr-TR')}</td>
+                    </tr>
+                  ))}
+                  {userStats.length === 0 && <tr><td colSpan={4} className="p-4 text-center text-gray-500">Henüz aktivite yok.</td></tr>}
                 </tbody>
               </table>
             </div>

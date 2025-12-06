@@ -13,11 +13,13 @@ export const PROVIDERS = [
 ];
 
 export const MOOD_TO_MOVIE_GENRE = {
-  funny: '35', scary: '27,53', emotional: '18,10749', action: '28,12', scifi: '878,14', crime: '80', relax: '99'
+  funny: '35', scary: '27,53', emotional: '18,10749', action: '28,12', scifi: '878,14', crime: '80', relax: '99',
+  fantasy: '14,12', history: '36', war: '10752', western: '37', music: '10402', mystery: '9648'
 };
 
 export const MOOD_TO_TV_GENRE = {
-  funny: '35', scary: '9648,10765', emotional: '18', action: '10759', scifi: '10765', crime: '80', relax: '99,10764'
+  funny: '35', scary: '9648,10765', emotional: '18', action: '10759', scifi: '10765', crime: '80', relax: '99,10764',
+  fantasy: '10765', war: '10768', soap: '10766', kids: '10762', reality: '10764'
 };
 
 export const MOOD_TO_YOUTUBE_KEYWORDS = {
@@ -46,7 +48,7 @@ export async function getSmartRecommendation(
   watchedIds: number[] = [], blacklistedIds: number[] = [],
   onlyTurkish: boolean = false, yearRange: string = '', sortBy: string = 'popularity.desc'
 ) {
-  const randomPage = Math.floor(Math.random() * 5) + 1;
+  const randomPage = Math.floor(Math.random() * 50) + 1;
   const validProviders = providers.split('|').filter(id => id !== '0').join('|');
   const genresStr = Array.isArray(genreIds) ? genreIds.join(',') : genreIds;
 
@@ -97,6 +99,11 @@ export async function searchTvShow(query: string) {
 export async function searchTvShowsList(query: string) {
   const data = await fetchTMDB('/search/tv', { query: query });
   return data.results ? data.results.slice(0, 5) : [];
+}
+
+export async function getTrendingTvShows() {
+  const data = await fetchTMDB('/trending/tv/week');
+  return data.results ? data.results.slice(0, 10) : [];
 }
 
 // --- 3. RASTGELE BÖLÜM ---

@@ -50,7 +50,7 @@ export async function autoPopulateYouTube() {
                   url: videoUrl,
                   duration_category: getCategory(min),
                   mood: mood, // Doğru kategoriye otomatik atar
-                  is_approved: true // Bot eklediği için onaylı olsun
+                  is_approved: false // Onay Beklemeli (Güvenlik Önlemi)
                 });
                 totalAdded++;
               }
@@ -191,7 +191,7 @@ export async function fetchFromSafeChannels() {
                 url: videoUrl,
                 duration_category: getCategory(min),
                 mood: 'relax', // Varsayılan mood (Admin panelden değiştirilebilir)
-                is_approved: true // Güvenli kanaldan geldiği için onaylı
+                is_approved: false // Onay Beklemeli
               });
               totalAdded++;
             }
@@ -232,7 +232,7 @@ export async function fetchYouTubeTrends() {
             url: videoUrl,
             duration_category: getCategory(min),
             mood: 'funny', // Trendler genellikle eğlencelidir, varsayılan funny.
-            is_approved: true
+            is_approved: false
           });
           totalAdded++;
         }

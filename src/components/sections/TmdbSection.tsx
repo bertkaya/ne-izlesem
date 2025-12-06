@@ -1,19 +1,15 @@
-
+import { useState, useEffect } from 'react'
 import {
     Loader2, Play, Check, Flag, Video, RotateCcw, EyeOff, AlertTriangle
 } from 'lucide-react'
-import { PROVIDERS, MOOD_TO_MOVIE_GENRE, MOOD_TO_TV_GENRE } from '@/lib/tmdb'
+import { PROVIDERS, MOOD_TO_MOVIE_GENRE, MOOD_TO_TV_GENRE, getTrendingTvShows } from '@/lib/tmdb'
 
 const GENRE_LABELS: Record<string, string> = {
     funny: 'Komedi', scary: 'Korku & Gerilim', emotional: 'Dram & Romantik',
-    action: 'Aksiyon & Macera', scifi: 'Bilim Kurgu', crime: 'Suç & Polisiye', relax: 'Belgesel & Yaşam'
+    action: 'Aksiyon & Macera', scifi: 'Bilim Kurgu', crime: 'Suç & Polisiye', relax: 'Belgesel & Yaşam',
+    fantasy: 'Fantastik', history: 'Tarih', war: 'Savaş', western: 'Western', music: 'Müzikal', mystery: 'Gizem',
+    soap: 'Pembe Dizi', kids: 'Çocuk', reality: 'Reality Show'
 };
-
-const POPULAR_SHOWS = [
-    { id: 4608, name: 'Gibi' }, { id: 1668, name: 'Friends' }, { id: 1400, name: 'Seinfeld' },
-    { id: 2316, name: 'The Office' }, { id: 456, name: 'The Simpsons' }, { id: 62560, name: 'Mr. Robot' },
-    { id: 1399, name: 'Game of Thrones' }, { id: 1396, name: 'Breaking Bad' },
-];
 
 interface TmdbSectionProps {
     tmdbType: 'movie' | 'tv';
@@ -46,6 +42,14 @@ export default function TmdbSection({
     toggleGenre, selectedGenres, fetchTmdbContent, loading, tmdbResult,
     openTrailer, getWatchLink, markAsWatched, onTryAgain, aiSuggestions, setTmdbResult
 }: TmdbSectionProps) {
+    const [trendingShows, setTrendingShows] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (tmdbType === 'tv' && trendingShows.length === 0) {
+            getTrendingTvShows().then(setTrendingShows);
+        }
+    }, [tmdbType]);
+
     return (
         <div className="flex flex-col items-center mt-8 px-4 animate-in fade-in duration-500">
             <div className="bg-gray-900/80 p-6 rounded-3xl shadow-2xl w-full max-w-2xl border border-gray-800">
@@ -86,9 +90,9 @@ export default function TmdbSection({
                                 ))}
                             </ul>
                         )}
-                        {/* Popüler Diziler */}
+                        {/* Popüler (Trend) Diziler */}
                         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-2">
-                            {POPULAR_SHOWS.map(show => (
+                            {trendingShows.map(show => (
                                 <button
                                     key={show.id}
                                     onClick={() => handleSearchSelect(show)}
@@ -200,9 +204,9 @@ export default function TmdbSection({
                                 <button onClick={() => window.open(getWatchLink(), '_blank')} className="flex-1 bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition flex items-center justify-center gap-2"><Play size={18} /> İzle</button>
                             </div>
                             <div className="flex justify-center gap-4">
-                                <button onClick={fetchTmdbContent} className="text-gray-400 hover:text-white text-sm flex gap-1"><RotateCcw size={14} /> Pas Geç</button>
-                                {onTryAgain && <button onClick={onTryAgain} className="text-gray-400 hover:text-yellow-400 text-sm flex gap-1"><RotateCcw size={14} /> Başka Öner</button>}
-                                <button onClick={markAsWatched} className="text-gray-400 hover:text-green-400 text-sm flex gap-1"><EyeOff size={14} /> İzledim</button>
+                                <button onClick={fetchTmdbContent} className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 rounded-xl flex items-center justify-center gap-2 border border-gray-700 transition-colors"><RotateCcw size={18} /> Pas Geç</button>
+                                {onTryAgain && <button onClick={onTryAgain} className="flex-1 bg-yellow-900/40 hover:bg-yellow-900/60 text-yellow-500 font-bold py-3 rounded-xl flex items-center justify-center gap-2 border border-yellow-700/50 transition-colors"><RotateCcw size={18} /> Başka Öner</button>}
+                                <button onClick={markAsWatched} className="flex-1 bg-green-900/40 hover:bg-green-900/60 text-green-500 font-bold py-3 rounded-xl flex items-center justify-center gap-2 border border-green-700/50 transition-colors"><EyeOff size={18} /> İzledim</button>
                             </div>
                         </div>
                     </div>
