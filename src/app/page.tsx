@@ -352,11 +352,52 @@ export default function Home() {
 
 
       {/* FOOTER */}
-      <footer className="w-full text-center py-8 text-gray-500 text-xs mt-12 border-t border-gray-800/50">
-        <p className="mb-2 uppercase font-bold tracking-widest text-gray-600">Ne Yesek?</p>
-        <p>Yemek sürenize uygun YouTube videoları, Gurme film/dizi önerileri ve Yapay Zeka Sommelier.</p>
-        <p className="mt-1 opacity-50">Film verileri TMDB tarafından sağlanmaktadır.</p>
+      <footer className="w-full text-center py-8 text-gray-500 text-xs mt-12 border-t border-gray-800/50 flex flex-col items-center gap-4">
+        <div className="text-center">
+          <p className="mb-2 uppercase font-bold tracking-widest text-gray-600">Ne Yesek?</p>
+          <p>Yemek sürenize uygun YouTube videoları, Gurme film/dizi önerileri ve Yapay Zeka Sommelier.</p>
+        </div>
+
+        <div className="flex flex-col items-center gap-2 mt-4 opacity-70 hover:opacity-100 transition-opacity">
+          <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer">
+            <Image
+              src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg"
+              alt="TMDB Logo"
+              width={150}
+              height={20}
+              className="h-4 w-auto"
+              unoptimized // SVG için gerekebilir veya domains'e eklenmeli
+            />
+          </a>
+          <p className="text-[10px] max-w-md mx-auto">
+            This product uses the TMDB API but is not endorsed or certified by TMDB. <br />
+            Bu ürün TMDB API kullanmaktadır fakat TMDB tarafından onaylanmamıştır.
+          </p>
+        </div>
       </footer>
+
+      {/* JSON-LD Structured Data for SEO */}
+      {tmdbResult && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": tmdbResult.name ? "TVSeries" : "Movie",
+              "name": tmdbResult.title || tmdbResult.name,
+              "description": tmdbResult.overview,
+              "image": `https://image.tmdb.org/t/p/original${tmdbResult.poster_path}`,
+              "datePublished": tmdbResult.release_date || tmdbResult.first_air_date,
+              "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": tmdbResult.vote_average,
+                "bestRating": "10",
+                "ratingCount": tmdbResult.vote_count
+              }
+            })
+          }}
+        />
+      )}
     </main>
   )
 }

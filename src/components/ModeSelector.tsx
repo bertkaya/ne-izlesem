@@ -20,8 +20,8 @@ const ModeSelector = memo(function ModeSelector({ appMode, setAppMode }: ModeSel
     ]
 
     return (
-        <div className="flex justify-center mt-6 px-4">
-            <div className="bg-gray-900 p-1 rounded-2xl border border-gray-800 flex flex-wrap justify-center w-full max-w-xl shadow-lg">
+        <div className="sticky top-4 z-50 flex justify-center mt-6 px-4 pointer-events-none">
+            <div className="bg-gray-900/90 backdrop-blur-md p-1 rounded-2xl border border-gray-800 flex flex-wrap justify-center w-full max-w-xl shadow-2xl pointer-events-auto">
                 {modes.map(({ id, label, icon: Icon, color }) => (
                     <button
                         key={id}

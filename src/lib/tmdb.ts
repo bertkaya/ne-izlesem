@@ -14,12 +14,14 @@ export const PROVIDERS = [
 
 export const MOOD_TO_MOVIE_GENRE = {
   funny: '35', scary: '27,53', emotional: '18,10749', action: '28,12', scifi: '878,14', crime: '80', relax: '99',
-  fantasy: '14,12', history: '36', war: '10752', western: '37', music: '10402', mystery: '9648'
+  fantasy: '14,12', history: '36', war: '10752', western: '37', music: '10402', mystery: '9648',
+  anime: '16', family: '10751', doc: '99'
 };
 
 export const MOOD_TO_TV_GENRE = {
   funny: '35', scary: '9648,10765', emotional: '18', action: '10759', scifi: '10765', crime: '80', relax: '99,10764',
-  fantasy: '10765', war: '10768', soap: '10766', kids: '10762', reality: '10764'
+  fantasy: '10765', war: '10768', soap: '10766', kids: '10762', reality: '10764',
+  anime: '16', family: '10751', doc: '99'
 };
 
 export const MOOD_TO_YOUTUBE_KEYWORDS = {
@@ -48,13 +50,13 @@ export async function getSmartRecommendation(
   watchedIds: number[] = [], blacklistedIds: number[] = [],
   onlyTurkish: boolean = false, yearRange: string = '', sortBy: string = 'popularity.desc'
 ) {
-  const randomPage = Math.floor(Math.random() * 50) + 1;
   const validProviders = providers.split('|').filter(id => id !== '0').join('|');
   const genresStr = Array.isArray(genreIds) ? genreIds.join(',') : genreIds;
+  let fromFallback = false;
 
   const params: any = {
     with_genres: genresStr, with_watch_providers: validProviders, watch_region: 'TR',
-    with_watch_monetization_types: 'flatrate', sort_by: sortBy, page: randomPage.toString(), 'vote_count.gte': '20'
+    with_watch_monetization_types: 'flatrate', sort_by: sortBy, 'vote_count.gte': '20'
   };
 
   if (onlyTurkish) params.with_original_language = 'tr';
@@ -63,8 +65,27 @@ export async function getSmartRecommendation(
     else if (yearRange.includes('-')) { const [s, e] = yearRange.split('-'); params['primary_release_date.gte'] = `${s}-01-01`; params['primary_release_date.lte'] = `${e}-12-31`; }
   }
 
-  let data = await fetchTMDB(`/discover/${type}`, params);
-  let fromFallback = false;
+  // 1. Önce toplam sayfa sayısını öğrenmek için 1. sayfayı çek
+  // Bu işlem (Discovery) 2 API çağrısı gerektirir ama boş sonuç dönme riskini (sayfa 50 yoksa) sıfırlar.
+  params.page = '1';
+  let initialData = await fetchTMDB(`/discover/${type}`, params);
+
+  // Eğer providerlı sonuç yoksa ve fallback gerekirse:
+  if (!initialData.results || initialData.results.length === 0) {
+    if (validProviders) {
+      delete params.with_watch_providers;
+      initialData = await fetchTMDB(`/discover/${type}`, params);
+      fromFallback = true;
+    }
+  }
+
+  // 2. Rastgele Sayfa seç (Maksimum 50 sayfa - TMDB limiti 500 ama performans için 20-30 ideal)
+  const totalPages = Math.min(initialData.total_pages || 1, 20); // 20 sayfadan fazlasına gitme, çok eski/alakasız olabilir
+  const randomPage = Math.floor(Math.random() * totalPages) + 1;
+
+  params.page = randomPage.toString();
+  let data = randomPage === 1 ? initialData : await fetchTMDB(`/discover/${type}`, params);
+
 
   if (!data.results || data.results.length === 0) {
     if (validProviders) {
@@ -110,7 +131,7 @@ export async function getTrendingTvShows() {
     sort_by: 'popularity.desc',
     watch_region: 'TR',
     'vote_count.gte': '100',
-    page: '1'
+    page: (Math.floor(Math.random() * 3) + 1).toString() // Random page 1-3
   });
   return data.results ? data.results.slice(0, 12) : []; // Increased to 12 for better fill
 }

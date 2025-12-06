@@ -108,9 +108,9 @@ export default function YoutubeSection({
                 <button
                     onClick={fetchYoutubeVideo}
                     disabled={loading}
-                    className="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all text-lg"
+                    className="w-full bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white font-black py-4 rounded-full flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all text-lg group"
                 >
-                    {loading ? <Loader2 className="animate-spin" /> : <><Tv fill="currentColor" size={24} /> BUL & İZLE</>}
+                    {loading ? <Loader2 className="animate-spin" /> : <><Play fill="currentColor" size={24} className="group-hover:scale-110 transition-transform" /> BUL & İZLE</>}
                 </button>
             </div>
 
