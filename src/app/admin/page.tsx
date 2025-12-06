@@ -106,7 +106,8 @@ export default function AdminPage() {
       title: meta.data.title,
       mood: meta.data.mood,
       duration_category: meta.data.duration_category,
-      is_approved: true // Manuel ekleme olduğu için onaylı
+      language: meta.data.language, // Dil eklendi
+      is_approved: true
     });
 
     if (error) setStatusMsg("DB Hatası: " + error.message);
@@ -188,6 +189,7 @@ export default function AdminPage() {
                     <th className="p-4">Video</th>
                     <th className="p-4">Süre</th>
                     <th className="p-4">Mood</th>
+                    <th className="p-4">Dil</th>
                     <th className="p-4 text-right">Link</th>
                   </tr>
                 </thead>
@@ -207,6 +209,11 @@ export default function AdminPage() {
                       <td className="p-4">
                         <select value={v.mood} onChange={(e) => handleSingleUpdate(v.id, 'mood', e.target.value)} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs outline-none">
                           <option value="funny">Komik</option><option value="relax">Rahat</option><option value="learn">Bilgi</option><option value="drama">Dram</option>
+                        </select>
+                      </td>
+                      <td className="p-4">
+                        <select value={v.language || 'en'} onChange={(e) => handleSingleUpdate(v.id, 'language', e.target.value)} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs outline-none">
+                          <option value="tr">TR 🇹🇷</option><option value="en">Global 🌍</option>
                         </select>
                       </td>
 
@@ -302,6 +309,7 @@ export default function AdminPage() {
           <div className="flex gap-2 flex-1 justify-center">
             <select onChange={(e) => handleBulkUpdate('duration_category', e.target.value)} className="bg-blue-800 border border-blue-600 rounded px-2 py-1 text-sm outline-none" defaultValue=""><option value="" disabled>Süre...</option><option value="snack">Atıştırmalık</option><option value="meal">Yemek</option><option value="feast">Ziyafet</option></select>
             <select onChange={(e) => handleBulkUpdate('mood', e.target.value)} className="bg-blue-800 border border-blue-600 rounded px-2 py-1 text-sm outline-none" defaultValue=""><option value="" disabled>Mood...</option><option value="funny">Komik</option><option value="relax">Rahat</option><option value="learn">Bilgi</option><option value="drama">Dram</option></select>
+            <select onChange={(e) => handleBulkUpdate('language', e.target.value)} className="bg-blue-800 border border-blue-600 rounded px-2 py-1 text-sm outline-none" defaultValue=""><option value="" disabled>Dil...</option><option value="tr">TR 🇹🇷</option><option value="en">Global 🌍</option></select>
           </div>
 
           <div className="flex gap-2">
