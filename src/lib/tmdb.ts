@@ -102,8 +102,17 @@ export async function searchTvShowsList(query: string) {
 }
 
 export async function getTrendingTvShows() {
-  const data = await fetchTMDB('/trending/tv/week');
-  return data.results ? data.results.slice(0, 10) : [];
+  // IMDB Popular charts logic implementation via TMDB
+  // User requested to pull from IMDB (which shows most popular/trending).
+  // TMDB's discover API with watch_region=TR ensures we only get things popular/available here.
+  // We filter by Vote Count to avoid junk.
+  const data = await fetchTMDB('/discover/tv', {
+    sort_by: 'popularity.desc',
+    watch_region: 'TR',
+    'vote_count.gte': '100',
+    page: '1'
+  });
+  return data.results ? data.results.slice(0, 12) : []; // Increased to 12 for better fill
 }
 
 // --- 3. RASTGELE BÖLÜM ---

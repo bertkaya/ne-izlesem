@@ -14,7 +14,7 @@ function parseDuration(duration: string) {
   const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
   return (parseInt(match?.[1] || '0') * 60) + (parseInt(match?.[2] || '0'));
 }
-function getCategory(minutes: number) { return minutes < 8 ? 'snack' : minutes < 30 ? 'meal' : 'feast'; }
+function getCategory(minutes: number) { return minutes < 2 ? 'snack' : minutes <= 20 ? 'meal' : 'feast'; }
 
 // --- 1. AKILLI YOUTUBE BOTU ---
 export async function autoPopulateYouTube() {
@@ -67,7 +67,8 @@ export async function autoPopulateYouTube() {
 export async function checkAndCleanDeadLinks() {
   const { data: videos } = await supabase.from('videos').select('id, url');
   if (!videos) return { success: false, message: 'Video yok.' };
-  let deletedCount = 0; const chunkSize = 50;
+  const chunkSize = 50;
+  let deletedCount = 0;
   for (let i = 0; i < videos.length; i += chunkSize) {
     const chunk = videos.slice(i, i + chunkSize);
     const idsToCheck = chunk.map(v => v.url.match(/v=([^&]+)/)?.[1]).filter(Boolean).join(',');
@@ -95,7 +96,7 @@ export async function askGemini(prompt: string) {
 
     const systemInstruction = `You are 'Film Sommelier', an expert AI movie consultant. Analyze the user prompt: "${prompt}".
 
-    OBJECTIVE: Provide 5 perfect recommendations based on specific mood, plot, or vague feelings. If the user describes a general category without nuance, fall back to discovery parameters.
+    OBJECTIVE: Provide 10 perfect recommendations based on specific mood, plot, or vague feelings. If the user describes a general category without nuance, fall back to discovery parameters.
 
     OUTPUT FORMAT (JSON ONLY):
     {
