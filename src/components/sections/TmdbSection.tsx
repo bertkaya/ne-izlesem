@@ -183,6 +183,18 @@ export default function TmdbSection({
                                         <span className="text-red-400 font-bold">{Math.round((tmdbResult.vote_average || 0) * 10)}%</span>
                                     </div>
 
+                                    {/* JUSTWATCH LINK */}
+                                    {tmdbResult['watch/providers']?.results?.TR?.link && (
+                                        <a
+                                            href={tmdbResult['watch/providers'].results.TR.link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1.5 bg-yellow-700/20 px-2 py-1 rounded-md border border-yellow-700/50 hover:bg-yellow-700/40 transition-colors"
+                                        >
+                                            <span className="text-yellow-600 font-black text-xs tracking-wider">JUSTWATCH</span>
+                                        </a>
+                                    )}
+
                                     {/* Additional Metadata */}
                                     {tmdbResult.release_date && <span className="text-gray-400 text-sm font-medium">{tmdbResult.release_date.split('-')[0]}</span>}
                                     {tmdbResult.first_air_date && <span className="text-gray-400 text-sm font-medium">{tmdbResult.first_air_date.split('-')[0]}</span>}
@@ -196,6 +208,24 @@ export default function TmdbSection({
                                     </div>
                                 )}
                             </div>
+
+                            {/* Providers (Şurada İzle) */}
+                            {tmdbResult['watch/providers']?.results?.TR?.flatrate && (
+                                <div className="mb-4">
+                                    <p className="text-xs text-gray-500 font-bold mb-2 uppercase">Şurada Mevcut:</p>
+                                    <div className="flex gap-2">
+                                        {tmdbResult['watch/providers'].results.TR.flatrate.map((p: any) => (
+                                            <div key={p.provider_id} className="relative group" title={p.provider_name}>
+                                                <img
+                                                    src={`https://image.tmdb.org/t/p/original${p.logo_path}`}
+                                                    alt={p.provider_name}
+                                                    className="w-8 h-8 rounded-lg shadow-md"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <p className="text-gray-400 text-sm leading-relaxed mb-6 line-clamp-4 md:line-clamp-6">{tmdbResult.overview || 'Özet bilgisi bulunamadı.'}</p>
 
