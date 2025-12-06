@@ -3,35 +3,36 @@ import { Sparkles, Loader2, Zap, Heart, Ghost, Smile, Brain, Rocket, Coffee, Tro
 
 const MOOD_CATEGORIES = [
     {
-        title: "Ruh Hali Modu",
+        title: "Ruh Hali",
         icon: <Smile size={18} className="text-yellow-400" />,
         chips: [
-            "🤣 Gülmekten Karnım Ağrısın", "😭 Hüngür Hüngür Ağlat", "😡 Sinirlerimi Boz", "😱 Altıma Yapayım",
-            "🥰 Aşık Olmak İstiyorum", "🤯 Beyin Yakan", "😴 Kafa Boşaltmalık", "🤓 Bir Şeyler Öğren"
+            "🤣 Gülmekten Karnım Ağrısın", "😭 Hüngür Hüngür Ağlat", "😱 Altıma Yapayım", "🥰 Pamuk Gibi Yap",
+            "🤯 Beyin Yakan", "😡 Sinirlerimi Boz", "😴 Kafa Boşaltmalık", "🤓 Ufkumu İkiye Katla"
         ]
     },
     {
-        title: "Senaryo Modu",
+        title: "Senaryo",
         icon: <Zap size={18} className="text-blue-400" />,
         chips: [
-            "🕵️‍♂️ Katil Kim?", "💰 Büyük Soygun", "🧟 Zombi İstilası", "👽 Uzaylılar Geldi",
-            "🏹 Orta Çağ Savaşı", "🧙‍♂️ Büyülü Dünyalar", "🥊 Yükseliş Hikayesi (Underdog)", "🕰️ Zaman Yolculuğu"
+            "🧟 Dünyanın Sonu Geldi", "🏝️ Issız Ada", "💰 Büyük Soygun", "👽 Uzaylı İstilası",
+            "🧙‍♂️ Büyülü Krallık", "⚔️ Epik Savaş", "🕵️‍♂️ Katil Kim?", "🕰️ Zaman Yolculuğu"
         ]
     },
     {
-        title: "Gurme Seçimler",
+        title: "Gurme",
         icon: <Trophy size={18} className="text-purple-400" />,
         chips: [
-            "🏆 Oscar Ödüllü", "🎨 Sanat Filmi (Arthouse)", "🇹🇷 Yeşilçam Klasikleri", "🐐 IMDb Top 250",
-            "🕵️ Noir / Dedektif", "🤠 Vahşi Batı (Western)", "🎌 Anime Başyapıtları", "🇰🇷 Kore Sineması"
+            "🐐 IMDb Top 250", "🇹🇷 Yeşilçam Efsaneleri", "🎭 Arthouse / Festival", "🎌 Anime Başyapıtları",
+            "🕵️ Neon Noir", "🤠 Spaghetti Western", "🤖 Cyberpunk", "🇰🇷 Kore Sineması"
         ]
     },
     {
-        title: "Spesifik Filtreler",
+        title: "Spesifik",
         icon: <Brain size={18} className="text-green-400" />,
         chips: [
-            "📅 80'ler Klasikleri", "📅 90'lar Nostaljisi", "⏱️ Kısa ve Etkili (<90dk)",
-            "⭐ IMDb 8+ ve 100k+ Oy", "🍿 Çerezlik Aksiyon", "👪 Ailecek İzlenecek"
+            "📅 80'ler Nostaljisi", "📅 90'lar Klasikleri", "⏱️ Kısa ve Çarpıcı (<90dk)",
+            "🏚️ Tek Mekan Gerilimi", "🍿 Çerezlik Aksiyon", "👪 Ailecek (Family Friendly)",
+            "🩸 Slasher Korku", "🎸 Müzikal Şölen"
         ]
     }
 ];

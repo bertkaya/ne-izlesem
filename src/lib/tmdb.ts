@@ -221,7 +221,7 @@ export async function getDiscoverBatch(page: number = 1, preferredGenres: string
   }));
 }
 
-export async function getMoviesByTitles(list: { title: string, type: 'movie' | 'tv', year?: string }[]) {
+export async function getMoviesByTitles(list: { title: string, type: 'movie' | 'tv', year?: string, reason?: string }[]) {
   const results = [];
   for (const item of list) {
     try {
@@ -239,7 +239,7 @@ export async function getMoviesByTitles(list: { title: string, type: 'movie' | '
         // Optional: Loop through to find exact title match if strictness needed
 
         const details = await getDetails(bestMatch.id, item.type);
-        results.push({ ...bestMatch, ...details });
+        results.push({ ...bestMatch, ...details, reason: item.reason });
       }
     } catch (e) {
       console.error(`Error fetching matching title for ${item.title}:`, e);

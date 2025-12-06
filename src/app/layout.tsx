@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, Bebas_Neue } from 'next/font/google'
+import { Syne, Outfit } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
-const bebas = Bebas_Neue({ weight: '400', subsets: ['latin'], variable: '--font-bebas' })
+const syne = Syne({ subsets: ['latin'], variable: '--font-syne' })
+const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' })
 
 export const metadata: Metadata = {
   title: 'Ne İzlesem? | Yapay Zeka Destekli Film ve Dizi Önerisi',
@@ -43,7 +43,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="tr" suppressHydrationWarning>
-      <body className={`${inter.variable} ${bebas.variable} font-sans antialiased text-foreground bg-gray-50 dark:bg-[#0f1014] transition-colors duration-300`}>
+      <body className={`${syne.variable} ${outfit.variable} font-sans antialiased text-foreground bg-gray-50 dark:bg-[#0f1014] transition-colors duration-300`}>
         <Providers>
           {children}
         </Providers>

@@ -101,7 +101,7 @@ export async function askGemini(prompt: string) {
     OUTPUT FORMAT (JSON ONLY):
     {
       "recommendations": [
-        { "title": "Exact Query Title", "type": "movie" | "tv", "year": "YYYY" }
+        { "title": "Exact Query Title", "type": "movie" | "tv", "year": "YYYY", "reason": "Neden önerildiği (kısa ve etkileyici)" }
       ],
       "params": {
         "genre_ids": "comma_separated_ids",

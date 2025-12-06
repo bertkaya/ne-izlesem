@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import {
-    Loader2, Play, Check, Flag, Video, RotateCcw, EyeOff, AlertTriangle
+    Loader2, Play, Check, Flag, Video, RotateCcw, EyeOff, AlertTriangle, Sparkles
 } from 'lucide-react'
 import { PROVIDERS, MOOD_TO_MOVIE_GENRE, MOOD_TO_TV_GENRE, getTrendingTvShows } from '@/lib/tmdb'
 
@@ -189,6 +189,16 @@ export default function TmdbSection({
                         </div>
                         <div className="p-8 md:w-2/3 relative flex flex-col justify-center">
                             {tmdbResult.fromFallback && <div className="absolute top-0 left-0 w-full bg-yellow-600/20 text-yellow-500 text-xs font-bold p-2 flex items-center gap-2"><AlertTriangle size={12} /> Seçtiğin platformda yok, genel öneri.</div>}
+
+                            {tmdbResult.reason && (
+                                <div className="mb-6 bg-gradient-to-r from-purple-900/40 to-blue-900/40 border border-purple-500/30 p-4 rounded-xl flex gap-3 items-start animate-in fade-in">
+                                    <Sparkles className="text-purple-400 shrink-0 mt-1" size={20} />
+                                    <div>
+                                        <p className="text-purple-300 text-xs font-bold uppercase mb-1">Sommelier'in Notu</p>
+                                        <p className="text-white text-sm italic font-medium">"{tmdbResult.reason}"</p>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="mb-4">
                                 <h2 className="text-3xl md:text-5xl font-black text-white leading-tight mb-2 drop-shadow-lg">{tmdbResult.title || tmdbResult.name}</h2>
