@@ -151,9 +151,29 @@ export default function Home() {
       const r = await getVideoFromChannel(myChannels[Math.floor(Math.random() * myChannels.length)]);
       if (r) { setYtVideo(r); setYtLoading(false); return }
     }
-    const { data } = await supabase.rpc('get_random_video', { chosen_duration: duration, chosen_mood: mood });
-    if (data && data.length > 0) setYtVideo(data[0]); else alert("Video bulunamadı.");
-    setYtLoading(false)
+
+    // Direct query with language filter instead of RPC
+    let query = supabase
+      .from('videos')
+      .select('*')
+      .eq('is_approved', true)
+      .eq('duration_category', duration)
+      .eq('mood', mood);
+
+    // Apply language filter if not 'all'
+    if (ytLang === 'tr') {
+      query = query.eq('language', 'tr');
+    }
+
+    const { data } = await query;
+    if (data && data.length > 0) {
+      // Random selection
+      const randomVideo = data[Math.floor(Math.random() * data.length)];
+      setYtVideo(randomVideo);
+    } else {
+      alert("Video bulunamadı. Dil/kategori filtresini değiştirmeyi deneyin.");
+    }
+    setYtLoading(false);
   }
   const handleReport = async () => { if (ytVideo && confirm("Yanlış kategori mi? Bildirilsin mi?")) { await reportVideo(ytVideo.id, 'wrong_category'); alert("Bildirildi!"); fetchYoutubeVideo(); } }
   const markYoutubeWatched = async () => { if (!ytVideo || !user) return; await supabase.from('user_history').insert({ user_id: user.id, tmdb_id: 0, media_type: 'youtube', title: ytVideo.title }); fetchYoutubeVideo(); }

@@ -44,7 +44,7 @@ export default function AdminPage() {
 
   // --- DATA FETCHING ---
   const fetchVideos = async () => {
-    let query = supabase.from('videos').select('*').order('created_at', { ascending: false }).limit(100)
+    let query = supabase.from('videos').select('*').order('created_at', { ascending: false }).limit(500)
     if (videoFilter === 'pending') query = query.eq('is_approved', false)
     const { data } = await query; if (data) setVideos(data)
   }
