@@ -7,20 +7,37 @@ import dynamic from 'next/dynamic'
 const ReactPlayer = dynamic(() => import('react-player'), { ssr: false }) as any
 
 const YOUTUBE_MOODS = [
-    { id: 'funny', label: '😂 Güldür', color: 'blue' },
-    { id: 'eat', label: '🍔 Birlikte Ye', color: 'orange' },
-    { id: 'classic', label: '📺 Klasikler', color: 'purple' },
-    { id: 'pets', label: '🐶 Evcil Dostlar', color: 'green' },
-    { id: 'relax', label: '💆‍♂️ Rahatla', color: 'teal' },
-    { id: 'learn', label: '🧠 Öğren', color: 'indigo' },
-    { id: 'drama', label: '🎬 Hikaye', color: 'pink' },
-    { id: 'travel', label: '✈️ Gezi & Tatil', color: 'yellow' },
-    { id: 'sport', label: '⚽ Spor', color: 'red' },
-    { id: 'tech', label: '💻 Teknoloji', color: 'cyan' },
-    { id: 'news', label: '📰 Gündem', color: 'zinc' },
-    { id: 'music', label: '🎵 Müzik', color: 'rose' },
-    { id: 'popculture', label: '✨ Magazin', color: 'fuchsia' }
+    { id: 'funny', label: '😂 Güldür' },
+    { id: 'eat', label: '🍔 Birlikte Ye' },
+    { id: 'classic', label: '📺 Klasikler' },
+    { id: 'pets', label: '🐶 Evcil Dostlar' },
+    { id: 'relax', label: '💆‍♂️ Rahatla' },
+    { id: 'learn', label: '🧠 Öğren' },
+    { id: 'drama', label: '🎬 Hikaye' },
+    { id: 'travel', label: '✈️ Gezi & Tatil' },
+    { id: 'sport', label: '⚽ Spor' },
+    { id: 'tech', label: '💻 Teknoloji' },
+    { id: 'news', label: '📰 Gündem' },
+    { id: 'music', label: '🎵 Müzik' },
+    { id: 'popculture', label: '✨ Magazin' }
 ];
+
+// Tailwind CSS dinamik class'ları desteklemediği için sabit mapping kullanıyoruz
+const MOOD_COLORS: Record<string, string> = {
+    funny: 'bg-blue-500/20 text-blue-400 border-blue-500',
+    eat: 'bg-orange-500/20 text-orange-400 border-orange-500',
+    classic: 'bg-purple-500/20 text-purple-400 border-purple-500',
+    pets: 'bg-green-500/20 text-green-400 border-green-500',
+    relax: 'bg-teal-500/20 text-teal-400 border-teal-500',
+    learn: 'bg-indigo-500/20 text-indigo-400 border-indigo-500',
+    drama: 'bg-pink-500/20 text-pink-400 border-pink-500',
+    travel: 'bg-yellow-500/20 text-yellow-400 border-yellow-500',
+    sport: 'bg-red-500/20 text-red-400 border-red-500',
+    tech: 'bg-cyan-500/20 text-cyan-400 border-cyan-500',
+    news: 'bg-zinc-500/20 text-zinc-400 border-zinc-500',
+    music: 'bg-rose-500/20 text-rose-400 border-rose-500',
+    popculture: 'bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500'
+};
 
 interface YoutubeSectionProps {
     ytVideo: any;
@@ -89,7 +106,7 @@ export default function YoutubeSection({
                         <button
                             key={m.id}
                             onClick={() => setMood(m.id)}
-                            className={`px-4 py-2 rounded-xl text-sm font-bold border ${mood === m.id ? `bg-${m.color}-500/20 text-${m.color}-400 border-${m.color}-500` : 'bg-gray-800 border-transparent text-gray-400'}`}
+                            className={`px-4 py-2 rounded-xl text-sm font-bold border ${mood === m.id ? MOOD_COLORS[m.id] : 'bg-gray-800 border-transparent text-gray-400'}`}
                         >
                             {m.label}
                         </button>

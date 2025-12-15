@@ -209,7 +209,7 @@ export default function TmdbSection({
                                 <div className="flex flex-wrap items-center gap-3 mt-2">
                                     {/* IMDB */}
                                     <div className="flex items-center gap-1.5 bg-yellow-500/20 px-2 py-1 rounded-md border border-yellow-500/50">
-                                        <span className="text-yellow-500 font-black text-xs tracking-wider">IMBD</span>
+                                        <span className="text-yellow-500 font-black text-xs tracking-wider">IMDb</span>
                                         <span className="text-yellow-400 font-bold">{tmdbResult.vote_average?.toFixed(1) || '0.0'}</span>
                                     </div>
 

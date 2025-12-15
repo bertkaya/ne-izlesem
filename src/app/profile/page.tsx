@@ -6,11 +6,12 @@ import { useRouter } from 'next/navigation'
 import { User, Settings, History, Trash2, Save, Loader2, ArrowLeft, LogOut, Tv, Youtube, Plus, Link as LinkIcon, Search } from 'lucide-react'
 import { PROVIDERS } from '@/lib/tmdb'
 import { resolveYouTubeChannel } from '../actions' // Action import
+import Image from 'next/image'
 
 export default function ProfilePage() {
   const supabase = createClientComponentClient()
   const router = useRouter()
-  
+
   const [user, setUser] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<'settings' | 'channels' | 'history'>('settings')
   const [loading, setLoading] = useState(true)
@@ -19,7 +20,7 @@ export default function ProfilePage() {
   const [myPlatforms, setMyPlatforms] = useState<number[]>([])
   const [myChannels, setMyChannels] = useState<string[]>([])
   const [newChannelInput, setNewChannelInput] = useState('')
-  const [addingChannel, setAddingChannel] = useState(false) 
+  const [addingChannel, setAddingChannel] = useState(false)
   const [saving, setSaving] = useState(false)
   const [history, setHistory] = useState<any[]>([])
   const [badges, setBadges] = useState<any[]>([]) // Rozetler
@@ -33,8 +34,8 @@ export default function ProfilePage() {
 
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
         if (profile) {
-          if(Array.isArray(profile.selected_platforms)) setMyPlatforms(profile.selected_platforms.map((p: string) => parseInt(p)))
-          if(Array.isArray(profile.favorite_channels)) setMyChannels(profile.favorite_channels)
+          if (Array.isArray(profile.selected_platforms)) setMyPlatforms(profile.selected_platforms.map((p: string) => parseInt(p)))
+          if (Array.isArray(profile.favorite_channels)) setMyChannels(profile.favorite_channels)
         }
 
         const { data: historyData } = await supabase.from('user_history').select('*').order('watched_at', { ascending: false }).limit(50)
@@ -44,7 +45,7 @@ export default function ProfilePage() {
         const { data: userBadges } = await supabase.from('user_badges').select('badge_id, created_at, badges(name, icon, description)').eq('user_id', user.id)
         if (userBadges) setBadges(userBadges)
 
-      } catch (error) { console.error(error) } 
+      } catch (error) { console.error(error) }
       finally { setLoading(false) }
     }
     fetchData()
@@ -64,7 +65,7 @@ export default function ProfilePage() {
     setAddingChannel(true);
     const result = await resolveYouTubeChannel(newChannelInput);
     if (result.success && result.id) {
-      if (!myChannels.includes(result.id)) { setMyChannels([...myChannels, result.id]); setNewChannelInput(''); } 
+      if (!myChannels.includes(result.id)) { setMyChannels([...myChannels, result.id]); setNewChannelInput(''); }
       else { alert("Bu kanal zaten var."); }
     } else { alert(result.message || "Kanal bulunamadı."); }
     setAddingChannel(false);
@@ -83,7 +84,7 @@ export default function ProfilePage() {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <button onClick={() => router.push('/')} className="p-2 bg-gray-800 rounded-full hover:bg-gray-700 transition"><ArrowLeft /></button>
-            <div><h1 className="text-2xl font-bold flex items-center gap-2"><User className="text-yellow-500"/> Profilim</h1><p className="text-gray-400 text-sm">{user?.email}</p></div>
+            <div><h1 className="text-2xl font-bold flex items-center gap-2"><User className="text-yellow-500" /> Profilim</h1><p className="text-gray-400 text-sm">{user?.email}</p></div>
           </div>
           <button onClick={handleLogout} className="flex items-center gap-2 text-red-500 hover:bg-red-500/10 px-4 py-2 rounded-lg transition"><LogOut size={18} /> Çıkış</button>
         </div>
@@ -118,10 +119,10 @@ export default function ProfilePage() {
               <h2 className="text-xl font-bold mb-4">Üyeliklerin</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 {PROVIDERS.filter(p => p.id !== 0).map(p => (
-                   <button key={p.id} onClick={() => togglePlatform(p.id)} className={`p-4 rounded-xl border text-sm font-bold flex items-center justify-center gap-2 transition-all ${myPlatforms.includes(p.id) ? `${p.color} bg-opacity-20 border-current` : 'bg-gray-800 border-gray-700 text-gray-500 grayscale'}`}>{p.name}</button>
+                  <button key={p.id} onClick={() => togglePlatform(p.id)} className={`p-4 rounded-xl border text-sm font-bold flex items-center justify-center gap-2 transition-all ${myPlatforms.includes(p.id) ? `${p.color} bg-opacity-20 border-current` : 'bg-gray-800 border-gray-700 text-gray-500 grayscale'}`}>{p.name}</button>
                 ))}
               </div>
-              <button onClick={saveAll} disabled={saving} className="bg-yellow-600 hover:bg-yellow-500 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2">{saving ? <Loader2 className="animate-spin" /> : <><Save size={18}/> Kaydet</>}</button>
+              <button onClick={saveAll} disabled={saving} className="bg-yellow-600 hover:bg-yellow-500 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2">{saving ? <Loader2 className="animate-spin" /> : <><Save size={18} /> Kaydet</>}</button>
             </div>
           </div>
         )}
@@ -130,25 +131,25 @@ export default function ProfilePage() {
         {activeTab === 'channels' && (
           <div className="animate-in fade-in">
             <div className="bg-gray-900/50 p-6 rounded-2xl border border-gray-800">
-              <h2 className="text-xl font-bold mb-2 flex items-center gap-2"><Youtube className="text-red-600"/> Favori Kanalların</h2>
+              <h2 className="text-xl font-bold mb-2 flex items-center gap-2"><Youtube className="text-red-600" /> Favori Kanalların</h2>
               <div className="flex gap-2 mb-6">
                 <div className="relative flex-1">
-                  <LinkIcon className="absolute left-3 top-3 text-gray-500" size={20}/>
+                  <LinkIcon className="absolute left-3 top-3 text-gray-500" size={20} />
                   <input value={newChannelInput} onChange={e => setNewChannelInput(e.target.value)} placeholder="Örn: youtube.com/@BarisOzcan" className="bg-gray-800 border border-gray-700 p-3 pl-10 rounded-lg w-full outline-none focus:border-red-500 text-white" />
                 </div>
                 <button onClick={handleAddChannel} disabled={addingChannel || !newChannelInput} className="bg-red-600 hover:bg-red-500 disabled:bg-gray-700 text-white px-4 rounded-lg font-bold flex items-center gap-2">
-                  {addingChannel ? <Loader2 className="animate-spin"/> : <><Search size={18}/> Bul & Ekle</>}
+                  {addingChannel ? <Loader2 className="animate-spin" /> : <><Search size={18} /> Bul & Ekle</>}
                 </button>
               </div>
               <div className="space-y-2 mb-6">
                 {myChannels.map(id => (
                   <div key={id} className="flex justify-between items-center bg-gray-800 p-3 rounded-lg border border-gray-700">
                     <span className="font-mono text-sm text-gray-300">{id}</span>
-                    <button onClick={() => removeChannel(id)} className="text-red-500 hover:text-red-400"><Trash2 size={16}/></button>
+                    <button onClick={() => removeChannel(id)} className="text-red-500 hover:text-red-400"><Trash2 size={16} /></button>
                   </div>
                 ))}
               </div>
-              <button onClick={saveAll} disabled={saving} className="bg-yellow-600 hover:bg-yellow-500 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2">{saving ? <Loader2 className="animate-spin" /> : <><Save size={18}/> Kaydet</>}</button>
+              <button onClick={saveAll} disabled={saving} className="bg-yellow-600 hover:bg-yellow-500 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2">{saving ? <Loader2 className="animate-spin" /> : <><Save size={18} /> Kaydet</>}</button>
             </div>
           </div>
         )}
@@ -159,8 +160,8 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {history.map(item => (
                 <div key={item.id} className="bg-gray-900 border border-gray-800 p-3 rounded-xl flex items-center gap-4 group">
-                  <div className="w-16 h-24 bg-gray-800 rounded-lg overflow-hidden flex-shrink-0">
-                    {item.poster_path ? <img src={`https://image.tmdb.org/t/p/w200${item.poster_path}`} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-600"><Tv size={20}/></div>}
+                  <div className="w-16 h-24 bg-gray-800 rounded-lg overflow-hidden flex-shrink-0 relative">
+                    {item.poster_path ? <Image src={`https://image.tmdb.org/t/p/w200${item.poster_path}`} alt={item.title || 'Poster'} fill className="object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-600"><Tv size={20} /></div>}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-white truncate">{item.title || 'İsimsiz'}</h3>
