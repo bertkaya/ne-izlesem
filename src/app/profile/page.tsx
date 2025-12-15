@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
-import { User, Settings, History, Trash2, Save, Loader2, ArrowLeft, LogOut, Tv, Youtube, Plus, Link as LinkIcon, Search } from 'lucide-react'
+import { User, Settings, History, Trash2, Save, Loader2, ArrowLeft, LogOut, Tv, Youtube, Plus, Link as LinkIcon, Search, Heart, Eye, Film } from 'lucide-react'
 import { PROVIDERS } from '@/lib/tmdb'
 import { resolveYouTubeChannel } from '../actions' // Action import
 import Image from 'next/image'
@@ -13,7 +13,7 @@ export default function ProfilePage() {
   const router = useRouter()
 
   const [user, setUser] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState<'settings' | 'channels' | 'history'>('settings')
+  const [activeTab, setActiveTab] = useState<'settings' | 'channels' | 'history' | 'watchlist'>('settings')
   const [loading, setLoading] = useState(true)
 
   // State
@@ -24,6 +24,8 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [history, setHistory] = useState<any[]>([])
   const [badges, setBadges] = useState<any[]>([]) // Rozetler
+  const [watchlist, setWatchlist] = useState<any[]>([]) // İzleme Listesi
+  const [watched, setWatched] = useState<any[]>([]) // İzlediklerim
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,6 +46,13 @@ export default function ProfilePage() {
         // Rozetleri Çek
         const { data: userBadges } = await supabase.from('user_badges').select('badge_id, created_at, badges(name, icon, description)').eq('user_id', user.id)
         if (userBadges) setBadges(userBadges)
+
+        // İzleme Listesi (Favoriler)
+        const { data: favoritesData } = await supabase.from('favorites').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+        if (favoritesData) {
+          setWatchlist(favoritesData.filter((f: any) => f.status === 'want_to_watch'))
+          setWatched(favoritesData.filter((f: any) => f.status === 'watched' || !f.status))
+        }
 
       } catch (error) { console.error(error) }
       finally { setLoading(false) }
@@ -91,6 +100,7 @@ export default function ProfilePage() {
 
         <div className="flex gap-4 mb-8 border-b border-gray-800 overflow-x-auto">
           <button onClick={() => setActiveTab('settings')} className={`pb-4 px-4 font-bold whitespace-nowrap ${activeTab === 'settings' ? 'text-yellow-500 border-b-2 border-yellow-500' : 'text-gray-400'}`}>Genel Ayarlar</button>
+          <button onClick={() => setActiveTab('watchlist')} className={`pb-4 px-4 font-bold whitespace-nowrap ${activeTab === 'watchlist' ? 'text-green-500 border-b-2 border-green-500' : 'text-gray-400'}`}>İzleme Listem</button>
           <button onClick={() => setActiveTab('channels')} className={`pb-4 px-4 font-bold whitespace-nowrap ${activeTab === 'channels' ? 'text-red-500 border-b-2 border-red-500' : 'text-gray-400'}`}>YouTube Kanallarım</button>
           <button onClick={() => setActiveTab('history')} className={`pb-4 px-4 font-bold whitespace-nowrap ${activeTab === 'history' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400'}`}>İzleme Geçmişi</button>
         </div>
@@ -154,7 +164,54 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* TAB 3: GEÇMİŞ */}
+        {/* TAB 3: İZLEME LİSTEM */}
+        {activeTab === 'watchlist' && (
+          <div className="animate-in fade-in">
+            {/* İzlediklerim */}
+            <div className="mb-8">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><Eye className="text-green-500" /> İzlediklerim ({watched.length})</h2>
+              {watched.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {watched.slice(0, 12).map(item => (
+                    <div key={item.id} className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 group hover:border-green-500 transition-all">
+                      <div className="relative aspect-[2/3]">
+                        {item.poster_path ? <Image src={`https://image.tmdb.org/t/p/w300${item.poster_path}`} alt={item.title || 'Poster'} fill className="object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-gray-900"><Film size={32} className="text-gray-600" /></div>}
+                      </div>
+                      <div className="p-2">
+                        <p className="text-xs font-bold text-white truncate">{item.title || 'İsimsiz'}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">Henüz izlediğin bir şey yok. Keşfet modunda beğendiklerini buraya ekle!</p>
+              )}
+            </div>
+
+            {/* İzlemek İstediklerim */}
+            <div>
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><Heart className="text-red-500" /> İzlemek İstediklerim ({watchlist.length})</h2>
+              {watchlist.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {watchlist.slice(0, 12).map(item => (
+                    <div key={item.id} className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 group hover:border-red-500 transition-all">
+                      <div className="relative aspect-[2/3]">
+                        {item.poster_path ? <Image src={`https://image.tmdb.org/t/p/w300${item.poster_path}`} alt={item.title || 'Poster'} fill className="object-cover" /> : <div className="w-full h-full flex items-center justify-center bg-gray-900"><Film size={32} className="text-gray-600" /></div>}
+                      </div>
+                      <div className="p-2">
+                        <p className="text-xs font-bold text-white truncate">{item.title || 'İsimsiz'}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">İzlemek istediğin film/dizi yok. Keşfet modunda beğen veya AI önerilerinden ekle!</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: GEÇMİŞ */}
         {activeTab === 'history' && (
           <div className="animate-in fade-in">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

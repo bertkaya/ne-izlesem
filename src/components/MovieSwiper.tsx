@@ -144,7 +144,7 @@ function Card({ movie, isTop, onDragEnd, customExitX }: { movie: Movie, isTop: b
         <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-gray-900 to-transparent" />
       </div>
       <div className="h-1/4 p-6 bg-gray-900 flex flex-col justify-center relative z-10">
-        <h2 className="text-lg font-black text-white line-clamp-1 mb-1">{movie.title || movie.name}</h2>
+        <h2 className="text-base font-black text-white line-clamp-2 mb-1 leading-tight">{movie.title || movie.name}</h2>
         <div className="flex items-center gap-4 mb-2">
           {/* IMDB / TMDB Score */}
           <div className="flex items-center gap-1">

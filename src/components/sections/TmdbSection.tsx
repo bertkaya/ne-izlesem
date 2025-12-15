@@ -10,7 +10,8 @@ const GENRE_LABELS: Record<string, string> = {
     action: 'Aksiyon & Macera', scifi: 'Bilim Kurgu', crime: 'Suç & Polisiye', relax: 'Belgesel & Yaşam',
     fantasy: 'Fantastik', history: 'Tarih', war: 'Savaş', western: 'Western', music: 'Müzikal', mystery: 'Gizem',
     soap: 'Pembe Dizi', kids: 'Çocuk', reality: 'Reality Show',
-    anime: 'Anime', family: 'Aile', doc: 'Belgesel'
+    anime: 'Anime', family: 'Aile', doc: 'Belgesel',
+    travel: 'Gezi & Doğa', sport: 'Spor', tech: 'Teknoloji', news: 'Gündem', popculture: 'Magazin'
 };
 
 interface TmdbSectionProps {

@@ -5,7 +5,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import {
   fetchAndSaveChannelVideos, resolveYouTubeChannel,
   addSafeChannel, removeSafeChannel, fetchFromSafeChannels,
-  bulkUpdateVideos, checkVideoHealth, fetchYouTubeTrends, fetchVideoMetadata
+  bulkUpdateVideos, checkVideoHealth, fetchYouTubeTrends, fetchVideoMetadata, fetchYouTubeByMood
 } from '../actions'
 import {
   ShieldCheck, Youtube, Loader2, CheckCircle, Trash2, ExternalLink,
@@ -141,6 +141,14 @@ export default function AdminPage() {
     setStatusMsg(res.message); setLoading(false); fetchVideos();
   }
 
+  // --- KATEGORİ BAZLI VIDEO ÇEK ---
+  const [selectedMoodForFetch, setSelectedMoodForFetch] = useState('funny');
+  const handleFetchByMood = async () => {
+    setLoading(true); setStatusMsg(`"${selectedMoodForFetch}" kategorisi taranıyor...`);
+    const res = await fetchYouTubeByMood(selectedMoodForFetch);
+    setStatusMsg(res.message); setLoading(false); fetchVideos();
+  }
+
   // --- BLACKLIST ---
   const handleBan = async () => { await supabase.from('blacklist').insert({ tmdb_id: parseInt(banId), reason: banReason }); fetchBlacklist(); setBanId('') }
   const handleUnban = async (id: number) => { await supabase.from('blacklist').delete().eq('id', id); fetchBlacklist() }
@@ -208,7 +216,8 @@ export default function AdminPage() {
                       </td>
                       <td className="p-4">
                         <select value={v.mood} onChange={(e) => handleSingleUpdate(v.id, 'mood', e.target.value)} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs outline-none">
-                          <option value="funny">Komik</option><option value="relax">Rahat</option><option value="learn">Bilgi</option><option value="drama">Dram</option>
+                          <option value="funny">Komik</option><option value="eat">Birlikte Ye</option><option value="classic">Klasik</option><option value="pets">Evcil</option>
+                          <option value="relax">Rahat</option><option value="learn">Bilgi</option><option value="drama">Dram</option>
                           <option value="travel">Gezi</option><option value="sport">Spor</option><option value="tech">Tekno</option>
                           <option value="news">Haber</option><option value="music">Müzik</option><option value="popculture">Magazin</option>
                         </select>
@@ -270,12 +279,23 @@ export default function AdminPage() {
               <p className="text-xs text-gray-500 mt-2">Bu listedeki kanallardan düzenli olarak otomatik video çekilir.</p>
             </div>
 
-            <div className="flex justify-end mb-4 gap-2">
+            <div className="flex flex-wrap justify-end mb-4 gap-2">
+              {/* Kategori Bazlı Fetch */}
+              <div className="flex gap-2 items-center bg-gray-800 p-2 rounded-lg border border-gray-700">
+                <select value={selectedMoodForFetch} onChange={(e) => setSelectedMoodForFetch(e.target.value)} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm outline-none">
+                  <option value="funny">😂 Komik</option><option value="eat">🍔 Birlikte Ye</option><option value="classic">📺 Klasik</option>
+                  <option value="pets">🐶 Evcil</option><option value="relax">💆 Rahat</option><option value="learn">🧠 Bilgi</option>
+                  <option value="drama">🎬 Dram</option><option value="travel">✈️ Gezi</option><option value="sport">⚽ Spor</option>
+                  <option value="tech">💻 Tekno</option><option value="news">📰 Haber</option><option value="music">🎵 Müzik</option>
+                  <option value="popculture">✨ Magazin</option>
+                </select>
+                <button onClick={handleFetchByMood} disabled={loading} className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded font-bold text-sm">Kategori Çek</button>
+              </div>
               <button onClick={handleFetchTrends} disabled={loading} className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2">
-                <Flame size={18} className={loading ? 'animate-spin' : ''} /> Trendleri Çek (Hype)
+                <Flame size={18} className={loading ? 'animate-spin' : ''} /> Trendleri Çek
               </button>
               <button onClick={handleFetchSafe} disabled={loading} className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2">
-                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} /> Kanalları Tara & Video Çek
+                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} /> Kanalları Tara
               </button>
             </div>
 
@@ -311,7 +331,8 @@ export default function AdminPage() {
           <div className="flex gap-2 flex-1 justify-center">
             <select onChange={(e) => handleBulkUpdate('duration_category', e.target.value)} className="bg-blue-800 border border-blue-600 rounded px-2 py-1 text-sm outline-none" defaultValue=""><option value="" disabled>Süre...</option><option value="snack">Atıştırmalık</option><option value="meal">Yemek</option><option value="feast">Ziyafet</option></select>
             <select onChange={(e) => handleBulkUpdate('mood', e.target.value)} className="bg-blue-800 border border-blue-600 rounded px-2 py-1 text-sm outline-none" defaultValue=""><option value="" disabled>Mood...</option>
-              <option value="funny">Komik</option><option value="relax">Rahat</option><option value="learn">Bilgi</option><option value="drama">Dram</option>
+              <option value="funny">Komik</option><option value="eat">Birlikte Ye</option><option value="classic">Klasik</option><option value="pets">Evcil</option>
+              <option value="relax">Rahat</option><option value="learn">Bilgi</option><option value="drama">Dram</option>
               <option value="travel">Gezi</option><option value="sport">Spor</option><option value="tech">Tekno</option>
               <option value="news">Haber</option><option value="music">Müzik</option><option value="popculture">Magazin</option>
             </select>

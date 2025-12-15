@@ -94,32 +94,29 @@ export async function askGemini(prompt: string) {
       generationConfig: { responseMimeType: "application/json" }
     });
 
-    const systemInstruction = `You are 'Film Sommelier', an expert AI movie consultant. Analyze the user prompt: "${prompt}".
+    const systemInstruction = `Sen 'Film Sommelier', uzman bir AI film danışmanısın. Kullanıcı isteği: "${prompt}".
 
-    OBJECTIVE: Provide 10 perfect recommendations based on specific mood, plot, or vague feelings. If the user describes a general category without nuance, fall back to discovery parameters.
+    AMAÇ: Kullanıcının ruh haline, isteklerine göre 5-10 mükemmel film/dizi önerisi sun. Yaratıcı ve sürpriz öneriler yap.
 
-    OUTPUT FORMAT (JSON ONLY):
+    ÇIKTI FORMATI (SADECE JSON):
     {
       "recommendations": [
-        { "title": "Exact Query Title", "type": "movie" | "tv", "year": "YYYY", "reason": "Neden önerildiği (kısa ve etkileyici)" }
-      ],
-      "params": {
-        "genre_ids": "comma_separated_ids",
-        "sort_by": "popularity.desc" | "vote_average.desc",
-        "year_range": "YYYY-YYYY",
-        "type": "movie" | "tv"
-      }
+        { "title": "Filmin İngilizce TMDB Başlığı", "type": "movie" veya "tv", "year": "YYYY", "reason": "Bu filmi neden önerdiğini Türkçe 1 cümleyle açıkla" }
+      ]
     }
 
-    RULES:
-    1. PRIORITIZE "recommendations" if the user gives ANY specific context (e.g., "sad love story", "mind-bending", "like Matrix").
-    2. USE "params" ONLY for very generic queries (e.g., "comedy movies", "action films").
-    3. For "Yeşilçam", strictly recommend Turkish classics (1960-1990).
-    4. For "title", prefer the English/International title for non-Turkish content to ensure TMDB match. For Turkish content, use Turkish title.
-    5. PROVIDE "year" if possible to resolve ambiguity (e.g. "Avatar" 2009 vs 2005).
-
-    Genres Mapping: ${JSON.stringify(MOOD_TO_MOVIE_GENRE)} (Approximate)
-    Return ONLY valid JSON.`;
+    KURALLAR:
+    1. Her zaman "recommendations" döndür, en az 5 öneri olsun.
+    2. "title" kesinlikle TMDB'de aranabilir İNGİLİZCE başlık olmalı. Türk filmleri için Türkçe başlık kullan.
+    3. Her öneri için kısa ve etkileyici bir "reason" yaz (Türkçe).
+    4. Çeşitlilik sağla - farklı yıllar, farklı ülkeler.
+    5. "🤣 Gülmekten Karnım Ağrısın" gibi istekler için gerçekten komik filmler öner (örn: Superbad, Hangover, Hababam Sınıfı).
+    6. "😭 Hüngür Hüngür Ağlat" için duygusal filmler (örn: Schindler's List, Hachi, Her Şey Güzel Olacak).
+    7. "Yeşilçam" için sadece 1960-1990 Türk klasikleri öner.
+    8. "Anime" için sadece Japonya yapımı anime öner.
+    9. "year" mutlaka ekle, belirsizlik olmasın.
+    
+    SADECE geçerli JSON döndür, başka hiçbir şey ekleme.`;
 
     const result = await model.generateContent(systemInstruction);
     const text = result.response.text();
@@ -246,6 +243,62 @@ export async function fetchYouTubeTrends() {
     return { success: false, message: 'Hata oluştu.' };
   }
 }
+
+// --- KATEGORİ BAZLI YOUTUBE FETCH ---
+export async function fetchYouTubeByMood(targetMood: string) {
+  if (!YOUTUBE_API_KEY) return { success: false, message: 'API Key eksik.' };
+
+  const keywords = MOOD_TO_YOUTUBE_KEYWORDS[targetMood as keyof typeof MOOD_TO_YOUTUBE_KEYWORDS];
+  if (!keywords || keywords.length === 0) {
+    return { success: false, message: `"${targetMood}" için anahtar kelime bulunamadı.` };
+  }
+
+  let totalAdded = 0;
+
+  // Bu mood için tüm anahtar kelimeleri ara
+  for (const query of keywords.slice(0, 5)) { // Max 5 anahtar kelime
+    try {
+      const url = `https://www.googleapis.com/youtube/v3/search?part=id,snippet&q=${encodeURIComponent(query)}&type=video&order=relevance&maxResults=5&videoEmbeddable=true&key=${YOUTUBE_API_KEY}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.items) {
+        const videoIds = data.items.map((i: any) => i.id.videoId).join(',');
+        const detailsRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&id=${videoIds}&key=${YOUTUBE_API_KEY}`);
+        const detailsData = await detailsRes.json();
+
+        if (detailsData.items) {
+          for (const item of detailsData.items) {
+            const videoUrl = `https://www.youtube.com/watch?v=${item.id}`;
+            const { data: existing } = await supabase.from('videos').select('id').eq('url', videoUrl).single();
+
+            if (!existing) {
+              const min = parseDuration(item.contentDetails.duration);
+
+              // Dil tespiti
+              let lang = item.snippet.defaultAudioLanguage || item.snippet.defaultLanguage || 'en';
+              const trChars = /[ğüşıöçĞÜŞİÖÇ]/;
+              if (trChars.test(item.snippet.title)) lang = 'tr';
+
+              await supabase.from('videos').insert({
+                title: item.snippet.title,
+                url: videoUrl,
+                duration_category: getCategory(min),
+                mood: targetMood,
+                language: lang.startsWith('tr') ? 'tr' : 'en',
+                is_approved: false
+              });
+              totalAdded++;
+            }
+          }
+        }
+      }
+    } catch (e) { console.error(`Hata (${query}):`, e); }
+  }
+
+  return { success: true, message: `"${targetMood}" kategorisi için ${totalAdded} yeni video eklendi.` };
+}
+
 // Raporlama
 export async function reportVideo(id: number, r: string) { await supabase.from('videos').update({ is_approved: false }).eq('id', id); return { success: true } }
 
