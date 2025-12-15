@@ -8,19 +8,19 @@ interface SearchParams {
 
 export function analyzePrompt(text: string): SearchParams {
   const lowerText = text.toLowerCase();
-  
+
   let genreIds = '35'; // Varsayılan: Komedi
   let sort = 'popularity.desc';
   let year = '';
 
   // --- 1. TÜR ANALİZİ ---
-  if (lowerText.includes('korku') || lowerText.includes('gerilim') || lowerText.includes('ürpertici')) genreIds = MOOD_TO_MOVIE_GENRE.scary;
-  else if (lowerText.includes('komik') || lowerText.includes('eğlence') || lowerText.includes('gülmek')) genreIds = MOOD_TO_MOVIE_GENRE.funny;
-  else if (lowerText.includes('ağlamak') || lowerText.includes('duygusal') || lowerText.includes('dram')) genreIds = MOOD_TO_MOVIE_GENRE.emotional;
-  else if (lowerText.includes('aksiyon') || lowerText.includes('vurdu') || lowerText.includes('macera')) genreIds = MOOD_TO_MOVIE_GENRE.action;
-  else if (lowerText.includes('bilim') || lowerText.includes('uzay') || lowerText.includes('gelecek')) genreIds = MOOD_TO_MOVIE_GENRE.scifi;
-  else if (lowerText.includes('suç') || lowerText.includes('polis') || lowerText.includes('mafya')) genreIds = MOOD_TO_MOVIE_GENRE.crime;
-  else if (lowerText.includes('belgesel') || lowerText.includes('öğren') || lowerText.includes('sakin')) genreIds = MOOD_TO_MOVIE_GENRE.relax;
+  if (lowerText.includes('korku') || lowerText.includes('gerilim') || lowerText.includes('ürpertici') || lowerText.includes('altıma yap')) genreIds = MOOD_TO_MOVIE_GENRE.scary;
+  else if (lowerText.includes('komik') || lowerText.includes('eğlence') || lowerText.includes('gülmek') || lowerText.includes('güldür') || lowerText.includes('karnım ağr')) genreIds = MOOD_TO_MOVIE_GENRE.funny;
+  else if (lowerText.includes('ağla') || lowerText.includes('hüngür') || lowerText.includes('duygusal') || lowerText.includes('dram') || lowerText.includes('gözyaş') || lowerText.includes('üzgün')) genreIds = MOOD_TO_MOVIE_GENRE.emotional;
+  else if (lowerText.includes('aksiyon') || lowerText.includes('vurdu') || lowerText.includes('macera') || lowerText.includes('çerezlik')) genreIds = MOOD_TO_MOVIE_GENRE.action;
+  else if (lowerText.includes('bilim') || lowerText.includes('uzay') || lowerText.includes('gelecek') || lowerText.includes('beyin yak')) genreIds = MOOD_TO_MOVIE_GENRE.scifi;
+  else if (lowerText.includes('suç') || lowerText.includes('polis') || lowerText.includes('mafya') || lowerText.includes('katil kim')) genreIds = MOOD_TO_MOVIE_GENRE.crime;
+  else if (lowerText.includes('belgesel') || lowerText.includes('öğren') || lowerText.includes('sakin') || lowerText.includes('kafa boşalt')) genreIds = MOOD_TO_MOVIE_GENRE.relax;
 
   // --- 2. YIL ANALİZİ ---
   if (lowerText.includes('90lar') || lowerText.includes('90\'lar') || lowerText.includes('eski')) year = '1990-2000';
