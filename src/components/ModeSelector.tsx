@@ -1,6 +1,7 @@
 import { Utensils, Film, Sparkles, Flame, Heart } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { memo } from 'react'
+import { useLanguage } from '@/components/LanguageContext'
 
 type AppMode = 'youtube' | 'tmdb' | 'swipe' | 'ai'
 
@@ -11,12 +12,13 @@ interface ModeSelectorProps {
 
 const ModeSelector = memo(function ModeSelector({ appMode, setAppMode }: ModeSelectorProps) {
     const router = useRouter()
+    const { t } = useLanguage()
 
     const modes = [
-        { id: 'youtube' as const, label: 'Yemek', icon: Utensils, color: 'text-yellow-500' },
-        { id: 'tmdb' as const, label: 'Gurme', icon: Film, color: 'text-red-500' },
-        { id: 'ai' as const, label: 'Asistan', icon: Sparkles, color: 'text-cyan-400' },
-        { id: 'swipe' as const, label: 'Keşfet', icon: Flame, color: 'text-purple-500' },
+        { id: 'youtube' as const, label: t.modes.youtube, icon: Utensils, color: 'text-yellow-500' },
+        { id: 'tmdb' as const, label: t.modes.tmdb, icon: Film, color: 'text-red-500' },
+        { id: 'ai' as const, label: t.modes.ai, icon: Sparkles, color: 'text-cyan-400' },
+        { id: 'swipe' as const, label: t.modes.swipe, icon: Flame, color: 'text-purple-500' },
     ]
 
     return (
@@ -26,17 +28,17 @@ const ModeSelector = memo(function ModeSelector({ appMode, setAppMode }: ModeSel
                     <button
                         key={id}
                         onClick={() => setAppMode(id)}
-                        className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${appMode === id ? `bg-gray-800 ${color} shadow-lg` : 'text-gray-500 hover:text-white'
+                        className={`flex-1 py-3 px-3 md:px-4 rounded-xl font-bold flex items-center justify-center gap-1.5 md:gap-2 transition-all text-xs md:text-sm ${appMode === id ? `bg-gray-800 ${color} shadow-lg` : 'text-gray-500 hover:text-white'
                             }`}
                     >
-                        <Icon size={18} /> {label}
+                        <Icon size={16} /> {label}
                     </button>
                 ))}
                 <button
                     onClick={() => router.push('/match')}
-                    className="flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-pink-500 hover:bg-gray-800 hover:shadow-lg"
+                    className="flex-1 py-3 px-3 md:px-4 rounded-xl font-bold flex items-center justify-center gap-1.5 md:gap-2 transition-all text-xs md:text-sm text-pink-500 hover:bg-gray-800 hover:shadow-lg"
                 >
-                    <Heart size={18} /> Eşleş
+                    <Heart size={16} /> {t.modes.match}
                 </button>
             </div>
         </div>

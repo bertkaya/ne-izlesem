@@ -3,24 +3,25 @@
 import { useState, useEffect } from 'react'
 import {
     Globe, Loader2, Play, RotateCcw, EyeOff, AlertTriangle, Repeat,
-    Volume2, VolumeX, Sparkles, ExternalLink, Timer, Tv, Moon, Sun,
+    Volume2, VolumeX, ExternalLink, Timer, Tv, Moon, Sun,
     Flame, Utensils
 } from 'lucide-react'
+import { useLanguage } from '@/components/LanguageContext'
 
 const YOUTUBE_MOODS = [
-    { id: 'funny', label: '😂 Güldür' },
-    { id: 'eat', label: '🍔 Birlikte Ye' },
-    { id: 'classic', label: '📺 Klasikler' },
-    { id: 'pets', label: '🐶 Evcil Dostlar' },
-    { id: 'relax', label: '💆‍♂️ Rahatla' },
-    { id: 'learn', label: '🧠 Öğren' },
-    { id: 'drama', label: '🎬 Hikaye' },
-    { id: 'travel', label: '✈️ Gezi & Tatil' },
-    { id: 'sport', label: '⚽ Spor' },
-    { id: 'tech', label: '💻 Teknoloji' },
-    { id: 'news', label: '📰 Gündem' },
-    { id: 'music', label: '🎵 Müzik' },
-    { id: 'popculture', label: '✨ Magazin' }
+    { id: 'funny', labelTr: '😂 Güldür', labelEn: '😂 Laughs' },
+    { id: 'eat', labelTr: '🍔 Birlikte Ye', labelEn: '🍔 Eat Together' },
+    { id: 'classic', labelTr: '📺 Klasikler', labelEn: '📺 Classics' },
+    { id: 'pets', labelTr: '🐶 Evcil Dostlar', labelEn: '🐶 Cute Pets' },
+    { id: 'relax', labelTr: '💆‍♂️ Rahatla', labelEn: '💆‍♂️ Chill & Relax' },
+    { id: 'learn', labelTr: '🧠 Öğren', labelEn: '🧠 Learn & Doc' },
+    { id: 'drama', labelTr: '🎬 Hikaye', labelEn: '🎬 Stories' },
+    { id: 'travel', labelTr: '✈️ Gezi & Tatil', labelEn: '✈️ Travel & Vlog' },
+    { id: 'sport', labelTr: '⚽ Spor', labelEn: '⚽ Sports' },
+    { id: 'tech', labelTr: '💻 Teknoloji', labelEn: '💻 Tech & Gadgets' },
+    { id: 'news', labelTr: '📰 Gündem', labelEn: '📰 Deep Dives' },
+    { id: 'music', labelTr: '🎵 Müzik', labelEn: '🎵 Music & Lofi' },
+    { id: 'popculture', labelTr: '✨ Magazin', labelEn: '✨ Pop Culture' }
 ];
 
 const MOOD_COLORS: Record<string, string> = {
@@ -59,17 +60,16 @@ export default function YoutubeSection({
     ytVideo, loading, duration, setDuration, mood, setMood, ytLang, setYtLang,
     fetchYoutubeVideo, markYoutubeWatched, handleReport, fetchSurpriseVideo, fetchMoreFromChannel
 }: YoutubeSectionProps) {
+    const { lang, t } = useLanguage()
     const [autoPlay, setAutoPlay] = useState(true);
     const [autoNext, setAutoNext] = useState(false);
     const [isMuted, setIsMuted] = useState(true);
     const [cinemaMode, setCinemaMode] = useState(false);
 
     // Yemek Zamanlayıcısı (Meal Timer)
-    const [timerMinutes, setTimerMinutes] = useState<number>(15);
     const [timerRemaining, setTimerRemaining] = useState<number | null>(null);
     const [timerActive, setTimerActive] = useState(false);
 
-    // Timer Interval
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
         if (timerActive && timerRemaining !== null && timerRemaining > 0) {
@@ -85,7 +85,6 @@ export default function YoutubeSection({
     }, [timerActive, timerRemaining]);
 
     const startTimer = (mins: number) => {
-        setTimerMinutes(mins);
         setTimerRemaining(mins * 60);
         setTimerActive(true);
     };
@@ -101,7 +100,6 @@ export default function YoutubeSection({
         return `${m}:${s < 10 ? '0' : ''}${s}`;
     };
 
-    // TV Modu (Otomatik sonraki video)
     useEffect(() => {
         if (autoNext && !ytVideo && !loading) {
             fetchYoutubeVideo();
@@ -114,16 +112,15 @@ export default function YoutubeSection({
 
     return (
         <div className={`flex flex-col items-center mt-6 px-4 animate-in fade-in duration-500 w-full transition-all ${cinemaMode ? 'relative z-50' : ''}`}>
-            {/* Sinema Modu Karartma Katmanı */}
             {cinemaMode && (
                 <div
                     onClick={() => setCinemaMode(false)}
                     className="fixed inset-0 bg-black/90 backdrop-blur-md z-40 cursor-pointer transition-opacity"
-                    title="Sinema modundan çıkmak için tıkla"
+                    title={t.youtube.lightsOn}
                 />
             )}
 
-            {/* YEMEK SAYACI (HER ZAMAN VEYA VİDEO VARKEN AKTİF) */}
+            {/* YEMEK SAYACI (MEAL TIMER) */}
             <div className="w-full max-w-2xl mb-4 z-10">
                 <div className="bg-gradient-to-r from-orange-950/40 via-gray-900/80 to-purple-950/40 border border-orange-500/20 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-lg backdrop-blur-sm">
                     <div className="flex items-center gap-2">
@@ -131,13 +128,13 @@ export default function YoutubeSection({
                             <Utensils size={18} />
                         </span>
                         <div>
-                            <p className="text-xs font-bold text-gray-300">Yemek Soğuma Sayacı 🍲</p>
+                            <p className="text-xs font-bold text-gray-300">{t.youtube.mealTimerTitle}</p>
                             <p className="text-[11px] text-gray-500">
                                 {timerRemaining !== null
                                     ? timerRemaining === 0
-                                        ? '🎉 Afiyet olsun! Yemeğin bitti.'
-                                        : `Yemeğin bitmesine: ${formatTime(timerRemaining)}`
-                                    : 'Yemeğinin tahmini süresini seç:'}
+                                        ? t.youtube.mealTimerDone
+                                        : `${t.youtube.mealTimerRemaining} ${formatTime(timerRemaining)}`
+                                    : t.youtube.mealTimerPrompt}
                             </p>
                         </div>
                     </div>
@@ -151,7 +148,7 @@ export default function YoutubeSection({
                                         onClick={() => startTimer(mins)}
                                         className="text-xs font-semibold px-2.5 py-1.5 bg-gray-800 hover:bg-orange-600/30 hover:text-orange-400 border border-gray-700 hover:border-orange-500/40 rounded-lg transition text-gray-300"
                                     >
-                                        {mins} dk
+                                        {mins} {t.youtube.minuteShort}
                                     </button>
                                 ))}
                             </>
@@ -164,7 +161,7 @@ export default function YoutubeSection({
                                     onClick={stopTimer}
                                     className="text-xs text-gray-400 hover:text-white px-2 py-1 bg-gray-800 rounded border border-gray-700"
                                 >
-                                    Sıfırla
+                                    {t.youtube.reset}
                                 </button>
                             </div>
                         )}
@@ -172,51 +169,50 @@ export default function YoutubeSection({
                 </div>
             </div>
 
-            {/* KONTROL & SEÇİM KARTI */}
+            {/* SEÇİM KARTI */}
             <div className={`bg-gray-900/80 p-6 rounded-3xl shadow-2xl w-full max-w-2xl border border-gray-800 mb-6 transition-all ${cinemaMode ? 'opacity-30 pointer-events-none scale-95' : ''}`}>
-                {/* ÜST BAR: SÜRE & DİL & ŞAŞIRT BUTONU */}
                 <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-2">
                         <Timer size={14} className="text-yellow-500" />
-                        <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Yemek Süresi</p>
+                        <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">{t.youtube.durationTitle}</p>
                     </div>
                     <button
                         onClick={() => setYtLang(ytLang === 'tr' ? 'all' : 'tr')}
                         className="text-xs font-bold flex items-center gap-1.5 px-3 py-1 bg-gray-800 border border-gray-700 rounded-full text-gray-300 hover:text-white hover:border-gray-500 transition"
                     >
-                        <Globe size={13} /> {ytLang === 'tr' ? 'Türkçe İçerik 🇹🇷' : 'Tüm Diller 🌍'}
+                        <Globe size={13} /> {ytLang === 'tr' ? t.youtube.langFilterTr : t.youtube.langFilterAll}
                     </button>
                 </div>
 
-                {/* SÜRE KARTLARI */}
+                {/* SÜRE BUTONLARI */}
                 <div className="grid grid-cols-3 gap-2 mb-6">
                     <button
                         onClick={() => setDuration('snack')}
                         className={`p-3 rounded-xl text-sm font-bold border flex flex-col items-center justify-center gap-1 transition-all ${duration === 'snack' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500 shadow-lg shadow-yellow-500/10' : 'bg-gray-800/80 border-transparent text-gray-400 hover:bg-gray-800'}`}
                     >
-                        <span className="flex items-center gap-1">🍿 Atıştır</span>
-                        <span className="text-[10px] opacity-70 font-normal">(0-2 dk)</span>
+                        <span className="flex items-center gap-1">🍿 {t.youtube.snack}</span>
+                        <span className="text-[10px] opacity-70 font-normal">{t.youtube.snackSub}</span>
                     </button>
                     <button
                         onClick={() => setDuration('meal')}
                         className={`p-3 rounded-xl text-sm font-bold border flex flex-col items-center justify-center gap-1 transition-all ${duration === 'meal' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500 shadow-lg shadow-yellow-500/10' : 'bg-gray-800/80 border-transparent text-gray-400 hover:bg-gray-800'}`}
                     >
-                        <span className="flex items-center gap-1">🍲 Doyur</span>
-                        <span className="text-[10px] opacity-70 font-normal">(2-20 dk)</span>
+                        <span className="flex items-center gap-1">🍲 {t.youtube.meal}</span>
+                        <span className="text-[10px] opacity-70 font-normal">{t.youtube.mealSub}</span>
                     </button>
                     <button
                         onClick={() => setDuration('feast')}
                         className={`p-3 rounded-xl text-sm font-bold border flex flex-col items-center justify-center gap-1 transition-all ${duration === 'feast' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500 shadow-lg shadow-yellow-500/10' : 'bg-gray-800/80 border-transparent text-gray-400 hover:bg-gray-800'}`}
                     >
-                        <span className="flex items-center gap-1">🍗 Ziyafet</span>
-                        <span className="text-[10px] opacity-70 font-normal">(20+ dk)</span>
+                        <span className="flex items-center gap-1">🍗 {t.youtube.feast}</span>
+                        <span className="text-[10px] opacity-70 font-normal">{t.youtube.feastSub}</span>
                     </button>
                 </div>
 
                 {/* MOD SEÇİMİ */}
                 <div className="flex items-center justify-between mb-3">
-                    <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Modunu Seç</p>
-                    <span className="text-[11px] text-gray-500">Masanın havasını değiştir</span>
+                    <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">{t.youtube.moodTitle}</p>
+                    <span className="text-[11px] text-gray-500">{t.youtube.moodSub}</span>
                 </div>
                 <div className="flex flex-wrap gap-2 mb-6 max-h-36 overflow-y-auto scrollbar-thin pr-1">
                     {YOUTUBE_MOODS.map((m) => (
@@ -225,34 +221,34 @@ export default function YoutubeSection({
                             onClick={() => setMood(m.id)}
                             className={`px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold border transition-all ${mood === m.id ? `${MOOD_COLORS[m.id]} shadow-md` : 'bg-gray-800/80 border-transparent text-gray-400 hover:text-gray-200'}`}
                         >
-                            {m.label}
+                            {lang === 'en' ? m.labelEn : m.labelTr}
                         </button>
                     ))}
                 </div>
 
-                {/* AYAR BUTONLARI (AUTOPLAY / SES / TV MODU) */}
+                {/* AYARLAR */}
                 <div className="flex gap-2 mb-6 justify-center flex-wrap">
                     <button
                         onClick={() => setAutoPlay(!autoPlay)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${autoPlay ? 'bg-green-500/20 text-green-400 border-green-500' : 'bg-gray-800 border-gray-700 text-gray-400'}`}
                     >
-                        <Play size={13} /> Otomatik Oynat
+                        <Play size={13} /> {autoPlay ? t.youtube.autoPlay : t.youtube.autoPlayOff}
                     </button>
                     <button
                         onClick={() => setIsMuted(!isMuted)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${!isMuted ? 'bg-blue-500/20 text-blue-400 border-blue-500' : 'bg-gray-800 border-gray-700 text-gray-400'}`}
                     >
-                        {isMuted ? <VolumeX size={13} /> : <Volume2 size={13} />} {isMuted ? 'Sessiz Başla' : 'Sesli Başla'}
+                        {isMuted ? <VolumeX size={13} /> : <Volume2 size={13} />} {isMuted ? t.youtube.muteOn : t.youtube.muteOff}
                     </button>
                     <button
                         onClick={() => setAutoNext(!autoNext)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${autoNext ? 'bg-purple-500/20 text-purple-400 border-purple-500' : 'bg-gray-800 border-gray-700 text-gray-400'}`}
                     >
-                        <Repeat size={13} /> TV Modu
+                        <Repeat size={13} /> {t.youtube.tvMode}
                     </button>
                 </div>
 
-                {/* ANA AKSİYON VE ŞAŞIRT BUTONLARI */}
+                {/* BAŞLATMA BUTONLARI */}
                 <div className="flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={fetchYoutubeVideo}
@@ -264,7 +260,7 @@ export default function YoutubeSection({
                         ) : (
                             <>
                                 <Play fill="currentColor" size={20} className="group-hover:scale-110 transition-transform" />
-                                <span>BUL & İZLE</span>
+                                <span>{t.youtube.findAndWatch}</span>
                             </>
                         )}
                     </button>
@@ -273,24 +269,22 @@ export default function YoutubeSection({
                         <button
                             onClick={fetchSurpriseVideo}
                             disabled={loading}
-                            title="Hiç düşünme, yemeğin soğumadan en iyi videoyu rastgele aç!"
                             className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold px-6 py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all text-sm group shrink-0"
                         >
                             <Flame className="text-yellow-300 group-hover:scale-110 transition-transform" size={18} />
-                            <span>Beni Şaşırt 🎲</span>
+                            <span>{t.youtube.surpriseMe}</span>
                         </button>
                     )}
                 </div>
             </div>
 
-            {/* VİDEO KARTI & OYNATICI */}
+            {/* OYNATICI VE KART */}
             {ytVideo && (
                 <div className={`w-full max-w-3xl mt-2 animate-in slide-in-from-bottom-4 transition-all ${cinemaMode ? 'z-50 scale-105 shadow-2xl' : ''}`}>
-                    {/* Üst Hızlı Çubuk: Sinema Modu & YouTube'da Aç */}
                     <div className="flex justify-between items-center mb-2 px-2">
                         <div className="flex items-center gap-2">
                             <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
-                            <span className="text-xs font-semibold text-gray-300">Yemek Arkadaşın Hazır</span>
+                            <span className="text-xs font-semibold text-gray-300">{t.youtube.companionReady}</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -298,7 +292,7 @@ export default function YoutubeSection({
                                 className={`text-xs font-bold px-3 py-1 rounded-lg border flex items-center gap-1.5 transition ${cinemaMode ? 'bg-yellow-500 text-black border-yellow-400' : 'bg-gray-800 text-gray-300 border-gray-700 hover:text-white'}`}
                             >
                                 {cinemaMode ? <Sun size={13} /> : <Moon size={13} />}
-                                {cinemaMode ? 'Işıkları Aç' : 'Işıkları Kapat'}
+                                {cinemaMode ? t.youtube.lightsOn : t.youtube.lightsOut}
                             </button>
 
                             {youtubeDirectUrl && (
@@ -308,14 +302,13 @@ export default function YoutubeSection({
                                     rel="noopener noreferrer"
                                     className="text-xs font-bold px-3 py-1 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/40 rounded-lg flex items-center gap-1 transition"
                                 >
-                                    <span>YouTube&apos;da Aç</span>
+                                    <span>{t.youtube.openYoutube}</span>
                                     <ExternalLink size={12} />
                                 </a>
                             )}
                         </div>
                     </div>
 
-                    {/* VİDEO IFRAME OYNATICI */}
                     <div className="bg-black rounded-3xl overflow-hidden shadow-2xl border border-gray-800 aspect-video relative">
                         <iframe
                             key={`${videoId || 'video'}-${autoPlay}-${isMuted}`}
@@ -329,7 +322,6 @@ export default function YoutubeSection({
                         ></iframe>
                     </div>
 
-                    {/* VİDEO BİLGİ & AKSİYON PANELİ */}
                     <div className="p-5 bg-gray-900/90 rounded-b-3xl mb-4 border-x border-b border-gray-800 backdrop-blur-md">
                         <h2 className="text-lg md:text-xl font-bold text-white mb-2 leading-snug">{ytVideo.title}</h2>
 
@@ -341,12 +333,7 @@ export default function YoutubeSection({
                             )}
                             {ytVideo.duration_category && (
                                 <span className="text-xs bg-yellow-900/30 text-yellow-300 border border-yellow-700/40 px-2.5 py-1 rounded-lg font-medium whitespace-nowrap">
-                                    ⏱️ {ytVideo.duration_category === 'snack' ? 'Atıştırmalık (0-2 dk)' : ytVideo.duration_category === 'meal' ? 'Yemeklik (2-20 dk)' : 'Ziyafet (20+ dk)'}
-                                </span>
-                            )}
-                            {ytVideo.mood && (
-                                <span className="text-xs bg-gray-800 text-gray-300 px-2.5 py-1 rounded-lg whitespace-nowrap">
-                                    🏷️ {ytVideo.mood}
+                                    ⏱️ {ytVideo.duration_category}
                                 </span>
                             )}
                         </div>
@@ -357,29 +344,27 @@ export default function YoutubeSection({
                             </div>
                         )}
 
-                        {/* AKSİYON BUTONLARI */}
                         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-800">
                             <div className="flex gap-2 flex-wrap">
                                 <button
                                     onClick={fetchYoutubeVideo}
                                     className="text-xs font-bold text-white bg-gray-800 hover:bg-gray-700 flex items-center gap-1.5 border border-gray-700 px-4 py-2 rounded-xl transition"
                                 >
-                                    <RotateCcw size={14} /> Pas Geç
+                                    <RotateCcw size={14} /> {t.youtube.skip}
                                 </button>
                                 <button
                                     onClick={markYoutubeWatched}
                                     className="text-xs font-bold text-white bg-green-900/40 hover:bg-green-800/60 border border-green-700/50 flex items-center gap-1.5 px-4 py-2 rounded-xl transition"
                                 >
-                                    <EyeOff size={14} /> İzledim
+                                    <EyeOff size={14} /> {t.youtube.watched}
                                 </button>
 
                                 {fetchMoreFromChannel && (ytVideo.channelId || ytVideo.channelTitle) && (
                                     <button
                                         onClick={() => fetchMoreFromChannel(ytVideo.channelId)}
                                         className="text-xs font-bold text-cyan-300 bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-700/40 flex items-center gap-1.5 px-3 py-2 rounded-xl transition"
-                                        title="Aynı kanaldan başka bir video aç"
                                     >
-                                        <Tv size={14} /> Bu Kanaldan Başka
+                                        <Tv size={14} /> {t.youtube.moreFromChannel}
                                     </button>
                                 )}
                             </div>
@@ -388,15 +373,14 @@ export default function YoutubeSection({
                                 <button
                                     onClick={fetchYoutubeVideo}
                                     className="text-[11px] text-gray-400 hover:text-yellow-400 flex items-center gap-1 py-1 px-2 hover:bg-gray-800 rounded transition"
-                                    title="Telif veya embed hatası varsa tıkla"
                                 >
-                                    <AlertTriangle size={12} /> Açılmıyor mu?
+                                    <AlertTriangle size={12} /> {t.youtube.brokenVideo}
                                 </button>
                                 <button
                                     onClick={handleReport}
                                     className="text-[11px] text-gray-500 hover:text-red-400 flex items-center gap-1 py-1 px-2 hover:bg-gray-800 rounded transition"
                                 >
-                                    Hatalı Kategori
+                                    {t.youtube.wrongCategory}
                                 </button>
                             </div>
                         </div>

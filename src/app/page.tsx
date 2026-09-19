@@ -13,6 +13,7 @@ import { checkBadges, askGemini, reportVideo, getAiSuggestions, getLiveYoutubeRe
 import { X } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
+import { useLanguage } from '@/components/LanguageContext'
 
 // Components
 import Navigation from '@/components/Navigation'
@@ -25,6 +26,7 @@ import SwipeSection from '@/components/sections/SwipeSection'
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false }) as any;
 
 export default function Home() {
+  const { lang, t } = useLanguage()
   const supabase = createClientComponentClient()
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
@@ -164,8 +166,11 @@ export default function Home() {
       .eq('mood', targetMood);
 
     // Dil filtresi
-    if (ytLang === 'tr') {
+    const effectiveLang = lang === 'en' ? 'en' : ytLang;
+    if (effectiveLang === 'tr') {
       query = query.or('language.eq.tr,language.is.null');
+    } else if (effectiveLang === 'en') {
+      query = query.eq('language', 'en');
     }
 
     const { data } = await query;
@@ -177,12 +182,12 @@ export default function Home() {
     }
 
     // 3. Veritabanında video yoksa ASLA hata verme, YouTube API'den canlı çek!
-    const liveRes = await getLiveYoutubeRecommendation(targetMood, targetDuration, ytLang);
+    const liveRes = await getLiveYoutubeRecommendation(targetMood, targetDuration, effectiveLang);
     if (liveRes.success && liveRes.video) {
       setYtVideo(liveRes.video);
     } else {
       // 4. Son fallback: Sürpriz video
-      const surpriseRes = await getSurpriseYoutubeVideo();
+      const surpriseRes = await getSurpriseYoutubeVideo(lang);
       if (surpriseRes.success && surpriseRes.video) {
         setYtVideo(surpriseRes.video);
       }
@@ -192,7 +197,7 @@ export default function Home() {
 
   const fetchSurpriseYoutubeVideo = async () => {
     setYtLoading(true); setYtVideo(null);
-    const res = await getSurpriseYoutubeVideo();
+    const res = await getSurpriseYoutubeVideo(lang);
     if (res.success && res.video) {
       setYtVideo(res.video);
       if (res.video.mood) setMood(res.video.mood);
@@ -272,7 +277,7 @@ export default function Home() {
     if (!promptToUse) { alert("Bir şeyler yaz."); setTmdbLoading(false); return }
 
     // 1. Yeni AI Modu (Liste Döndürür)
-    const { success, results } = await getAiSuggestions(promptToUse);
+    const { success, results } = await getAiSuggestions(promptToUse, lang);
 
     if (success && results && results.length > 0) {
       setAiSuggestions(results);
@@ -412,12 +417,12 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-8 text-gray-500 text-xs mt-12 border-t border-gray-800/50 flex flex-col items-center gap-4">
-        <div className="text-center">
-          <p className="mb-2 uppercase font-bold tracking-widest text-gray-600">Ne Yesek?</p>
-          <p>Yemek sürenize uygun YouTube videoları, Gurme film/dizi önerileri ve Yapay Zeka Sommelier.</p>
+        <div className="text-center px-4">
+          <p className="mb-2 uppercase font-bold tracking-widest text-gray-400">{t.footer.brand}</p>
+          <p className="max-w-md mx-auto">{t.footer.desc}</p>
         </div>
 
-        <div className="flex flex-col items-center gap-2 mt-4 opacity-70 hover:opacity-100 transition-opacity">
+        <div className="flex flex-col items-center gap-2 mt-2 opacity-70 hover:opacity-100 transition-opacity">
           <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer">
             <Image
               src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg"
@@ -425,12 +430,11 @@ export default function Home() {
               width={150}
               height={20}
               className="h-4 w-auto"
-              unoptimized // SVG için gerekebilir veya domains'e eklenmeli
+              unoptimized
             />
           </a>
           <p className="text-[10px] max-w-md mx-auto">
-            This product uses the TMDB API but is not endorsed or certified by TMDB. <br />
-            Bu ürün TMDB API kullanmaktadır fakat TMDB tarafından onaylanmamıştır.
+            {t.footer.disclaimer}
           </p>
         </div>
       </footer>

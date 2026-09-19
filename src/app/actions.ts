@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 import { MOOD_TO_YOUTUBE_KEYWORDS, getMoviesByTitles, MOOD_TO_MOVIE_GENRE } from '@/lib/tmdb' // Kelime havuzunu al
+import { GLOBAL_YOUTUBE_KEYWORDS } from '@/lib/i18n'
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
@@ -97,7 +98,7 @@ export async function checkAndCleanDeadLinks() {
   return { success: true, message: `${deletedCount} ölü video temizlendi.` };
 }
 
-export async function askGemini(prompt: string) {
+export async function askGemini(prompt: string, locale: 'tr' | 'en' = 'tr') {
   if (!GEMINI_API_KEY) return { success: false, recommendations: null, params: null };
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
@@ -106,7 +107,26 @@ export async function askGemini(prompt: string) {
       generationConfig: { responseMimeType: "application/json" }
     });
 
-    const systemInstruction = `Sen 'Film Sommelier', uzman bir AI film danışmanısın. Kullanıcı isteği: "${prompt}".
+    const isEn = locale === 'en';
+    const systemInstruction = isEn ? `You are 'Film Sommelier', an expert AI cinema & TV consultant. User request: "${prompt}".
+
+    GOAL: Provide 5-10 tailored movie/TV show recommendations matching the user's mood and vibe. Be creative and surprising.
+
+    OUTPUT FORMAT (JSON ONLY):
+    {
+      "recommendations": [
+        { "title": "English TMDB Searchable Title", "type": "movie" or "tv", "year": "YYYY", "reason": "Why you recommend this in 1 engaging English sentence" }
+      ]
+    }
+
+    RULES:
+    1. Always return a "recommendations" array with at least 5 items.
+    2. "title" must be exact searchable English TMDB title.
+    3. Provide a concise, witty "reason" in English for each recommendation.
+    4. Maintain variety in release years, subgenres, and directors.
+    5. Always provide "year" so matching is accurate.
+    
+    RETURN ONLY VALID JSON, no markdown formatting outside the json.` : `Sen 'Film Sommelier', uzman bir AI film danışmanısın. Kullanıcı isteği: "${prompt}".
 
     AMAÇ: Kullanıcının ruh haline, isteklerine göre 5-10 mükemmel film/dizi önerisi sun. Yaratıcı ve sürpriz öneriler yap.
 
@@ -122,11 +142,7 @@ export async function askGemini(prompt: string) {
     2. "title" kesinlikle TMDB'de aranabilir İNGİLİZCE başlık olmalı. Türk filmleri için Türkçe başlık kullan.
     3. Her öneri için kısa ve etkileyici bir "reason" yaz (Türkçe).
     4. Çeşitlilik sağla - farklı yıllar, farklı ülkeler.
-    5. "🤣 Gülmekten Karnım Ağrısın" gibi istekler için gerçekten komik filmler öner (örn: Superbad, Hangover, Hababam Sınıfı).
-    6. "😭 Hüngür Hüngür Ağlat" için duygusal filmler (örn: Schindler's List, Hachi, Her Şey Güzel Olacak).
-    7. "Yeşilçam" için sadece 1960-1990 Türk klasikleri öner.
-    8. "Anime" için sadece Japonya yapımı anime öner.
-    9. "year" mutlaka ekle, belirsizlik olmasın.
+    5. "year" mutlaka ekle, belirsizlik olmasın.
     
     SADECE geçerli JSON döndür, başka hiçbir şey ekleme.`;
 
@@ -313,8 +329,8 @@ export async function fetchYouTubeByMood(targetMood: string) {
 // Raporlama
 export async function reportVideo(id: number, r: string) { await supabase.from('videos').update({ is_approved: false }).eq('id', id); return { success: true } }
 
-export async function getAiSuggestions(prompt: string) {
-  const { success, recommendations } = await askGemini(prompt);
+export async function getAiSuggestions(prompt: string, locale: 'tr' | 'en' = 'tr') {
+  const { success, recommendations } = await askGemini(prompt, locale);
   if (success && recommendations && recommendations.length > 0) {
     const movies = await getMoviesByTitles(recommendations);
     return { success: true, results: movies };
@@ -356,16 +372,18 @@ export async function fetchVideoMetadata(url: string) {
   }
 }
 
-export async function getLiveYoutubeRecommendation(mood: string, duration: string, lang: 'tr' | 'all') {
+export async function getLiveYoutubeRecommendation(mood: string, duration: string, lang: 'tr' | 'all' | 'en' = 'tr') {
   if (!YOUTUBE_API_KEY) return { success: false, message: 'API Key eksik' };
 
-  const moodKey = mood as keyof typeof MOOD_TO_YOUTUBE_KEYWORDS;
-  const keywordPool = MOOD_TO_YOUTUBE_KEYWORDS[moodKey] || ['Komik', 'Yemek', 'Sohbet', 'Belgesel'];
+  const isEn = lang === 'en';
+  const poolByLang = isEn ? GLOBAL_YOUTUBE_KEYWORDS.en : GLOBAL_YOUTUBE_KEYWORDS.tr;
+  const moodKey = mood as keyof typeof poolByLang;
+  const keywordPool = poolByLang[moodKey] || (isEn ? ['Trending videos', 'Comedy sketch', 'Food tour'] : ['Komik', 'Yemek', 'Sohbet']);
   const shuffled = [...keywordPool].sort(() => 0.5 - Math.random());
   const selectedQuery = shuffled[0];
 
   try {
-    const langParam = lang === 'tr' ? '&relevanceLanguage=tr' : '';
+    const langParam = isEn ? '&relevanceLanguage=en' : (lang === 'tr' ? '&relevanceLanguage=tr' : '');
     const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=id,snippet&q=${encodeURIComponent(selectedQuery)}&type=video&order=relevance&maxResults=10&videoEmbeddable=true${langParam}&key=${YOUTUBE_API_KEY}`;
     const searchRes = await fetch(searchUrl);
     if (!searchRes.ok) return { success: false, message: 'YouTube arama başarısız' };
@@ -396,9 +414,9 @@ export async function getLiveYoutubeRecommendation(mood: string, duration: strin
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const mins = parseDuration(chosenItem.contentDetails.duration);
     const category = getCategory(mins);
-    const detectedLang = detectLanguageFromSnippet(chosenItem.snippet);
+    const detectedLang = isEn ? 'en' : detectLanguageFromSnippet(chosenItem.snippet);
 
-    // Veritabanına asenkron olarak kaydet (varsa güncelleme, yoksa ekle)
+    // Veritabanına asenkron olarak kaydet
     supabase.from('videos').upsert({
       url: videoUrl,
       title: chosenItem.snippet.title,
@@ -430,8 +448,8 @@ export async function getLiveYoutubeRecommendation(mood: string, duration: strin
   }
 }
 
-export async function getSurpriseYoutubeVideo() {
+export async function getSurpriseYoutubeVideo(locale: 'tr' | 'en' = 'tr') {
   const surpriseMoods = ['funny', 'eat', 'classic', 'learn', 'relax', 'travel'];
   const randomMood = surpriseMoods[Math.floor(Math.random() * surpriseMoods.length)];
-  return await getLiveYoutubeRecommendation(randomMood, 'meal', 'tr');
+  return await getLiveYoutubeRecommendation(randomMood, 'meal', locale === 'en' ? 'en' : 'tr');
 }
