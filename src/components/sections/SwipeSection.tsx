@@ -7,11 +7,10 @@ interface SwipeSectionProps {
     swipeMovies: any[];
     handleSwipe: (direction: 'left' | 'right', movie: any) => void;
     handleSwipeWatch: (movie: any) => void;
-    supabase: any; // Or specific type if available
 }
 
 export default function SwipeSection({
-    swipeType, setSwipeType, swipeMovies, handleSwipe, handleSwipeWatch, supabase
+    swipeType, setSwipeType, swipeMovies, handleSwipe, handleSwipeWatch
 }: SwipeSectionProps) {
     return (
         <div className="flex flex-col items-center mt-12 px-4 animate-in fade-in">

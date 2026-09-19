@@ -1,5 +1,4 @@
-// ... imports
-import { Sparkles, Loader2, Zap, Heart, Ghost, Smile, Brain, Rocket, Coffee, Trophy } from 'lucide-react'
+import { Loader2, Zap, Smile, Brain, Trophy } from 'lucide-react'
 
 const MOOD_CATEGORIES = [
     {
@@ -47,6 +46,35 @@ export default function AiSection({ fetchAiRecommendation, loading }: AiSectionP
         <div className="flex flex-col items-center mt-8 px-4 animate-in fade-in duration-500 w-full max-w-5xl mx-auto text-center pb-24">
             <h2 className="text-4xl font-black mb-2 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent drop-shadow-lg">Film Sommelier 🤖</h2>
             <p className="text-gray-400 text-lg mb-8">Bugün canın ne çekiyor?</p>
+
+            {/* Custom prompt input */}
+            <div className="w-full max-w-xl mx-auto mb-8 flex gap-2">
+                <input
+                    type="text"
+                    placeholder="Örn: 90'lar nostaljisi, yağmurlu bir gece filmi..."
+                    className="flex-1 bg-gray-800 border border-gray-700 text-white px-4 py-3 rounded-xl outline-none focus:border-cyan-500 transition-colors placeholder:text-gray-500"
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
+                            fetchAiRecommendation((e.target as HTMLInputElement).value.trim());
+                            (e.target as HTMLInputElement).value = '';
+                        }
+                    }}
+                    disabled={loading}
+                />
+                <button
+                    onClick={(e) => {
+                        const input = (e.currentTarget.previousElementSibling as HTMLInputElement);
+                        if (input.value.trim()) {
+                            fetchAiRecommendation(input.value.trim());
+                            input.value = '';
+                        }
+                    }}
+                    disabled={loading}
+                    className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95"
+                >
+                    Sor
+                </button>
+            </div>
 
             {loading && (
                 <div className="fixed inset-0 bg-black/80 z-50 flex flex-col items-center justify-center backdrop-blur-sm">

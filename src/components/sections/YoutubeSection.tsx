@@ -1,10 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Globe, Loader2, Play, RotateCcw, EyeOff, AlertTriangle, Repeat, Tv } from 'lucide-react'
-import dynamic from 'next/dynamic'
-
-const ReactPlayer = dynamic(() => import('react-player'), { ssr: false }) as any
+import { Globe, Loader2, Play, RotateCcw, EyeOff, AlertTriangle, Repeat, Volume2, VolumeX } from 'lucide-react'
 
 const YOUTUBE_MOODS = [
     { id: 'funny', label: '😂 Güldür' },
@@ -65,7 +62,8 @@ export default function YoutubeSection({
         if (autoNext && !ytVideo && !loading) {
             fetchYoutubeVideo();
         }
-    }, [autoNext, ytVideo, loading, fetchYoutubeVideo]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [autoNext, ytVideo, loading]);
 
     return (
         <div className="flex flex-col items-center mt-8 px-4 animate-in fade-in duration-500 w-full">
@@ -121,10 +119,16 @@ export default function YoutubeSection({
                         <Play size={14} /> Otomatik Oynat
                     </button>
                     <button
+                        onClick={() => setIsMuted(!isMuted)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold border transition-colors ${!isMuted ? 'bg-blue-500/20 text-blue-400 border-blue-500' : 'bg-gray-800 border-gray-700 text-gray-400'}`}
+                    >
+                        {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />} {isMuted ? 'Sessiz' : 'Sesli'}
+                    </button>
+                    <button
                         onClick={() => setAutoNext(!autoNext)}
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold border transition-colors ${autoNext ? 'bg-purple-500/20 text-purple-400 border-purple-500' : 'bg-gray-800 border-gray-700 text-gray-400'}`}
                     >
-                        <Repeat size={14} /> Otomatik Geç (TV Modu)
+                        <Repeat size={14} /> TV Modu
                     </button>
                 </div>
 
@@ -141,6 +145,7 @@ export default function YoutubeSection({
                 <div className="w-full max-w-2xl mt-4 animate-in slide-in-from-bottom-4">
                     <div className="bg-black rounded-3xl overflow-hidden shadow-2xl border border-gray-800 aspect-video relative">
                         <iframe
+                            key={`${ytVideo.videoId || ytVideo.url.split('v=')[1]}-${autoPlay}-${isMuted}`}
                             width="100%"
                             height="100%"
                             src={`https://www.youtube.com/embed/${ytVideo.videoId || ytVideo.url.split('v=')[1]}?autoplay=${autoPlay ? 1 : 0}&mute=${isMuted ? 1 : 0}`}

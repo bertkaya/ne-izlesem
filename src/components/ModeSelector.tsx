@@ -34,7 +34,7 @@ const ModeSelector = memo(function ModeSelector({ appMode, setAppMode }: ModeSel
                 ))}
                 <button
                     onClick={() => router.push('/match')}
-                    className="flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-gray-800 text-pink-500 shadow-lg hover:text-white"
+                    className="flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-pink-500 hover:bg-gray-800 hover:shadow-lg"
                 >
                     <Heart size={18} /> Eşleş
                 </button>

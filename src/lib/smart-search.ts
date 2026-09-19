@@ -25,7 +25,8 @@ export function analyzePrompt(text: string): SearchParams {
   // --- 2. YIL ANALİZİ ---
   if (lowerText.includes('90lar') || lowerText.includes('90\'lar') || lowerText.includes('eski')) year = '1990-2000';
   if (lowerText.includes('80ler') || lowerText.includes('80\'ler')) year = '1980-1990';
-  if (lowerText.includes('yeni') || lowerText.includes('güncel') || lowerText.includes('vizyon')) year = '2023-2025';
+  if (lowerText.includes('70ler') || lowerText.includes('70\'ler')) year = '1970-1980';
+  if (lowerText.includes('yeni') || lowerText.includes('güncel') || lowerText.includes('vizyon')) year = '2024-2026';
 
   // --- 3. SIRALAMA ANALİZİ ---
   if (lowerText.includes('en iyi') || lowerText.includes('puanı yüksek') || lowerText.includes('kaliteli')) sort = 'vote_average.desc';

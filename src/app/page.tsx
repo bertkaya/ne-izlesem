@@ -67,8 +67,7 @@ export default function Home() {
 
   // Modals
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [suggestUrl, setSuggestUrl] = useState('')
-  const [suggestStatus, setSuggestStatus] = useState('')
+
   const [trailerId, setTrailerId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -162,7 +161,7 @@ export default function Home() {
 
     // Apply language filter if not 'all'
     if (ytLang === 'tr') {
-      query = query.eq('language', 'tr');
+      query = query.or('language.eq.tr,language.is.null');
     }
 
     const { data } = await query;
@@ -259,8 +258,8 @@ export default function Home() {
 
   const openTrailer = () => { if (tmdbResult?.videos?.results) { const t = tmdbResult.videos.results.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube'); if (t) setTrailerId(t.key); else alert("Fragman yok."); } else alert("Fragman yok."); }
   const markAsWatched = async () => { if (!tmdbResult || !user) { if (!user && confirm("Giriş?")) window.location.href = '/login'; return; } await supabase.from('user_history').insert({ user_id: user.id, tmdb_id: tmdbResult.id, media_type: tmdbType, title: tmdbResult.title || tmdbResult.name, poster_path: tmdbResult.poster_path, vote_average: tmdbResult.vote_average }); setWatchedIds([...watchedIds, tmdbResult.id]); fetchTmdbContent(); const { newBadges } = await checkBadges(user.id); if (newBadges?.length) alert(`🎉 Yeni Rozet: ${newBadges.join(', ')}`); }
-  const toggleFavorite = async () => { if (!tmdbResult || !user) { alert("Giriş yap."); return; } if (favorites.includes(tmdbResult.id)) { await supabase.from('favorites').delete().eq('user_id', user.id).eq('tmdb_id', tmdbResult.id); setFavorites(favorites.filter(id => id !== tmdbResult.id)) } else { await supabase.from('favorites').insert({ user_id: user.id, tmdb_id: tmdbResult.id, media_type: tmdbType, title: tmdbResult.title || tmdbResult.name, poster_path: tmdbResult.poster_path, vote_average: tmdbResult.vote_average }); setFavorites([...favorites, tmdbResult.id]) } }
-  const handleSuggest = async (e: React.FormEvent) => { e.preventDefault(); setSuggestStatus('sending'); const v = getYoutubeId(suggestUrl); if (!v) { setSuggestStatus('error'); return } const { error } = await supabase.from('videos').insert({ title: 'Kullanıcı Önerisi', url: suggestUrl, duration_category: 'meal', mood: 'funny', is_approved: false }); if (!error) { setSuggestStatus('success'); setTimeout(() => { setIsModalOpen(false); setSuggestStatus(''); setSuggestUrl('') }, 2000) } else { setSuggestStatus('db_error') } }
+
+
   const togglePlatform = async (id: number) => { const n = platforms.includes(id) ? platforms.filter(p => p !== id) : [...platforms, id]; setPlatforms(n); if (user) await supabase.from('profiles').update({ selected_platforms: n.map(String) }).eq('id', user.id) }
   const getWatchLink = () => {
     if (!tmdbResult) return '#';
@@ -282,8 +281,7 @@ export default function Home() {
     return `https://www.themoviedb.org/${type}/${tmdbResult.id}/watch`;
   }
 
-  // Helper for YouTube ID
-  const getYoutubeId = (url: string) => { const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/); return (match && match[2].length === 11) ? match[2] : null; }
+
 
   // --- TRAILER AUTO FETCH ---
   useEffect(() => {
@@ -366,7 +364,6 @@ export default function Home() {
           swipeMovies={swipeMovies}
           handleSwipe={handleSwipe}
           handleSwipeWatch={handleSwipeWatch}
-          supabase={supabase}
         />
       )}
 

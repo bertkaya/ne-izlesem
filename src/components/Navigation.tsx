@@ -2,7 +2,9 @@
 import { User } from '@supabase/supabase-js'
 import { Moon, Sun, User as UserIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
-import { useEffect, useState, memo } from 'react'
+import { memo, useSyncExternalStore } from 'react'
+
+const emptySubscribe = () => () => {}
 
 interface NavigationProps {
     user: User | null
@@ -10,9 +12,7 @@ interface NavigationProps {
 
 const Navigation = memo(function Navigation({ user }: NavigationProps) {
     const { theme, setTheme } = useTheme()
-    const [mounted, setMounted] = useState(false)
-
-    useEffect(() => setMounted(true), [])
+    const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false)
 
     return (
         <nav className="flex justify-between items-center p-6 max-w-7xl mx-auto w-full z-50 relative">

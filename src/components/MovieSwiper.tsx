@@ -152,11 +152,7 @@ function Card({ movie, isTop, onDragEnd, customExitX }: { movie: Movie, isTop: b
             <span className="text-yellow-400 font-bold text-lg">{movie.vote_average?.toFixed(1) || '0.0'}</span>
           </div>
 
-          {/* Rotten Tomatoes / Match Score (Simulated) */}
-          <div className="flex items-center gap-1">
-            <div className="bg-red-600 text-white text-[10px] font-bold px-1 rounded">TOMATO</div>
-            <span className="text-white font-bold text-lg">{Math.round((movie.vote_average || 0) * 10)}%</span>
-          </div>
+
         </div>
         <p className="text-sm text-gray-400 line-clamp-2">{movie.overview || 'Özet bilgisi bulunmuyor.'}</p>
       </div>

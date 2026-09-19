@@ -30,8 +30,9 @@ export default function LoginPage() {
       })
       if (error) setError(error.message)
       else {
-        // Kayıt başarılı, onboarding sayfasına yönlendir
-        router.push('/onboarding')
+        setError(null)
+        setView('sign-in')
+        alert('Kayıt başarılı! E-posta adresini kontrol et ve doğruladıktan sonra giriş yap.')
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({

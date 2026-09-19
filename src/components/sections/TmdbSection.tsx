@@ -51,7 +51,7 @@ export default function TmdbSection({
         if (tmdbType === 'tv' && trendingShows.length === 0) {
             getTrendingTvShows().then(setTrendingShows);
         }
-    }, [tmdbType]);
+    }, [tmdbType, trendingShows.length]);
 
     return (
         <div className="flex flex-col items-center mt-8 px-4 animate-in fade-in duration-500">
@@ -145,7 +145,7 @@ export default function TmdbSection({
             {/* AI LISTESİ */}
             {aiSuggestions && aiSuggestions.length > 0 && (
                 <div className="w-full max-w-4xl mt-6 animate-in slide-in-from-bottom-4">
-                    <p className="text-gray-400 text-sm mb-3 font-bold px-2">Gemini'nin Seçimleri:</p>
+                    <p className="text-gray-400 text-sm mb-3 font-bold px-2">Gemini&apos;nin Seçimleri:</p>
                     <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide px-2">
                         {aiSuggestions.map((m) => (
                             <button
@@ -195,8 +195,8 @@ export default function TmdbSection({
                                 <div className="mb-6 bg-gradient-to-r from-purple-900/40 to-blue-900/40 border border-purple-500/30 p-4 rounded-xl flex gap-3 items-start animate-in fade-in">
                                     <Sparkles className="text-purple-400 shrink-0 mt-1" size={20} />
                                     <div>
-                                        <p className="text-purple-300 text-xs font-bold uppercase mb-1">Sommelier'in Notu</p>
-                                        <p className="text-white text-sm italic font-medium">"{tmdbResult.reason}"</p>
+                                        <p className="text-purple-300 text-xs font-bold uppercase mb-1">Sommelier&apos;in Notu</p>
+                                        <p className="text-white text-sm italic font-medium">&quot;{tmdbResult.reason}&quot;</p>
                                     </div>
                                 </div>
                             )}
@@ -214,11 +214,7 @@ export default function TmdbSection({
                                         <span className="text-yellow-400 font-bold">{tmdbResult.vote_average?.toFixed(1) || '0.0'}</span>
                                     </div>
 
-                                    {/* ROTTEN (Simulated) */}
-                                    <div className="flex items-center gap-1.5 bg-red-600/20 px-2 py-1 rounded-md border border-red-600/50">
-                                        <span className="text-red-500 font-black text-xs tracking-wider">TOMATO</span>
-                                        <span className="text-red-400 font-bold">{Math.round((tmdbResult.vote_average || 0) * 10)}%</span>
-                                    </div>
+
 
                                     {/* JUSTWATCH LINK */}
                                     {tmdbResult['watch/providers']?.results?.TR?.link && (
@@ -233,8 +229,7 @@ export default function TmdbSection({
                                     )}
 
                                     {/* Additional Metadata */}
-                                    {tmdbResult.release_date && <span className="text-gray-400 text-sm font-medium">{tmdbResult.release_date.split('-')[0]}</span>}
-                                    {tmdbResult.first_air_date && <span className="text-gray-400 text-sm font-medium">{tmdbResult.first_air_date.split('-')[0]}</span>}
+                                    {(tmdbResult.release_date || tmdbResult.first_air_date) && <span className="text-gray-400 text-sm font-medium">{(tmdbResult.release_date || tmdbResult.first_air_date).split('-')[0]}</span>}
                                 </div>
 
                                 {tmdbResult.season && (

@@ -3,8 +3,8 @@ import { Syne, Outfit } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 
-const syne = Syne({ subsets: ['latin'], variable: '--font-syne' })
-const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' })
+const syne = Syne({ subsets: ['latin', 'latin-ext'], variable: '--font-syne' })
+const outfit = Outfit({ subsets: ['latin', 'latin-ext'], variable: '--font-outfit' })
 
 export const metadata: Metadata = {
   title: 'Ne İzlesem? | Yapay Zeka Destekli Film ve Dizi Önerisi',

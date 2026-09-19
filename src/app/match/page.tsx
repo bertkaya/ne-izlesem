@@ -8,6 +8,14 @@ import MovieSwiper from '@/components/MovieSwiper'
 import { Users, Copy, ArrowRight, Loader2, Sparkles, Film, Play } from 'lucide-react'
 import Image from 'next/image'
 
+function generateRoomCode(): string {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+function getRandomDiscoverPage(): number {
+  return Math.floor(Math.random() * 5) + 1;
+}
+
 export default function MatchPage() {
   const supabase = createClientComponentClient()
   const router = useRouter()
@@ -83,7 +91,7 @@ export default function MatchPage() {
   const createRoom = async () => {
     if (!user) return;
     setLoading(true)
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    const code = generateRoomCode();
     await supabase.from('match_rooms').insert({ code, created_by: user.id })
     setRoomCode(code)
     await loadMovies()
@@ -105,7 +113,7 @@ export default function MatchPage() {
   }
 
   const loadMovies = async () => {
-    const randomPage = Math.floor(Math.random() * 5) + 1;
+    const randomPage = getRandomDiscoverPage();
     const data = await getDiscoverBatch(randomPage)
     setMovies(data)
   }
@@ -138,7 +146,7 @@ export default function MatchPage() {
             {loading ? <Loader2 className="animate-spin mx-auto" /> : <span className="relative z-10">Oda Oluştur</span>}
           </button>
           <div className="relative mb-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-700"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-card dark:bg-gray-900 text-gray-500 font-bold">VEYA</span></div></div>
-          <div className="flex gap-2"><input value={roomCode} onChange={(e) => setRoomCode(e.target.value)} placeholder="0000" className="bg-gray-800 border border-gray-700 rounded-xl p-4 text-center font-mono text-xl tracking-widest outline-none focus:border-purple-500 flex-1 transition-colors" maxLength={4} /><button onClick={joinRoom} disabled={loading || roomCode.length < 4} className="bg-gray-700 hover:bg-gray-600 text-white px-6 rounded-xl font-bold transition-colors">Katıl</button></div>
+          <div className="flex gap-2"><input value={roomCode} onChange={(e) => setRoomCode(e.target.value.toUpperCase())} placeholder="ABC123" className="bg-gray-800 border border-gray-700 rounded-xl p-4 text-center font-mono text-xl tracking-widest outline-none focus:border-purple-500 flex-1 transition-colors" maxLength={6} /><button onClick={joinRoom} disabled={loading || roomCode.length < 4} className="bg-gray-700 hover:bg-gray-600 text-white px-6 rounded-xl font-bold transition-colors">Katıl</button></div>
         </div>
       )}
 

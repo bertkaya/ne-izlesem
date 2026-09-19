@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
-import { Check, CheckCircle2 } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
 
 // TMDb Tür ID'leri
 const GENRES = [
@@ -27,7 +27,7 @@ const PLATFORMS = [
   { id: 119, name: 'Prime Video', color: 'bg-blue-500' },
   { id: 337, name: 'Disney+', color: 'bg-indigo-600' },
   { id: 342, name: 'BluTV', color: 'bg-teal-500' },
-  { id: 0, name: 'Gain', color: 'bg-pink-600' } // Gain TMDb'de yoksa manuel yöneteceğiz
+  { id: 569, name: 'Gain', color: 'bg-pink-600' }
 ]
 
 export default function OnboardingPage() {

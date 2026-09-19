@@ -16,6 +16,16 @@ function parseDuration(duration: string) {
 }
 function getCategory(minutes: number) { return minutes < 2 ? 'snack' : minutes <= 20 ? 'meal' : 'feast'; }
 
+function detectLanguageFromSnippet(snippet: any): 'tr' | 'en' {
+  const lang = snippet?.defaultAudioLanguage || snippet?.defaultLanguage;
+  if (lang && typeof lang === 'string') {
+    return lang.toLowerCase().startsWith('tr') ? 'tr' : 'en';
+  }
+  const trChars = /[ğüşıöçĞÜŞİÖÇ]/;
+  const text = `${snippet?.title || ''} ${snippet?.description || ''}`;
+  return trChars.test(text) ? 'tr' : 'en';
+}
+
 // --- 1. AKILLI YOUTUBE BOTU ---
 export async function autoPopulateYouTube() {
   if (!YOUTUBE_API_KEY) return { success: false, message: 'API Key eksik.' };
@@ -31,6 +41,7 @@ export async function autoPopulateYouTube() {
       try {
         const url = `https://www.googleapis.com/youtube/v3/search?part=id,snippet&q=${encodeURIComponent(query)}&type=video&order=relevance&maxResults=5&videoEmbeddable=true&key=${YOUTUBE_API_KEY}`;
         const res = await fetch(url);
+        if (!res.ok) continue;
         const data = await res.json();
 
         if (data.items) {
@@ -50,6 +61,7 @@ export async function autoPopulateYouTube() {
                   url: videoUrl,
                   duration_category: getCategory(min),
                   mood: mood, // Doğru kategoriye otomatik atar
+                  language: detectLanguageFromSnippet(item.snippet),
                   is_approved: false // Onay Beklemeli (Güvenlik Önlemi)
                 });
                 totalAdded++;
@@ -90,7 +102,7 @@ export async function askGemini(prompt: string) {
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.0-flash",
       generationConfig: { responseMimeType: "application/json" }
     });
 
@@ -141,7 +153,7 @@ export async function checkBadges(userId: string) {
 export async function resolveYouTubeChannel(input: string) {
   if (!YOUTUBE_API_KEY) return { success: false, message: 'API Key eksik.' };
   if (input.startsWith('UC') && input.length === 24) return { success: true, id: input };
-  let handle = input.match(/@([^\/\?]+)/)?.[1] || input;
+  const handle = input.match(/@([^\/\?]+)/)?.[1] || input;
   try {
     const res = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(handle)}&key=${YOUTUBE_API_KEY}`);
     const data = await res.json();
@@ -189,6 +201,7 @@ export async function fetchFromSafeChannels() {
                 url: videoUrl,
                 duration_category: getCategory(min),
                 mood: 'relax', // Varsayılan mood (Admin panelden değiştirilebilir)
+                language: detectLanguageFromSnippet(item.snippet),
                 is_approved: false // Onay Beklemeli
               });
               totalAdded++;
@@ -230,6 +243,7 @@ export async function fetchYouTubeTrends() {
             url: videoUrl,
             duration_category: getCategory(min),
             mood: 'funny', // Trendler genellikle eğlencelidir, varsayılan funny.
+            language: detectLanguageFromSnippet(item.snippet) || 'tr',
             is_approved: false
           });
           totalAdded++;
@@ -275,17 +289,14 @@ export async function fetchYouTubeByMood(targetMood: string) {
             if (!existing) {
               const min = parseDuration(item.contentDetails.duration);
 
-              // Dil tespiti
-              let lang = item.snippet.defaultAudioLanguage || item.snippet.defaultLanguage || 'en';
-              const trChars = /[ğüşıöçĞÜŞİÖÇ]/;
-              if (trChars.test(item.snippet.title)) lang = 'tr';
+              const lang = detectLanguageFromSnippet(item.snippet);
 
               await supabase.from('videos').insert({
                 title: item.snippet.title,
                 url: videoUrl,
                 duration_category: getCategory(min),
                 mood: targetMood,
-                language: lang.startsWith('tr') ? 'tr' : 'en',
+                language: lang,
                 is_approved: false
               });
               totalAdded++;
@@ -327,17 +338,7 @@ export async function fetchVideoMetadata(url: string) {
     const min = parseDuration(item.contentDetails.duration);
     const category = getCategory(min);
 
-    // Dil Tespiti (defaultAudioLanguage veya defaultLanguage veya title/description analizi)
-    let lang = item.snippet.defaultAudioLanguage || item.snippet.defaultLanguage;
-    if (!lang) {
-      // Fallback: Başlık veya açıklamada Türkçe karakter kontrolü
-      const trChars = /[ğüşıöçĞÜŞİÖÇ]/;
-      if (trChars.test(item.snippet.title) || trChars.test(item.snippet.description)) {
-        lang = 'tr';
-      } else {
-        lang = 'en'; // Varsayılan
-      }
-    }
+    const language = detectLanguageFromSnippet(item.snippet);
 
     return {
       success: true,
@@ -346,7 +347,7 @@ export async function fetchVideoMetadata(url: string) {
         description: item.snippet.description,
         duration_category: category,
         mood: 'funny', // Varsayılan, admin değiştirebilir
-        language: lang.startsWith('tr') ? 'tr' : 'en',
+        language,
         thumbnail: item.snippet.thumbnails?.high?.url
       }
     };

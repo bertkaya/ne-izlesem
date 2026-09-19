@@ -9,7 +9,7 @@ import {
 } from '../actions'
 import {
   ShieldCheck, Youtube, Loader2, CheckCircle, Trash2, ExternalLink,
-  Ban, Plus, Eye, Link as LinkIcon, Layers, RefreshCw, Stethoscope, CheckSquare, Square, Flame
+  Plus, Eye, Link as LinkIcon, Layers, RefreshCw, Stethoscope, CheckSquare, Square, Flame
 } from 'lucide-react'
 
 const supabase = createClientComponentClient()
@@ -18,6 +18,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'videos' | 'safe_channels' | 'blacklist' | 'user_stats'>('videos')
   const [loading, setLoading] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
+  const [isAuthed, setIsAuthed] = useState(false)
 
   // VIDEOS TAB
   const [videos, setVideos] = useState<any[]>([])
@@ -35,13 +36,6 @@ export default function AdminPage() {
   // USER STATS TAB
   const [userStats, setUserStats] = useState<any[]>([])
 
-  useEffect(() => {
-    if (activeTab === 'videos') fetchVideos();
-    if (activeTab === 'safe_channels') fetchSafeChannels();
-    if (activeTab === 'blacklist') fetchBlacklist();
-    if (activeTab === 'user_stats') fetchUserStats();
-  }, [activeTab, videoFilter])
-
   // --- DATA FETCHING ---
   const fetchVideos = async () => {
     let query = supabase.from('videos').select('*').order('created_at', { ascending: false }).limit(500)
@@ -55,6 +49,24 @@ export default function AdminPage() {
     const { data: history } = await supabase.from('user_history').select('*, profiles(email)').order('created_at', { ascending: false }).limit(50);
     if (history) setUserStats(history);
   }
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { window.location.href = '/login'; return }
+      setIsAuthed(true)
+    }
+    checkAdmin()
+  }, [])
+
+  useEffect(() => {
+    if (!isAuthed) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (activeTab === 'videos') fetchVideos();
+    if (activeTab === 'safe_channels') fetchSafeChannels();
+    if (activeTab === 'blacklist') fetchBlacklist();
+    if (activeTab === 'user_stats') fetchUserStats();
+  }, [activeTab, videoFilter, isAuthed])
 
   // --- VIDEO İŞLEMLERİ ---
   const toggleSelect = (id: number) => selectedIds.includes(id) ? setSelectedIds(selectedIds.filter(i => i !== id)) : setSelectedIds([...selectedIds, id])
@@ -152,6 +164,8 @@ export default function AdminPage() {
   // --- BLACKLIST ---
   const handleBan = async () => { await supabase.from('blacklist').insert({ tmdb_id: parseInt(banId), reason: banReason }); fetchBlacklist(); setBanId('') }
   const handleUnban = async (id: number) => { await supabase.from('blacklist').delete().eq('id', id); fetchBlacklist() }
+
+  if (!isAuthed) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white"><Loader2 className="animate-spin" size={32} /></div>
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 font-sans flex flex-col items-center pb-24">
