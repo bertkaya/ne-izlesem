@@ -9,7 +9,7 @@ import {
   MOOD_TO_MOVIE_GENRE, MOOD_TO_TV_GENRE
 } from '@/lib/tmdb'
 import { analyzePrompt } from '@/lib/smart-search'
-import { checkBadges, askGemini, reportVideo, getAiSuggestions } from './actions'
+import { checkBadges, askGemini, reportVideo, getAiSuggestions, getLiveYoutubeRecommendation, getSurpriseYoutubeVideo } from './actions'
 import { X } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
@@ -144,33 +144,74 @@ export default function Home() {
   const handleSwipeWatch = (movie: any) => { setTmdbResult(movie); setTmdbType(swipeType); setAppMode('tmdb'); }
 
   // --- YOUTUBE LOGIC ---
-  const fetchYoutubeVideo = async () => {
+  const fetchYoutubeVideo = async (overrideMood?: string, overrideDuration?: string) => {
     setYtLoading(true); setYtVideo(null);
-    if (myChannels.length > 0 && Math.random() > 0.5) {
+    const targetMood = overrideMood || mood;
+    const targetDuration = overrideDuration || duration;
+
+    // 1. Kullanıcının favori kanalı varsa %40 ihtimalle oradan çek
+    if (myChannels.length > 0 && Math.random() > 0.6) {
       const r = await getVideoFromChannel(myChannels[Math.floor(Math.random() * myChannels.length)]);
-      if (r) { setYtVideo(r); setYtLoading(false); return }
+      if (r) { setYtVideo(r); setYtLoading(false); return; }
     }
 
-    // Direct query with language filter instead of RPC
+    // 2. Önce yerel veritabanına bak
     let query = supabase
       .from('videos')
       .select('*')
       .eq('is_approved', true)
-      .eq('duration_category', duration)
-      .eq('mood', mood);
+      .eq('duration_category', targetDuration)
+      .eq('mood', targetMood);
 
-    // Apply language filter if not 'all'
+    // Dil filtresi
     if (ytLang === 'tr') {
       query = query.or('language.eq.tr,language.is.null');
     }
 
     const { data } = await query;
     if (data && data.length > 0) {
-      // Random selection
       const randomVideo = data[Math.floor(Math.random() * data.length)];
       setYtVideo(randomVideo);
+      setYtLoading(false);
+      return;
+    }
+
+    // 3. Veritabanında video yoksa ASLA hata verme, YouTube API'den canlı çek!
+    const liveRes = await getLiveYoutubeRecommendation(targetMood, targetDuration, ytLang);
+    if (liveRes.success && liveRes.video) {
+      setYtVideo(liveRes.video);
     } else {
-      alert("Video bulunamadı. Dil/kategori filtresini değiştirmeyi deneyin.");
+      // 4. Son fallback: Sürpriz video
+      const surpriseRes = await getSurpriseYoutubeVideo();
+      if (surpriseRes.success && surpriseRes.video) {
+        setYtVideo(surpriseRes.video);
+      }
+    }
+    setYtLoading(false);
+  }
+
+  const fetchSurpriseYoutubeVideo = async () => {
+    setYtLoading(true); setYtVideo(null);
+    const res = await getSurpriseYoutubeVideo();
+    if (res.success && res.video) {
+      setYtVideo(res.video);
+      if (res.video.mood) setMood(res.video.mood);
+      if (res.video.duration_category) setDuration(res.video.duration_category);
+    }
+    setYtLoading(false);
+  }
+
+  const fetchMoreFromChannel = async (channelId?: string) => {
+    if (!channelId) {
+      fetchYoutubeVideo();
+      return;
+    }
+    setYtLoading(true);
+    const res = await getVideoFromChannel(channelId);
+    if (res) {
+      setYtVideo(res);
+    } else {
+      fetchYoutubeVideo();
     }
     setYtLoading(false);
   }
@@ -335,6 +376,7 @@ export default function Home() {
           ytVideo={ytVideo} loading={ytLoading} duration={duration} setDuration={setDuration}
           mood={mood} setMood={setMood} ytLang={ytLang} setYtLang={setYtLang}
           fetchYoutubeVideo={fetchYoutubeVideo} markYoutubeWatched={markYoutubeWatched} handleReport={handleReport}
+          fetchSurpriseVideo={fetchSurpriseYoutubeVideo} fetchMoreFromChannel={fetchMoreFromChannel}
         />
       )}
 

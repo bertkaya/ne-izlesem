@@ -351,7 +351,87 @@ export async function fetchVideoMetadata(url: string) {
         thumbnail: item.snippet.thumbnails?.high?.url
       }
     };
-  } catch (e) {
+  } catch (_e) {
     return { success: false, message: 'YouTube API Hatası' };
   }
+}
+
+export async function getLiveYoutubeRecommendation(mood: string, duration: string, lang: 'tr' | 'all') {
+  if (!YOUTUBE_API_KEY) return { success: false, message: 'API Key eksik' };
+
+  const moodKey = mood as keyof typeof MOOD_TO_YOUTUBE_KEYWORDS;
+  const keywordPool = MOOD_TO_YOUTUBE_KEYWORDS[moodKey] || ['Komik', 'Yemek', 'Sohbet', 'Belgesel'];
+  const shuffled = [...keywordPool].sort(() => 0.5 - Math.random());
+  const selectedQuery = shuffled[0];
+
+  try {
+    const langParam = lang === 'tr' ? '&relevanceLanguage=tr' : '';
+    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=id,snippet&q=${encodeURIComponent(selectedQuery)}&type=video&order=relevance&maxResults=10&videoEmbeddable=true${langParam}&key=${YOUTUBE_API_KEY}`;
+    const searchRes = await fetch(searchUrl);
+    if (!searchRes.ok) return { success: false, message: 'YouTube arama başarısız' };
+
+    const searchData = await searchRes.json();
+    if (!searchData.items || searchData.items.length === 0) return { success: false, message: 'Video bulunamadı' };
+
+    const videoIds = searchData.items.map((i: any) => i.id?.videoId).filter(Boolean).join(',');
+    const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&id=${videoIds}&key=${YOUTUBE_API_KEY}`;
+    const detailsRes = await fetch(detailsUrl);
+    if (!detailsRes.ok) return { success: false, message: 'Video detayları alınamadı' };
+
+    const detailsData = await detailsRes.json();
+    if (!detailsData.items || detailsData.items.length === 0) return { success: false, message: 'Video detayları boş' };
+
+    // İstenen süre kategorisine en uygun videoyu seç
+    let chosenItem = detailsData.items.find((it: any) => {
+      const mins = parseDuration(it.contentDetails.duration);
+      return getCategory(mins) === duration;
+    });
+
+    // Eğer o sürede tam eşleşme yoksa rastgele birini al
+    if (!chosenItem) {
+      chosenItem = detailsData.items[Math.floor(Math.random() * detailsData.items.length)];
+    }
+
+    const videoId = chosenItem.id;
+    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const mins = parseDuration(chosenItem.contentDetails.duration);
+    const category = getCategory(mins);
+    const detectedLang = detectLanguageFromSnippet(chosenItem.snippet);
+
+    // Veritabanına asenkron olarak kaydet (varsa güncelleme, yoksa ekle)
+    supabase.from('videos').upsert({
+      url: videoUrl,
+      title: chosenItem.snippet.title,
+      duration_category: category,
+      mood: mood,
+      language: detectedLang,
+      is_approved: true
+    }, { onConflict: 'url' }).then(() => {});
+
+    return {
+      success: true,
+      video: {
+        id: videoId,
+        videoId: videoId,
+        title: chosenItem.snippet.title,
+        url: videoUrl,
+        duration_category: category,
+        mood: mood,
+        language: detectedLang,
+        channelTitle: chosenItem.snippet.channelTitle,
+        channelId: chosenItem.snippet.channelId,
+        description: chosenItem.snippet.description,
+        thumbnail: chosenItem.snippet.thumbnails?.high?.url || chosenItem.snippet.thumbnails?.medium?.url
+      }
+    };
+  } catch (err) {
+    console.error('getLiveYoutubeRecommendation error:', err);
+    return { success: false, message: 'Beklenmeyen hata oluştu' };
+  }
+}
+
+export async function getSurpriseYoutubeVideo() {
+  const surpriseMoods = ['funny', 'eat', 'classic', 'learn', 'relax', 'travel'];
+  const randomMood = surpriseMoods[Math.floor(Math.random() * surpriseMoods.length)];
+  return await getLiveYoutubeRecommendation(randomMood, 'meal', 'tr');
 }
