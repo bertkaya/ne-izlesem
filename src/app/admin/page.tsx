@@ -1,42 +1,49 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import {
-  fetchAndSaveChannelVideos, resolveYouTubeChannel,
-  addSafeChannel, removeSafeChannel, fetchFromSafeChannels,
-  bulkUpdateVideos, checkVideoHealth, fetchYouTubeTrends, fetchVideoMetadata, fetchYouTubeByMood
+  getAdminStatus, resolveYouTubeChannel, addSafeChannel, removeSafeChannel, fetchFromSafeChannels,
+  bulkUpdateVideos, setVideosApproval, deleteVideos, addVideoByUrl, banTitle, unbanTitle,
+  checkVideoHealth, fetchYouTubeTrends, fetchYouTubeByMood
 } from '../actions'
 import {
-  ShieldCheck, Youtube, Loader2, CheckCircle, Trash2, ExternalLink,
-  Plus, Eye, Link as LinkIcon, Layers, RefreshCw, Stethoscope, CheckSquare, Square, Flame
+  ShieldCheck, Loader2, CheckCircle, Trash2, ExternalLink,
+  Plus, Layers, RefreshCw, Stethoscope, CheckSquare, Square, Flame
 } from 'lucide-react'
 
 const supabase = createClientComponentClient()
 
+interface VideoRow { id: number; title: string; url: string; mood: string; duration_category: string; language: string | null; is_approved: boolean }
+interface SafeChannelRow { id: number; channel_id: string; channel_name: string | null }
+interface BlacklistRow { id: number; tmdb_id: number; reason: string | null }
+interface UserStatRow { id: number; media_type: string; title: string; created_at: string; profiles?: { email?: string } | null }
+
 export default function AdminPage() {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<'videos' | 'safe_channels' | 'blacklist' | 'user_stats'>('videos')
   const [loading, setLoading] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
   const [isAuthed, setIsAuthed] = useState(false)
 
   // VIDEOS TAB
-  const [videos, setVideos] = useState<any[]>([])
+  const [videos, setVideos] = useState<VideoRow[]>([])
   const [videoFilter, setVideoFilter] = useState<'all' | 'pending'>('all')
   const [selectedIds, setSelectedIds] = useState<number[]>([]) // Toplu seçim
 
   // SAFE CHANNELS TAB
-  const [safeChannels, setSafeChannels] = useState<any[]>([])
+  const [safeChannels, setSafeChannels] = useState<SafeChannelRow[]>([])
   const [newSafeInput, setNewSafeInput] = useState('')
 
   // BLACKLIST TAB
-  const [blacklist, setBlacklist] = useState<any[]>([])
+  const [blacklist, setBlacklist] = useState<BlacklistRow[]>([])
   const [banId, setBanId] = useState(''); const [banReason, setBanReason] = useState('')
 
   // USER STATS TAB
-  const [userStats, setUserStats] = useState<any[]>([])
+  const [userStats, setUserStats] = useState<UserStatRow[]>([])
 
-  // --- DATA FETCHING ---
+  // --- DATA FETCHING (okuma istemcide; RLS yalnızca admin'e tüm satırları gösterir) ---
   const fetchVideos = async () => {
     let query = supabase.from('videos').select('*').order('created_at', { ascending: false }).limit(500)
     if (videoFilter === 'pending') query = query.eq('is_approved', false)
@@ -51,22 +58,27 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    const checkAdmin = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { window.location.href = '/login'; return }
-      setIsAuthed(true)
-    }
-    checkAdmin()
-  }, [])
+    // Yetki sunucuda kontrol edilir (ADMIN_EMAILS). Admin olmayan kullanıcı ana sayfaya döner.
+    getAdminStatus().then(({ loggedIn, isAdmin }) => {
+      if (!loggedIn) router.replace('/login')
+      else if (!isAdmin) router.replace('/')
+      else setIsAuthed(true)
+    })
+  }, [router])
 
   useEffect(() => {
     if (!isAuthed) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (activeTab === 'videos') fetchVideos();
     if (activeTab === 'safe_channels') fetchSafeChannels();
     if (activeTab === 'blacklist') fetchBlacklist();
     if (activeTab === 'user_stats') fetchUserStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, videoFilter, isAuthed])
+
+  /** Server action sonucunu durum mesajına yazar. */
+  const report = (res: { success: boolean; message?: string }, okMessage?: string) => {
+    setStatusMsg(res.success ? (res.message || okMessage || '') : `Hata: ${res.message || 'bilinmeyen hata'}`)
+  }
 
   // --- VIDEO İŞLEMLERİ ---
   const toggleSelect = (id: number) => selectedIds.includes(id) ? setSelectedIds(selectedIds.filter(i => i !== id)) : setSelectedIds([...selectedIds, id])
@@ -74,27 +86,27 @@ export default function AdminPage() {
 
   const handleBulkAction = async (action: 'delete' | 'approve') => {
     if (!confirm(`Seçili ${selectedIds.length} video için işlem yapılsın mı?`)) return;
-    if (action === 'delete') { await supabase.from('videos').delete().in('id', selectedIds); }
-    if (action === 'approve') { await supabase.from('videos').update({ is_approved: true }).in('id', selectedIds); }
+    const res = action === 'delete' ? await deleteVideos(selectedIds) : await setVideosApproval(selectedIds, true)
+    report(res, action === 'delete' ? 'Silindi.' : 'Onaylandı.')
     setSelectedIds([]); fetchVideos();
   }
 
   const handleBulkUpdate = async (field: string, value: string) => {
     if (!confirm(`Seçili videoların ${field} değeri değişecek.`)) return;
-    await bulkUpdateVideos(selectedIds, { [field]: value });
+    report(await bulkUpdateVideos(selectedIds, field, value), 'Güncellendi.')
     fetchVideos(); setSelectedIds([]);
   }
 
   const handleSingleUpdate = async (id: number, field: string, value: string) => {
     // Optimistic update
     setVideos(videos.map(v => v.id === id ? { ...v, [field]: value } : v))
-    await supabase.from('videos').update({ [field]: value }).eq('id', id)
+    const res = await bulkUpdateVideos([id], field, value)
+    if (!res.success) { report(res); fetchVideos() }
   }
 
   const handleHealthCheck = async () => {
     setLoading(true); setStatusMsg("Videolar kontrol ediliyor (Bu işlem sürebilir)...");
-    const res = await checkVideoHealth();
-    setStatusMsg(res.message); setLoading(false); fetchVideos();
+    report(await checkVideoHealth()); setLoading(false); fetchVideos();
   }
 
   // --- MANUAL VIDEO ADD ---
@@ -102,28 +114,9 @@ export default function AdminPage() {
   const handleManualAdd = async () => {
     if (!manualVideoUrl) return;
     setLoading(true); setStatusMsg("Video bilgileri çekiliyor (YouTube)...");
-
-    const meta = await fetchVideoMetadata(manualVideoUrl);
-
-    if (!meta.success || !meta.data) {
-      setStatusMsg("Hata: " + meta.message);
-      setLoading(false);
-      return;
-    }
-
-    setStatusMsg(`Eklendi: ${meta.data.title} (${meta.data.duration_category}) - ${meta.data.language === 'tr' ? 'Türkçe 🇹🇷' : 'Yabancı 🌍'}`);
-
-    const { error } = await supabase.from('videos').insert({
-      url: manualVideoUrl,
-      title: meta.data.title,
-      mood: meta.data.mood,
-      duration_category: meta.data.duration_category,
-      language: meta.data.language, // Dil eklendi
-      is_approved: true
-    });
-
-    if (error) setStatusMsg("DB Hatası: " + error.message);
-    else { setManualVideoUrl(''); fetchVideos(); }
+    const res = await addVideoByUrl(manualVideoUrl)
+    report(res)
+    if (res.success) { setManualVideoUrl(''); fetchVideos(); }
     setLoading(false);
   }
 
@@ -133,37 +126,34 @@ export default function AdminPage() {
     setLoading(true); setStatusMsg("Kanal aranıyor...");
     const res = await resolveYouTubeChannel(newSafeInput);
     if (res.success && res.id) {
-      await addSafeChannel(res.id, newSafeInput);
-      setNewSafeInput(''); fetchSafeChannels(); setStatusMsg("Kanal güvenli listeye eklendi.");
+      report(await addSafeChannel(res.id, newSafeInput), "Kanal güvenli listeye eklendi.");
+      setNewSafeInput(''); fetchSafeChannels();
     } else {
-      setStatusMsg("Kanal bulunamadı.");
+      setStatusMsg(res.message || "Kanal bulunamadı.");
     }
     setLoading(false);
   }
 
   const handleFetchSafe = async () => {
     setLoading(true); setStatusMsg("Güvenli kanallar taranıyor...");
-    const res = await fetchFromSafeChannels();
-    setStatusMsg(res.message); setLoading(false); fetchVideos();
+    report(await fetchFromSafeChannels()); setLoading(false); fetchVideos();
   }
 
   const handleFetchTrends = async () => {
     setLoading(true); setStatusMsg("YouTube trendleri taranıyor...");
-    const res = await fetchYouTubeTrends();
-    setStatusMsg(res.message); setLoading(false); fetchVideos();
+    report(await fetchYouTubeTrends()); setLoading(false); fetchVideos();
   }
 
   // --- KATEGORİ BAZLI VIDEO ÇEK ---
   const [selectedMoodForFetch, setSelectedMoodForFetch] = useState('funny');
   const handleFetchByMood = async () => {
     setLoading(true); setStatusMsg(`"${selectedMoodForFetch}" kategorisi taranıyor...`);
-    const res = await fetchYouTubeByMood(selectedMoodForFetch);
-    setStatusMsg(res.message); setLoading(false); fetchVideos();
+    report(await fetchYouTubeByMood(selectedMoodForFetch)); setLoading(false); fetchVideos();
   }
 
   // --- BLACKLIST ---
-  const handleBan = async () => { await supabase.from('blacklist').insert({ tmdb_id: parseInt(banId), reason: banReason }); fetchBlacklist(); setBanId('') }
-  const handleUnban = async (id: number) => { await supabase.from('blacklist').delete().eq('id', id); fetchBlacklist() }
+  const handleBan = async () => { report(await banTitle(parseInt(banId), banReason), 'Yasaklandı.'); fetchBlacklist(); setBanId('') }
+  const handleUnban = async (id: number) => { report(await unbanTitle(id), 'Kaldırıldı.'); fetchBlacklist() }
 
   if (!isAuthed) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white"><Loader2 className="animate-spin" size={32} /></div>
 
@@ -242,7 +232,7 @@ export default function AdminPage() {
                         </select>
                       </td>
 
-                      <td className="p-4 text-right"><a href={v.url} target="_blank" className="text-blue-400 hover:text-blue-300"><ExternalLink size={16} /></a></td>
+                      <td className="p-4 text-right"><a href={v.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300"><ExternalLink size={16} /></a></td>
                     </tr>
                   ))}
                 </tbody>
@@ -266,7 +256,7 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700">
-                  {userStats.map((stat: any) => (
+                  {userStats.map(stat => (
                     <tr key={stat.id} className="hover:bg-gray-700/30">
                       <td className="p-4 text-white font-medium">{(stat.profiles && stat.profiles.email) ? stat.profiles.email.split('@')[0] : 'Anonim'}</td>
                       <td className="p-4"><span className={`px-2 py-1 rounded text-xs font-bold ${stat.media_type === 'youtube' ? 'bg-red-900/50 text-red-300' : 'bg-blue-900/50 text-blue-300'}`}>{stat.media_type}</span></td>
@@ -320,7 +310,7 @@ export default function AdminPage() {
                     <div className="font-bold text-white">{c.channel_name || 'İsimsiz Kanal'}</div>
                     <div className="text-xs text-gray-500 font-mono">{c.channel_id}</div>
                   </div>
-                  <button onClick={async () => { await removeSafeChannel(c.id); fetchSafeChannels(); }} className="text-red-500 hover:bg-red-500/10 p-2 rounded"><Trash2 size={18} /></button>
+                  <button onClick={async () => { report(await removeSafeChannel(c.id), 'Kanal kaldırıldı.'); fetchSafeChannels(); }} className="text-red-500 hover:bg-red-500/10 p-2 rounded"><Trash2 size={18} /></button>
                 </div>
               ))}
               {safeChannels.length === 0 && <p className="text-gray-500">Listeniz boş.</p>}
