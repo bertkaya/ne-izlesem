@@ -71,6 +71,7 @@ export interface TranslationSchema {
     season: string;
     episode: string;
     fallbackNotice: string;
+    popularShows: string;
   };
   ai: {
     title: string;
@@ -78,6 +79,13 @@ export interface TranslationSchema {
     placeholder: string;
     askButton: string;
     thinking: string;
+    badge: string;
+    analyzing: string;
+    curatedTitle: string;
+    picks: string;
+    tastingNote: string;
+    dataNote: string;
+    allPicks: string;
     moodCategories: {
       title: string;
       chips: string[];
@@ -88,6 +96,36 @@ export interface TranslationSchema {
     movie: string;
     tv: string;
     autoFavoriteNote: string;
+    like: string;
+    pass: string;
+    likeTitle: string;
+    passTitle: string;
+    detailsTitle: string;
+    loading: string;
+    loadingSub: string;
+  };
+  common: {
+    noImage: string;
+    untitled: string;
+    noOverview: string;
+    login: string;
+    cancel: string;
+  };
+  messages: {
+    noTrailer: string;
+    movieNotFound: string;
+    tvNotFound: string;
+    episodeNotFound: string;
+    loginToSave: string;
+    loginToReport: string;
+    reportConfirm: string;
+    reportAction: string;
+    reported: string;
+    newBadge: string;
+    rateLimited: string;
+    aiNoResults: string;
+    aiUnavailable: string;
+    genericError: string;
   };
   footer: {
     brand: string;
@@ -167,7 +205,8 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       watched: 'İzledim',
       season: 'SEZON',
       episode: 'BÖLÜM',
-      fallbackNotice: 'Seçtiğin platformda yok, genel öneri.'
+      fallbackNotice: 'Seçtiğin platformda yok, genel öneri.',
+      popularShows: '🔥 Popüler Diziler'
     },
     ai: {
       title: 'Film Sommelier 🤖',
@@ -175,6 +214,13 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       placeholder: "Örn: 90'lar nostaljisi, yağmurlu bir gece filmi...",
       askButton: 'Sor',
       thinking: 'Yapay zeka en iyilerini seçiyor...',
+      badge: 'Kişiselleştirilmiş Film Danışmanı',
+      analyzing: 'Temalar, puanlar ve sinematik atmosfer analiz ediliyor...',
+      curatedTitle: "Sommelier'in Senin İçin Seçtikleri",
+      picks: 'Öneri',
+      tastingNote: "Sommelier'in Tadım Notu",
+      dataNote: 'Neden Bu Yapım?',
+      allPicks: 'Seçilen Tüm Yapımlar (İncelemek için tıkla)',
       moodCategories: [
         {
           title: "Ruh Hali",
@@ -211,7 +257,37 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       title: 'Keşfet',
       movie: 'Film',
       tv: 'Dizi',
-      autoFavoriteNote: 'Beğendiklerin otomatik favorilere ekleniyor'
+      autoFavoriteNote: 'Beğendiklerin otomatik favorilere ekleniyor',
+      like: 'BEĞEN',
+      pass: 'GEÇ',
+      likeTitle: 'Beğen (Sağa Kaydır)',
+      passTitle: 'Geç (Sola Kaydır)',
+      detailsTitle: 'Detay & Fragman',
+      loading: 'Yeni içerikler yükleniyor',
+      loadingSub: 'Mükemmel öneriler hazırlanıyor...'
+    },
+    common: {
+      noImage: 'Görsel Yok',
+      untitled: 'İsimsiz İçerik',
+      noOverview: 'Bu içerik için özet açıklaması bulunmuyor.',
+      login: 'Giriş Yap',
+      cancel: 'Vazgeç'
+    },
+    messages: {
+      noTrailer: 'Bu yapımın fragmanı bulunamadı.',
+      movieNotFound: 'Film bulunamadı. Filtreleri değiştirip tekrar dene.',
+      tvNotFound: 'Dizi bulunamadı.',
+      episodeNotFound: 'Bölüm bulunamadı.',
+      loginToSave: 'İzlediklerini kaydetmek için giriş yapmalısın.',
+      loginToReport: 'Bildirim göndermek için giriş yapmalısın.',
+      reportConfirm: 'Bu video yanlış kategoride mi?',
+      reportAction: 'Bildir',
+      reported: 'Bildirildi, teşekkürler!',
+      newBadge: '🎉 Yeni Rozet:',
+      rateLimited: 'Çok hızlı gidiyorsun, birkaç saniye bekle.',
+      aiNoResults: 'Bu isteğe uygun bir şey bulamadım. Biraz farklı anlatmayı dener misin?',
+      aiUnavailable: 'Öneri servisi şu an kullanılamıyor.',
+      genericError: 'Bir hata oluştu, tekrar dene.'
     },
     footer: {
       brand: 'Ne İzlesem?',
@@ -289,7 +365,8 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       watched: 'Watched',
       season: 'SEASON',
       episode: 'EPISODE',
-      fallbackNotice: 'Not on selected streaming platform, general recommendation.'
+      fallbackNotice: 'Not on selected streaming platform, general recommendation.',
+      popularShows: '🔥 Popular Shows'
     },
     ai: {
       title: 'Film Sommelier 🤖',
@@ -297,6 +374,13 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       placeholder: 'E.g., 90s nostalgia crime thriller, cozy rainy night movie...',
       askButton: 'Ask',
       thinking: 'AI Sommelier is curating the finest picks...',
+      badge: 'AI Cinema Consultant',
+      analyzing: 'Analyzing themes, ratings, and cinematic atmosphere...',
+      curatedTitle: "Sommelier's Curated Selection",
+      picks: 'Picks',
+      tastingNote: "Sommelier's Tasting Note",
+      dataNote: 'Why This Pick?',
+      allPicks: 'All Curated Titles (Tap to preview)',
       moodCategories: [
         {
           title: "Mood & Vibe",
@@ -333,7 +417,37 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       title: 'Discover',
       movie: 'Movies',
       tv: 'TV Shows',
-      autoFavoriteNote: 'Items you like are automatically saved to favorites'
+      autoFavoriteNote: 'Items you like are automatically saved to favorites',
+      like: 'LIKE',
+      pass: 'NOPE',
+      likeTitle: 'Like (Swipe Right)',
+      passTitle: 'Pass (Swipe Left)',
+      detailsTitle: 'Details & Trailer',
+      loading: 'Loading new titles',
+      loadingSub: 'Preparing great picks...'
+    },
+    common: {
+      noImage: 'No Image',
+      untitled: 'Untitled',
+      noOverview: 'No overview available for this title.',
+      login: 'Sign In',
+      cancel: 'Cancel'
+    },
+    messages: {
+      noTrailer: 'No trailer found for this title.',
+      movieNotFound: 'No movie found. Try different filters.',
+      tvNotFound: 'TV show not found.',
+      episodeNotFound: 'No episode found.',
+      loginToSave: 'Sign in to save what you have watched.',
+      loginToReport: 'Sign in to send a report.',
+      reportConfirm: 'Is this video in the wrong category?',
+      reportAction: 'Report',
+      reported: 'Reported, thanks!',
+      newBadge: '🎉 New Badge:',
+      rateLimited: "You're going fast — wait a few seconds.",
+      aiNoResults: "I couldn't find a match. Could you describe it a bit differently?",
+      aiUnavailable: 'The recommendation service is unavailable right now.',
+      genericError: 'Something went wrong, please try again.'
     },
     footer: {
       brand: 'What To Watch?',

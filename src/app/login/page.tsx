@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/Toast'
 import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react'
 
 export default function LoginPage() {
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   
   const router = useRouter()
+  const toast = useToast()
   const supabase = createClientComponentClient()
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -32,7 +34,7 @@ export default function LoginPage() {
       else {
         setError(null)
         setView('sign-in')
-        alert('Kayıt başarılı! E-posta adresini kontrol et ve doğruladıktan sonra giriş yap.')
+        toast('Kayıt başarılı! E-posta adresini kontrol et ve doğruladıktan sonra giriş yap.', { type: 'success', durationMs: 8000 })
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({

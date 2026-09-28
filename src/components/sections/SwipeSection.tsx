@@ -1,13 +1,14 @@
 import { Heart } from 'lucide-react'
 import MovieSwiper from '@/components/MovieSwiper'
 import { useLanguage } from '@/components/LanguageContext'
+import type { MediaItem, MediaType } from '@/types/media'
 
 interface SwipeSectionProps {
-    swipeType: 'movie' | 'tv';
-    setSwipeType: (t: 'movie' | 'tv') => void;
-    swipeMovies: any[];
-    handleSwipe: (direction: 'left' | 'right', movie: any) => void;
-    handleSwipeWatch: (movie: any) => void;
+    swipeType: MediaType;
+    setSwipeType: (t: MediaType) => void;
+    swipeMovies: MediaItem[];
+    handleSwipe: (direction: 'left' | 'right', movie: MediaItem) => void;
+    handleSwipeWatch: (movie: MediaItem) => void;
 }
 
 export default function SwipeSection({

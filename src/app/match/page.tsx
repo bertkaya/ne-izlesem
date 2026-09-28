@@ -3,10 +3,16 @@
 import { useState, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/Toast'
 import { getDiscoverBatch } from '@/lib/tmdb'
 import MovieSwiper from '@/components/MovieSwiper'
 import { Users, Copy, ArrowRight, Loader2, Sparkles, Film, Play } from 'lucide-react'
 import Image from 'next/image'
+import type { User } from '@supabase/supabase-js'
+import type { MediaItem } from '@/types/media'
+
+interface ActiveUser { id: string; email: string }
+interface MatchResult { title: string; poster_path?: string | null }
 
 function generateRoomCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -17,16 +23,17 @@ function getRandomDiscoverPage(): number {
 }
 
 export default function MatchPage() {
-  const supabase = createClientComponentClient()
+  const [supabase] = useState(() => createClientComponentClient())
   const router = useRouter()
+  const toast = useToast()
 
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [view, setView] = useState<'lobby' | 'swiping' | 'matched'>('lobby')
   const [roomCode, setRoomCode] = useState('')
-  const [movies, setMovies] = useState<any[]>([])
-  const [matchResult, setMatchResult] = useState<any>(null)
+  const [movies, setMovies] = useState<MediaItem[]>([])
+  const [matchResult, setMatchResult] = useState<MatchResult | null>(null)
   const [loading, setLoading] = useState(false)
-  const [activeUsers, setActiveUsers] = useState<any[]>([])
+  const [activeUsers, setActiveUsers] = useState<ActiveUser[]>([])
 
   useEffect(() => {
     const init = async () => {
@@ -35,7 +42,7 @@ export default function MatchPage() {
       setUser(user)
     }
     init()
-  }, [])
+  }, [supabase, router])
 
   // Real-time Room Update and Presence
   useEffect(() => {
@@ -50,12 +57,12 @@ export default function MatchPage() {
     channel
       .on('presence', { event: 'sync' }, () => {
         const newState = channel.presenceState()
-        const users = Object.values(newState).flat().map((u: any) => ({
-          id: u.user_id,
-          email: u.email || 'Anonim'
-        }))
+        const users: ActiveUser[] = Object.values(newState).flat().map(p => {
+          const u = p as { user_id?: string; email?: string }
+          return { id: u.user_id ?? '', email: u.email || 'Anonim' }
+        })
         // Filter unique by ID
-        const unique = Array.from(new Map(users.map((item: any) => [item.id, item])).values())
+        const unique = Array.from(new Map(users.map(item => [item.id, item])).values())
         setActiveUsers(unique);
       })
       .on(
@@ -73,7 +80,7 @@ export default function MatchPage() {
 
             // Checking if matches count >= activeUsers / 2 or just classic logic
             if (count && count >= 2) {
-              setMatchResult({ title: newVote.movie_title, poster_path: newVote.poster_path })
+              setMatchResult({ title: newVote.movie_title || '', poster_path: newVote.poster_path })
               setView('matched')
             }
           }
@@ -86,7 +93,7 @@ export default function MatchPage() {
       })
 
     return () => { supabase.removeChannel(channel) }
-  }, [roomCode, user])
+  }, [roomCode, user, supabase])
 
   const createRoom = async () => {
     if (!user) return;
@@ -107,7 +114,7 @@ export default function MatchPage() {
       await loadMovies();
       setView('swiping')
     } else {
-      alert("Oda bulunamadı!")
+      toast("Oda bulunamadı!", { type: 'error' })
     }
     setLoading(false)
   }
@@ -118,7 +125,7 @@ export default function MatchPage() {
     setMovies(data)
   }
 
-  const handleSwipe = async (direction: 'left' | 'right', movie: any) => {
+  const handleSwipe = async (direction: 'left' | 'right', movie: MediaItem) => {
     if (!user || !roomCode) return;
     await supabase.from('match_votes').insert({
       room_code: roomCode, user_id: user.id, movie_id: movie.id,
@@ -127,8 +134,8 @@ export default function MatchPage() {
     })
   }
 
-  const handleWatch = (movie: any) => {
-    window.open(`https://www.google.com/search?q=${encodeURIComponent(movie.title)}+izle`, '_blank');
+  const handleWatch = (movie: MediaItem) => {
+    window.open(`https://www.google.com/search?q=${encodeURIComponent(movie.title || movie.name || '')}+izle`, '_blank');
   }
 
   if (!user) return null;

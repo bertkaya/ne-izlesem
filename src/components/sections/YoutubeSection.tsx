@@ -7,6 +7,7 @@ import {
     Flame, Utensils
 } from 'lucide-react'
 import { useLanguage } from '@/components/LanguageContext'
+import type { YoutubeVideo } from '@/types/media'
 
 const YOUTUBE_MOODS = [
     { id: 'funny', labelTr: '😂 Güldür', labelEn: '😂 Laughs' },
@@ -41,7 +42,7 @@ const MOOD_COLORS: Record<string, string> = {
 };
 
 interface YoutubeSectionProps {
-    ytVideo: any;
+    ytVideo: YoutubeVideo | null;
     loading: boolean;
     duration: string;
     setDuration: (d: string) => void;
