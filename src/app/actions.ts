@@ -330,12 +330,92 @@ export async function fetchYouTubeByMood(targetMood: string) {
 export async function reportVideo(id: number, r: string) { await supabase.from('videos').update({ is_approved: false }).eq('id', id); return { success: true } }
 
 export async function getAiSuggestions(prompt: string, locale: 'tr' | 'en' = 'tr') {
-  const { success, recommendations } = await askGemini(prompt, locale);
-  if (success && recommendations && recommendations.length > 0) {
-    const movies = await getMoviesByTitles(recommendations);
-    return { success: true, results: movies };
+  // 1. Try Gemini if API key is present
+  if (GEMINI_API_KEY) {
+    try {
+      const { success, recommendations } = await askGemini(prompt, locale);
+      if (success && recommendations && recommendations.length > 0) {
+        const movies = await getMoviesByTitles(recommendations);
+        if (movies && movies.length > 0) {
+          return { success: true, results: movies };
+        }
+      }
+    } catch (e) {
+      console.warn("Gemini query failed, falling back to Smart Curator:", e);
+    }
   }
-  return { success: false, results: [] };
+
+  // 2. Guaranteed Smart Curator Fallback via TMDB
+  try {
+    const { analyzePrompt } = await import('@/lib/smart-search');
+    const { genreIds, sort, year, minVoteCount, minVoteAverage } = analyzePrompt(prompt);
+
+    const TMDB_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+    if (!TMDB_KEY) return { success: false, results: [] };
+
+    const langParam = locale === 'en' ? 'en-US' : 'tr-TR';
+    const params = new URLSearchParams({
+      api_key: TMDB_KEY,
+      language: langParam,
+      sort_by: sort || 'popularity.desc',
+      include_adult: 'false',
+      with_genres: genreIds,
+      'vote_count.gte': String(minVoteCount || 100),
+    });
+
+    if (minVoteAverage) {
+      params.append('vote_average.gte', String(minVoteAverage));
+    }
+
+    if (year) {
+      if (year.includes('-')) {
+        const [startY, endY] = year.split('-');
+        params.append('primary_release_date.gte', `${startY}-01-01`);
+        params.append('primary_release_date.lte', `${endY}-12-31`);
+      } else {
+        params.append('primary_release_year', year);
+      }
+    }
+
+    const res = await fetch(`https://api.themoviedb.org/3/discover/movie?${params.toString()}`);
+    if (!res.ok) return { success: false, results: [] };
+
+    const data = await res.json();
+    if (!data.results || data.results.length === 0) {
+      // Relax filters
+      const relaxRes = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&language=${langParam}&sort_by=popularity.desc&include_adult=false&with_genres=${genreIds}`);
+      const relaxData = await relaxRes.json();
+      data.results = relaxData.results || [];
+    }
+
+    const isEn = locale === 'en';
+    const reasons = isEn ? [
+      "A critically acclaimed masterpiece with unforgettable storytelling.",
+      "Perfect match for this mood: gripping pacing and brilliant performances.",
+      "A timeless crowd-pleaser with stunning cinematography.",
+      "Full of clever twists and emotional resonance.",
+      "An absolute essential watch that will keep you hooked from start to finish.",
+      "Cult classic with great replay value and memorable scenes."
+    ] : [
+      "Bu türün en beğenilen, unutulmaz hikaye anlatımına sahip başyapıtlarından biri.",
+      "Tam bu moda uygun: sürükleyici temposu ve harika oyunculuklarıyla öne çıkıyor.",
+      "Görsel dili ve atmosferiyle iz bırakan zamansız bir sinema şöleni.",
+      "Beklenmedik sürprizleri ve duygusal derinliğiyle tam aradığın lezzette.",
+      "Başından sonuna kadar ekran başından ayrılamayacağın kült bir öneri.",
+      "Harika müzikleri ve unutulmaz sahneleriyle listelerin zirvesinde."
+    ];
+
+    const curated = (data.results || []).slice(0, 8).map((m: any, idx: number) => ({
+      ...m,
+      title: m.title || m.name,
+      reason: reasons[idx % reasons.length]
+    }));
+
+    return { success: curated.length > 0, results: curated };
+  } catch (err) {
+    console.error("Smart Curator error:", err);
+    return { success: false, results: [] };
+  }
 }
 
 export async function fetchVideoMetadata(url: string) {

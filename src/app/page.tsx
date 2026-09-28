@@ -274,32 +274,37 @@ export default function Home() {
     setAiSuggestions([]);
 
     const promptToUse = promptOverride || aiPrompt;
-    if (!promptToUse) { alert("Bir şeyler yaz."); setTmdbLoading(false); return }
-
-    // 1. Yeni AI Modu (Liste Döndürür)
-    const { success, results } = await getAiSuggestions(promptToUse, lang);
-
-    if (success && results && results.length > 0) {
-      setAiSuggestions(results);
-      setTmdbResult(results[0]); // İlkini göster
-      setAppMode('tmdb');
+    if (!promptToUse) {
       setTmdbLoading(false);
-      setAiPrompt('');
       return;
     }
 
-    // 2. Fallback: Eski mantık (eğer AI listesi boşsa)
-    const { genreIds, sort, year } = analyzePrompt(promptToUse);
-    const m = await getSmartRecommendation(genreIds, platforms.join('|'), 'movie', watchedIds, blacklistedIds, false, year, sort);
-    if (m) {
-      setTmdbResult(m);
-      setAppMode('tmdb');
-      setTmdbType('movie');
-    } else {
-      alert("Bulunamadı.");
+    try {
+      // 1. Akıllı AI & Küratör Motoru
+      const { success, results } = await getAiSuggestions(promptToUse, lang);
+
+      if (success && results && results.length > 0) {
+        setAiSuggestions(results);
+        setTmdbResult(results[0]);
+        setTmdbType('movie');
+        setAiPrompt('');
+        return;
+      }
+
+      // 2. Güvenilir Fallback
+      const { genreIds, sort, year } = analyzePrompt(promptToUse);
+      const m = await getSmartRecommendation(genreIds, platforms.join('|'), 'movie', watchedIds, blacklistedIds, false, year, sort);
+      if (m) {
+        setTmdbResult(m);
+        setAiSuggestions([m]);
+        setTmdbType('movie');
+      }
+    } catch (err) {
+      console.error("fetchAiRecommendation error:", err);
+    } finally {
+      setTmdbLoading(false);
+      setAiPrompt('');
     }
-    setTmdbLoading(false);
-    setAiPrompt('');
   }
 
   const openTrailer = () => { if (tmdbResult?.videos?.results) { const t = tmdbResult.videos.results.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube'); if (t) setTrailerId(t.key); else alert("Fragman yok."); } else alert("Fragman yok."); }
@@ -389,6 +394,11 @@ export default function Home() {
         <AiSection
           fetchAiRecommendation={fetchAiRecommendation}
           loading={tmdbLoading}
+          aiSuggestions={aiSuggestions}
+          selectedMovie={tmdbResult}
+          setSelectedMovie={setTmdbResult}
+          openTrailer={openTrailer}
+          getWatchLink={getWatchLink}
         />
       )}
 

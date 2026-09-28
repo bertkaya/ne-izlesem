@@ -230,28 +230,27 @@ export async function getDiscoverBatch(page: number = 1, preferredGenres: string
 }
 
 export async function getMoviesByTitles(list: { title: string, type: 'movie' | 'tv', year?: string, reason?: string }[]) {
-  const results = [];
-  for (const item of list) {
+  const promises = list.slice(0, 8).map(async (item) => {
     try {
+      const type = item.type || 'movie';
       const params: any = { query: item.title };
       if (item.year) {
-        if (item.type === 'movie') params.year = item.year;
+        if (type === 'movie') params.year = item.year;
         else params.first_air_date_year = item.year;
       }
 
-      const searchRes = await fetchTMDB(`/search/${item.type}`, params);
-
+      const searchRes = await fetchTMDB(`/search/${type}`, params);
       if (searchRes.results && searchRes.results.length > 0) {
-        // Find best match (prefer exact title match if possible)
-        const bestMatch = searchRes.results[0]; // Default to first
-        // Optional: Loop through to find exact title match if strictness needed
-
-        const details = await getDetails(bestMatch.id, item.type);
-        results.push({ ...bestMatch, ...details, reason: item.reason });
+        const bestMatch = searchRes.results[0];
+        const details = await getDetails(bestMatch.id, type);
+        return { ...bestMatch, ...details, reason: item.reason };
       }
-    } catch (e) {
-      console.error(`Error fetching matching title for ${item.title}:`, e);
+      return null;
+    } catch (_e) {
+      return null;
     }
-  }
-  return results;
+  });
+
+  const resolved = await Promise.all(promises);
+  return resolved.filter((r): r is NonNullable<typeof r> => r !== null);
 }

@@ -2,16 +2,18 @@
 
 import { useState, useEffect } from 'react'
 import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion'
-import { Star, X, Heart, Loader2, Film } from 'lucide-react'
+import { Star, X, Heart, Loader2, Film, Play, Calendar } from 'lucide-react'
 import Image from 'next/image'
 
 interface Movie {
   id: number;
   title: string;
-  name?: string; // For TV shows
+  name?: string;
   poster_path: string | null;
   vote_average: number;
   overview: string;
+  release_date?: string;
+  first_air_date?: string;
 }
 
 interface Props {
@@ -36,14 +38,14 @@ export default function MovieSwiper({ movies, onSwipe, onWatch }: Props) {
     setExitX(direction === 'left' ? -1000 : 1000);
     setTimeout(() => {
       setCards(prev => prev.filter(c => c.id !== id));
-      setExitX(0); // Reset
+      setExitX(0);
     }, 200);
   }
 
   const handleDragEnd = (offset: number, id: number) => {
-    if (offset > 100) {
+    if (offset > 90) {
       removeCard(id, 'right');
-    } else if (offset < -100) {
+    } else if (offset < -90) {
       removeCard(id, 'left');
     }
   }
@@ -55,8 +57,9 @@ export default function MovieSwiper({ movies, onSwipe, onWatch }: Props) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-8 w-full max-w-sm">
-      <div className="relative w-full h-[500px] flex items-center justify-center perspective-1000">
+    <div className="flex flex-col items-center gap-6 w-full max-w-sm px-2">
+      {/* KART DECK */}
+      <div className="relative w-full h-[520px] md:h-[560px] flex items-center justify-center perspective-1000">
         <AnimatePresence>
           {cards.map((movie, index) => (
             <Card
@@ -70,22 +73,38 @@ export default function MovieSwiper({ movies, onSwipe, onWatch }: Props) {
         </AnimatePresence>
 
         {cards.length === 0 && (
-          <div className="animate-pulse text-center text-gray-500 flex flex-col items-center">
-            <Loader2 size={48} className="animate-spin mb-2" />
-            <p>Yeni içerikler yükleniyor...</p>
+          <div className="text-center text-gray-400 flex flex-col items-center justify-center p-8 bg-gray-900/60 rounded-3xl border border-gray-800 backdrop-blur-md w-full h-full shadow-2xl">
+            <Loader2 size={48} className="animate-spin mb-4 text-purple-500" />
+            <p className="font-bold text-white text-lg mb-1">Yeni içerikler yükleniyor</p>
+            <p className="text-xs text-gray-500">Mükemmel öneriler hazırlanıyor...</p>
           </div>
         )}
       </div>
 
-      <div className="flex gap-6 z-10">
-        <button onClick={() => triggerSwipe('left')} className="p-4 bg-gray-800 rounded-full text-red-500 border border-red-500/30 hover:bg-red-500 hover:text-white transition-all shadow-lg active:scale-95 group">
-          <X size={32} className="group-hover:scale-110 transition-transform" />
+      {/* SWIPE KONTROL BUTONLARI */}
+      <div className="flex items-center gap-6 z-10 mt-2">
+        <button
+          onClick={() => triggerSwipe('left')}
+          title="Geç (Sola Kaydır)"
+          className="p-4 bg-gray-900/90 text-red-500 border border-red-500/30 hover:bg-red-500 hover:text-white rounded-full transition-all shadow-xl hover:shadow-red-500/20 active:scale-90 group"
+        >
+          <X size={28} className="group-hover:scale-110 transition-transform" />
         </button>
-        <button onClick={() => { if (cards.length > 0) onWatch(cards[cards.length - 1]) }} className="p-5 bg-white text-black rounded-full hover:scale-110 transition-transform shadow-xl hover:shadow-2xl active:scale-95">
-          <Film size={28} />
+
+        <button
+          onClick={() => { if (cards.length > 0) onWatch(cards[cards.length - 1]) }}
+          title="Detay & Fragman"
+          className="p-5 bg-gradient-to-tr from-purple-600 to-pink-600 text-white rounded-full hover:scale-110 transition-all shadow-2xl hover:shadow-purple-500/40 active:scale-95 group"
+        >
+          <Play fill="currentColor" size={24} className="group-hover:scale-110 transition-transform ml-0.5" />
         </button>
-        <button onClick={() => triggerSwipe('right')} className="p-4 bg-gray-800 rounded-full text-green-500 border border-green-500/30 hover:bg-green-500 hover:text-white transition-all shadow-lg active:scale-95 group">
-          <Heart size={32} className="group-hover:scale-110 transition-transform" />
+
+        <button
+          onClick={() => triggerSwipe('right')}
+          title="Beğen (Sağa Kaydır)"
+          className="p-4 bg-gray-900/90 text-green-500 border border-green-500/30 hover:bg-green-500 hover:text-white rounded-full transition-all shadow-xl hover:shadow-green-500/20 active:scale-90 group"
+        >
+          <Heart fill="currentColor" size={28} className="group-hover:scale-110 transition-transform" />
         </button>
       </div>
     </div>
@@ -94,13 +113,15 @@ export default function MovieSwiper({ movies, onSwipe, onWatch }: Props) {
 
 function Card({ movie, isTop, onDragEnd, customExitX }: { movie: Movie, isTop: boolean, onDragEnd: (offset: number) => void, customExitX: number }) {
   const x = useMotionValue(0)
-  const rotate = useTransform(x, [-200, 200], [-25, 25])
-  const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0])
-  const scale = useTransform(x, [-200, 0, 200], [0.8, 1, 0.8])
+  const rotate = useTransform(x, [-200, 200], [-20, 20])
+  const opacity = useTransform(x, [-200, -120, 0, 120, 200], [0.3, 1, 1, 1, 0.3])
+  const scale = useTransform(x, [-200, 0, 200], [0.92, 1, 0.92])
 
-  // Visual indicators for swipe
-  const likeOpacity = useTransform(x, [0, 100], [0, 1]);
-  const nopeOpacity = useTransform(x, [-100, 0], [1, 0]);
+  const likeOpacity = useTransform(x, [10, 80], [0, 1]);
+  const nopeOpacity = useTransform(x, [-80, -10], [1, 0]);
+
+  const displayTitle = movie.title || movie.name || 'İsimsiz İçerik';
+  const releaseYear = (movie.release_date || movie.first_air_date)?.split('-')[0];
 
   return (
     <motion.div
@@ -110,51 +131,77 @@ function Card({ movie, isTop, onDragEnd, customExitX }: { movie: Movie, isTop: b
       onDragEnd={(_, info) => {
         if (isTop) onDragEnd(info.offset.x)
       }}
-      initial={{ scale: 0.9, opacity: 0, y: 20 }}
+      initial={{ scale: 0.92, opacity: 0, y: 15 }}
       animate={{ scale: 1, opacity: 1, y: 0 }}
-      exit={{ x: customExitX || (x.get() < 0 ? -1000 : 1000), opacity: 0, transition: { duration: 0.4 } }}
-      className="absolute top-0 w-full h-full bg-gray-800 rounded-3xl shadow-2xl border border-gray-700 overflow-hidden cursor-grab active:cursor-grabbing"
+      exit={{ x: customExitX || (x.get() < 0 ? -1000 : 1000), opacity: 0, transition: { duration: 0.35 } }}
+      className="absolute top-0 w-full h-full rounded-3xl shadow-2xl border border-gray-700/60 overflow-hidden cursor-grab active:cursor-grabbing bg-gray-950 select-none"
     >
-      {/* Swipe Indicators */}
+      {/* BEĞEN GÖSTERGESİ */}
       {isTop && (
         <>
-          <motion.div style={{ opacity: likeOpacity }} className="absolute top-8 right-8 z-20 border-4 border-green-500 text-green-500 font-bold text-4xl px-4 py-2 rounded-xl transform rotate-12 bg-black/20 backdrop-blur-sm">
+          <motion.div
+            style={{ opacity: likeOpacity }}
+            className="absolute top-6 right-6 z-30 border-4 border-green-500 text-green-400 font-black text-3xl px-4 py-1.5 rounded-2xl transform rotate-12 bg-black/60 backdrop-blur-md shadow-2xl pointer-events-none"
+          >
             BEĞEN
           </motion.div>
-          <motion.div style={{ opacity: nopeOpacity }} className="absolute top-8 left-8 z-20 border-4 border-red-500 text-red-500 font-bold text-4xl px-4 py-2 rounded-xl transform -rotate-12 bg-black/20 backdrop-blur-sm">
+          <motion.div
+            style={{ opacity: nopeOpacity }}
+            className="absolute top-6 left-6 z-30 border-4 border-red-500 text-red-400 font-black text-3xl px-4 py-1.5 rounded-2xl transform -rotate-12 bg-black/60 backdrop-blur-md shadow-2xl pointer-events-none"
+          >
             GEÇ
           </motion.div>
         </>
       )}
 
-      <div className="relative h-3/4 bg-gray-900">
+      {/* FULL-BLEED POSTER GÖRSELİ */}
+      <div className="absolute inset-0 w-full h-full bg-gray-900">
         {movie.poster_path ? (
           <Image
-            src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
-            alt={movie.title || movie.name || 'Film'}
+            src={`https://image.tmdb.org/t/p/w780${movie.poster_path}`}
+            alt={displayTitle}
             fill
             className="object-cover pointer-events-none"
             priority={isTop}
+            sizes="(max-width: 640px) 100vw, 400px"
           />
         ) : (
-          <div className="h-full flex items-center justify-center bg-gray-800">
-            <Film size={64} className="text-gray-600" />
+          <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900 text-gray-600 gap-2">
+            <Film size={54} />
+            <span className="text-xs">Görsel Yok</span>
           </div>
         )}
-        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-gray-900 to-transparent" />
       </div>
-      <div className="h-1/4 p-6 bg-gray-900 flex flex-col justify-center relative z-10">
-        <h2 className="text-base font-black text-white line-clamp-2 mb-1 leading-tight">{movie.title || movie.name}</h2>
-        <div className="flex items-center gap-4 mb-2">
-          {/* IMDB / TMDB Score */}
-          <div className="flex items-center gap-1">
-            <Star size={16} className="text-yellow-400 fill-yellow-400" />
-            <span className="text-yellow-400 font-bold text-lg">{movie.vote_average?.toFixed(1) || '0.0'}</span>
+
+      {/* ÜST VIGNETTE */}
+      <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-black/70 via-black/20 to-transparent pointer-events-none z-10" />
+
+      {/* ALT SİNEMATİK KARARTMA & BİLGİ ALANI */}
+      <div className="absolute bottom-0 left-0 w-full h-80 bg-gradient-to-t from-black via-black/85 via-45% to-transparent p-6 flex flex-col justify-end z-20 pointer-events-none">
+        {/* ROZETLER */}
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          <div className="flex items-center gap-1 bg-yellow-500/20 backdrop-blur-md border border-yellow-500/50 px-2 py-0.5 rounded-md">
+            <Star size={13} className="text-yellow-400 fill-yellow-400" />
+            <span className="text-yellow-300 font-bold text-xs">{movie.vote_average?.toFixed(1) || '0.0'}</span>
           </div>
 
-
+          {releaseYear && (
+            <div className="flex items-center gap-1 bg-white/10 backdrop-blur-md border border-white/20 px-2 py-0.5 rounded-md text-xs font-semibold text-gray-200">
+              <Calendar size={12} />
+              <span>{releaseYear}</span>
+            </div>
+          )}
         </div>
-        <p className="text-sm text-gray-400 line-clamp-2">{movie.overview || 'Özet bilgisi bulunmuyor.'}</p>
+
+        {/* BAŞLIK (KRİSTAL NETLİKTE, BÜYÜK VE ASLA KESİLMEYEN) */}
+        <h2 className="text-2xl md:text-3xl font-black text-white leading-tight mb-2 drop-shadow-lg line-clamp-2">
+          {displayTitle}
+        </h2>
+
+        {/* ÖZET */}
+        <p className="text-xs md:text-sm text-gray-300 line-clamp-3 leading-relaxed drop-shadow">
+          {movie.overview || 'Bu içerik için özet açıklaması bulunamadı.'}
+        </p>
       </div>
     </motion.div>
   )
