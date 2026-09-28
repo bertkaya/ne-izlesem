@@ -3,16 +3,23 @@
 import { useState, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
-import { User, Settings, History, Trash2, Save, Loader2, ArrowLeft, LogOut, Tv, Youtube, Plus, Link as LinkIcon, Search, Heart, Eye, Film } from 'lucide-react'
-import { PROVIDERS } from '@/lib/tmdb'
+import { User, Trash2, Save, Loader2, ArrowLeft, LogOut, Tv, Youtube, Link as LinkIcon, Search, Heart, Eye, Film } from 'lucide-react'
+import { useToast } from '@/components/Toast'
+import { PROVIDERS } from '@/lib/constants'
 import { resolveYouTubeChannel } from '../actions' // Action import
 import Image from 'next/image'
+import type { User as AuthUser } from '@supabase/supabase-js'
+
+interface HistoryRow { id: number; tmdb_id: number; media_type: string; title: string; poster_path?: string | null; vote_average?: number; watched_at?: string; created_at?: string }
+interface BadgeRow { badge_id: string; created_at: string; badges: { name: string; icon: string; description: string } }
+interface FavoriteRow { id: number; tmdb_id: number; media_type: string; title: string; poster_path?: string | null; vote_average?: number; status?: string | null }
 
 export default function ProfilePage() {
-  const supabase = createClientComponentClient()
+  const [supabase] = useState(() => createClientComponentClient())
   const router = useRouter()
+  const toast = useToast()
 
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
   const [activeTab, setActiveTab] = useState<'settings' | 'channels' | 'history' | 'watchlist'>('settings')
   const [loading, setLoading] = useState(true)
 
@@ -22,10 +29,10 @@ export default function ProfilePage() {
   const [newChannelInput, setNewChannelInput] = useState('')
   const [addingChannel, setAddingChannel] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [history, setHistory] = useState<any[]>([])
-  const [badges, setBadges] = useState<any[]>([]) // Rozetler
-  const [watchlist, setWatchlist] = useState<any[]>([]) // İzleme Listesi
-  const [watched, setWatched] = useState<any[]>([]) // İzlediklerim
+  const [history, setHistory] = useState<HistoryRow[]>([])
+  const [badges, setBadges] = useState<BadgeRow[]>([]) // Rozetler
+  const [watchlist, setWatchlist] = useState<FavoriteRow[]>([]) // İzleme Listesi
+  const [watched, setWatched] = useState<FavoriteRow[]>([]) // İzlediklerim
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,26 +52,27 @@ export default function ProfilePage() {
 
         // Rozetleri Çek
         const { data: userBadges } = await supabase.from('user_badges').select('badge_id, created_at, badges(name, icon, description)').eq('user_id', user.id)
-        if (userBadges) setBadges(userBadges)
+        if (userBadges) setBadges(userBadges as unknown as BadgeRow[])
 
         // İzleme Listesi (Favoriler)
         const { data: favoritesData } = await supabase.from('favorites').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
         if (favoritesData) {
-          setWatchlist(favoritesData.filter((f: any) => f.status === 'want_to_watch'))
-          setWatched(favoritesData.filter((f: any) => f.status === 'watched' || !f.status))
+          setWatchlist(favoritesData.filter((f: FavoriteRow) => f.status === 'want_to_watch'))
+          setWatched(favoritesData.filter((f: FavoriteRow) => f.status === 'watched' || !f.status))
         }
 
       } catch (error) { console.error(error) }
       finally { setLoading(false) }
     }
     fetchData()
-  }, [])
+  }, [supabase, router])
 
   const saveAll = async () => {
+    if (!user) return
     setSaving(true)
     const { error } = await supabase.from('profiles').update({ selected_platforms: myPlatforms.map(String), favorite_channels: myChannels }).eq('id', user.id)
-    if (!error) alert("Kaydedildi! ✅")
-    else alert("Hata oluştu.")
+    if (!error) toast("Kaydedildi! ✅", { type: 'success' })
+    else toast("Hata oluştu.", { type: 'error' })
     setSaving(false)
   }
 
@@ -75,8 +83,8 @@ export default function ProfilePage() {
     const result = await resolveYouTubeChannel(newChannelInput);
     if (result.success && result.id) {
       if (!myChannels.includes(result.id)) { setMyChannels([...myChannels, result.id]); setNewChannelInput(''); }
-      else { alert("Bu kanal zaten var."); }
-    } else { alert(result.message || "Kanal bulunamadı."); }
+      else { toast("Bu kanal zaten var."); }
+    } else { toast(result.message || "Kanal bulunamadı.", { type: 'error' }); }
     setAddingChannel(false);
   }
 
@@ -113,7 +121,7 @@ export default function ProfilePage() {
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">🏆 Rozet Koleksiyonun</h2>
               {badges.length > 0 ? (
                 <div className="flex gap-4 flex-wrap">
-                  {badges.map((b: any) => (
+                  {badges.map(b => (
                     <div key={b.badge_id} className="bg-gray-900 p-3 rounded-xl border border-gray-700 flex flex-col items-center text-center w-24" title={b.badges.description}>
                       <div className="text-3xl mb-2">{b.badges.icon}</div>
                       <div className="text-xs font-bold text-gray-300">{b.badges.name}</div>

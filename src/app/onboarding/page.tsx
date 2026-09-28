@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/Toast'
 import { CheckCircle2 } from 'lucide-react'
 
 // TMDb Tür ID'leri
@@ -37,19 +38,16 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false)
 
   const router = useRouter()
+  const toast = useToast()
   const supabase = createClientComponentClient()
 
   // Seçim Fonksiyonları
   const toggleGenre = (id: number) => {
-    selectedGenres.includes(id) 
-      ? setSelectedGenres(selectedGenres.filter(g => g !== id))
-      : setSelectedGenres([...selectedGenres, id])
+    setSelectedGenres(selectedGenres.includes(id) ? selectedGenres.filter(g => g !== id) : [...selectedGenres, id])
   }
 
   const togglePlatform = (id: number) => {
-    selectedPlatforms.includes(id)
-      ? setSelectedPlatforms(selectedPlatforms.filter(p => p !== id))
-      : setSelectedPlatforms([...selectedPlatforms, id])
+    setSelectedPlatforms(selectedPlatforms.includes(id) ? selectedPlatforms.filter(p => p !== id) : [...selectedPlatforms, id])
   }
 
   // Kaydet ve Bitir
@@ -71,7 +69,7 @@ export default function OnboardingPage() {
       if (!error) {
         router.push('/') // Ana sayfaya postala
       } else {
-        alert("Bir hata oluştu!")
+        toast("Bir hata oluştu!", { type: 'error' })
       }
     }
     setLoading(false)

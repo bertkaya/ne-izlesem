@@ -2,16 +2,17 @@ import { useState } from 'react'
 import Image from 'next/image'
 import {
     Loader2, Zap, Smile, Brain, Trophy, Sparkles, Play, Video,
-    Star, ArrowRight, RotateCcw, Calendar
+    Star, Calendar, Info, AlertTriangle
 } from 'lucide-react'
 import { useLanguage } from '@/components/LanguageContext'
+import { displayTitle, releaseYear, type MediaItem } from '@/types/media'
 
 interface AiSectionProps {
     fetchAiRecommendation: (overridePrompt?: string) => void;
     loading: boolean;
-    aiSuggestions?: any[];
-    selectedMovie?: any;
-    setSelectedMovie?: (movie: any) => void;
+    aiSuggestions?: MediaItem[];
+    selectedMovie?: MediaItem | null;
+    setSelectedMovie?: (movie: MediaItem) => void;
     openTrailer?: () => void;
     getWatchLink?: () => string;
 }
@@ -27,7 +28,7 @@ export default function AiSection({
     fetchAiRecommendation, loading, aiSuggestions = [],
     selectedMovie, setSelectedMovie, openTrailer, getWatchLink
 }: AiSectionProps) {
-    const { lang, t } = useLanguage()
+    const { t } = useLanguage()
     const [inputValue, setInputValue] = useState('')
 
     const handleSearch = () => {
@@ -37,16 +38,17 @@ export default function AiSection({
         }
     };
 
-    const isEn = lang === 'en';
-    const activeMovie = selectedMovie || (aiSuggestions && aiSuggestions.length > 0 ? aiSuggestions[0] : null);
+    const activeMovie = selectedMovie || (aiSuggestions.length > 0 ? aiSuggestions[0] : null);
+    const activeYear = activeMovie ? releaseYear(activeMovie) : undefined;
+    const isAiReason = activeMovie?.reasonSource !== 'curator';
 
     return (
         <div className="flex flex-col items-center mt-6 px-4 animate-in fade-in duration-500 w-full max-w-5xl mx-auto pb-24">
             {/* BAŞLIK */}
             <div className="text-center mb-6">
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-bold mb-3 shadow-sm">
-                    <Sparkles size={14} className="animate-spin text-cyan-300" />
-                    <span>{isEn ? 'AI Cinema Consultant' : 'Kişiselleştirilmiş Film Danışmanı'}</span>
+                    <Sparkles size={14} className="text-cyan-300" />
+                    <span>{t.ai.badge}</span>
                 </div>
                 <h2 className="text-3xl md:text-5xl font-black mb-2 bg-gradient-to-r from-cyan-400 via-teal-300 to-blue-500 bg-clip-text text-transparent drop-shadow-lg">
                     {t.ai.title}
@@ -87,23 +89,23 @@ export default function AiSection({
                     </div>
                     <h3 className="text-white font-bold text-lg mb-1">{t.ai.thinking}</h3>
                     <p className="text-xs text-gray-400">
-                        {isEn ? 'Analyzing themes, ratings, and cinematic atmosphere...' : 'Temalar, puanlar ve sinematik atmosfer analiz ediliyor...'}
+                        {t.ai.analyzing}
                     </p>
                 </div>
             )}
 
             {/* SOMMELIER ÖNERİ LİSTESİ (VARSA DOĞRUDAN BURADA GÖSTERİLİR) */}
-            {!loading && aiSuggestions && aiSuggestions.length > 0 && activeMovie && (
+            {!loading && aiSuggestions.length > 0 && activeMovie && (
                 <div className="w-full max-w-4xl mb-12 animate-in slide-in-from-bottom-6">
                     <div className="flex justify-between items-center mb-4 px-2">
                         <div className="flex items-center gap-2">
                             <span className="text-xl">🍷</span>
                             <h3 className="text-lg md:text-xl font-bold text-white">
-                                {isEn ? "Sommelier's Curated Selection" : "Sommelier'in Senin İçin Seçtikleri"}
+                                {t.ai.curatedTitle}
                             </h3>
                         </div>
                         <span className="text-xs text-cyan-400 font-semibold bg-cyan-950/60 border border-cyan-700/40 px-3 py-1 rounded-full">
-                            {aiSuggestions.length} {isEn ? 'Picks' : 'Öneri'}
+                            {aiSuggestions.length} {t.ai.picks}
                         </span>
                     </div>
 
@@ -113,35 +115,44 @@ export default function AiSection({
                             {activeMovie.poster_path ? (
                                 <Image
                                     src={`https://image.tmdb.org/t/p/w500${activeMovie.poster_path}`}
-                                    alt={activeMovie.title || activeMovie.name}
+                                    alt={displayTitle(activeMovie)}
                                     fill
                                     className="object-cover"
+                                    sizes="(max-width: 768px) 100vw, 33vw"
                                     priority
                                 />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">Görsel Yok</div>
+                                <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">{t.common.noImage}</div>
                             )}
                             <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-transparent to-transparent md:hidden" />
                         </div>
 
                         <div className="p-6 md:p-8 md:w-2/3 flex flex-col justify-center">
-                            {/* SOMMELIER GEREKÇESİ (ÖZEL PURPLE KART) */}
+                            {activeMovie.fromFallback && (
+                                <div className="mb-3 text-yellow-500 text-xs font-bold flex items-center gap-2">
+                                    <AlertTriangle size={12} /> {t.tmdb.fallbackNotice}
+                                </div>
+                            )}
+
+                            {/* GEREKÇE: AI notu (italik alıntı) ya da TMDB verisinden üretilmiş açıklama */}
                             {activeMovie.reason && (
-                                <div className="mb-4 bg-gradient-to-r from-purple-950/60 to-blue-950/60 border border-purple-500/40 p-4 rounded-2xl flex gap-3 items-start shadow-lg">
-                                    <Sparkles className="text-purple-400 shrink-0 mt-0.5" size={20} />
+                                <div className={`mb-4 p-4 rounded-2xl flex gap-3 items-start shadow-lg border ${isAiReason ? 'bg-gradient-to-r from-purple-950/60 to-blue-950/60 border-purple-500/40' : 'bg-gray-900/80 border-cyan-700/40'}`}>
+                                    {isAiReason
+                                        ? <Sparkles className="text-purple-400 shrink-0 mt-0.5" size={20} />
+                                        : <Info className="text-cyan-400 shrink-0 mt-0.5" size={20} />}
                                     <div>
-                                        <p className="text-purple-300 text-xs font-bold uppercase tracking-wider mb-1">
-                                            {isEn ? "Sommelier's Tasting Note" : "Sommelier'in Tadım Notu"}
+                                        <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${isAiReason ? 'text-purple-300' : 'text-cyan-300'}`}>
+                                            {isAiReason ? t.ai.tastingNote : t.ai.dataNote}
                                         </p>
-                                        <p className="text-white text-sm italic font-medium leading-relaxed">
-                                            &ldquo;{activeMovie.reason}&rdquo;
+                                        <p className={`text-white text-sm font-medium leading-relaxed ${isAiReason ? 'italic' : ''}`}>
+                                            {isAiReason ? <>&ldquo;{activeMovie.reason}&rdquo;</> : activeMovie.reason}
                                         </p>
                                     </div>
                                 </div>
                             )}
 
                             <h3 className="text-2xl md:text-4xl font-black text-white leading-tight mb-2 drop-shadow-md">
-                                {activeMovie.title || activeMovie.name}
+                                {displayTitle(activeMovie)}
                             </h3>
 
                             <div className="flex items-center gap-3 mb-4 flex-wrap">
@@ -150,16 +161,16 @@ export default function AiSection({
                                     <span className="text-yellow-300 font-bold text-xs">{activeMovie.vote_average?.toFixed(1) || '0.0'}</span>
                                 </div>
 
-                                {(activeMovie.release_date || activeMovie.first_air_date) && (
+                                {activeYear && (
                                     <div className="flex items-center gap-1 bg-white/10 px-2.5 py-1 rounded-lg border border-white/15 text-xs text-gray-300 font-medium">
                                         <Calendar size={13} />
-                                        <span>{(activeMovie.release_date || activeMovie.first_air_date).split('-')[0]}</span>
+                                        <span>{activeYear}</span>
                                     </div>
                                 )}
                             </div>
 
                             <p className="text-gray-300 text-xs md:text-sm leading-relaxed mb-6 line-clamp-3 md:line-clamp-4">
-                                {activeMovie.overview || (isEn ? 'No overview available for this title.' : 'Bu içerik için özet açıklaması bulunmuyor.')}
+                                {activeMovie.overview || t.common.noOverview}
                             </p>
 
                             <div className="flex gap-3 flex-wrap">
@@ -169,7 +180,7 @@ export default function AiSection({
                                         className="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 border border-gray-700 transition text-sm shadow-md"
                                     >
                                         <Video size={16} className="text-red-400" />
-                                        <span>{isEn ? 'Trailer' : 'Fragman'}</span>
+                                        <span>{t.tmdb.trailer}</span>
                                     </button>
                                 )}
 
@@ -179,7 +190,7 @@ export default function AiSection({
                                         className="flex-1 bg-white hover:bg-gray-200 text-black font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition text-sm shadow-lg"
                                     >
                                         <Play size={16} fill="currentColor" />
-                                        <span>{isEn ? 'Watch' : 'İzle'}</span>
+                                        <span>{t.tmdb.watch}</span>
                                     </button>
                                 )}
                             </div>
@@ -188,10 +199,10 @@ export default function AiSection({
 
                     {/* DİĞER ÖNERİLER ÇUBUĞU / GALERİ */}
                     <p className="text-xs text-gray-400 uppercase font-bold px-1 mb-3">
-                        {isEn ? 'All Curated Titles (Tap to preview)' : 'Seçilen Tüm Filmler (İncelemek için tıkla)'}
+                        {t.ai.allPicks}
                     </p>
                     <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                        {aiSuggestions.map((m: any, idx: number) => {
+                        {aiSuggestions.map((m, idx) => {
                             const isSelected = activeMovie?.id === m.id;
                             return (
                                 <button
@@ -203,15 +214,16 @@ export default function AiSection({
                                         {m.poster_path ? (
                                             <Image
                                                 src={`https://image.tmdb.org/t/p/w185${m.poster_path}`}
-                                                alt={m.title || m.name}
+                                                alt={displayTitle(m)}
                                                 fill
+                                                sizes="112px"
                                                 className="object-cover"
                                             />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-500 text-center p-1">Görsel Yok</div>
+                                            <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-500 text-center p-1">{t.common.noImage}</div>
                                         )}
                                     </div>
-                                    <p className="text-[11px] font-bold text-white line-clamp-1">{m.title || m.name}</p>
+                                    <p className="text-[11px] font-bold text-white line-clamp-1">{displayTitle(m)}</p>
                                     <p className="text-[10px] text-yellow-400">⭐ {m.vote_average?.toFixed(1) || '0.0'}</p>
                                 </button>
                             );

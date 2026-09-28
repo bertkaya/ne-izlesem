@@ -3,8 +3,10 @@ import Image from 'next/image'
 import {
     Loader2, Play, Check, Flag, Video, RotateCcw, EyeOff, AlertTriangle, Sparkles
 } from 'lucide-react'
-import { PROVIDERS, MOOD_TO_MOVIE_GENRE, MOOD_TO_TV_GENRE, getTrendingTvShows } from '@/lib/tmdb'
+import { PROVIDERS, MOOD_TO_MOVIE_GENRE, MOOD_TO_TV_GENRE } from '@/lib/constants'
+import { getTrendingTvShows } from '@/lib/tmdb'
 import { useLanguage } from '@/components/LanguageContext'
+import { displayTitle, releaseYear, type MediaItem, type MediaType } from '@/types/media'
 
 const GENRE_LABELS_TR: Record<string, string> = {
     funny: 'Komedi', scary: 'Korku & Gerilim', emotional: 'Dram & Romantik',
@@ -25,28 +27,28 @@ const GENRE_LABELS_EN: Record<string, string> = {
 };
 
 interface TmdbSectionProps {
-    tmdbType: 'movie' | 'tv';
-    setTmdbType: (t: 'movie' | 'tv') => void;
+    tmdbType: MediaType;
+    setTmdbType: (t: MediaType) => void;
     platforms: number[];
     togglePlatform: (id: number) => void;
     searchQuery: string;
     setSearchQuery: (q: string) => void;
     showDropdown: boolean;
-    searchResults: any[];
-    handleSearchSelect: (show: any) => void;
+    searchResults: MediaItem[];
+    handleSearchSelect: (show: MediaItem) => void;
     onlyTurkish: boolean;
     setOnlyTurkish: (v: boolean) => void;
     toggleGenre: (id: string) => void;
     selectedGenres: string[];
     fetchTmdbContent: () => void;
     loading: boolean;
-    tmdbResult: any;
+    tmdbResult: MediaItem | null;
     openTrailer: () => void;
     getWatchLink: () => string;
     markAsWatched: () => void;
     onTryAgain?: () => void;
-    aiSuggestions?: any[];
-    setTmdbResult?: (result: any) => void;
+    aiSuggestions?: MediaItem[];
+    setTmdbResult?: (result: MediaItem) => void;
 }
 
 export default function TmdbSection({
@@ -56,7 +58,7 @@ export default function TmdbSection({
     openTrailer, getWatchLink, markAsWatched, onTryAgain, aiSuggestions, setTmdbResult
 }: TmdbSectionProps) {
     const { lang, t } = useLanguage()
-    const [trendingShows, setTrendingShows] = useState<any[]>([]);
+    const [trendingShows, setTrendingShows] = useState<MediaItem[]>([]);
 
     useEffect(() => {
         if (tmdbType === 'tv' && trendingShows.length === 0) {
@@ -111,15 +113,16 @@ export default function TmdbSection({
                                             {show.poster_path && (
                                                 <Image
                                                     src={`https://image.tmdb.org/t/p/w92${show.poster_path}`}
-                                                    alt={show.name}
+                                                    alt={displayTitle(show)}
                                                     fill
+                                                    sizes="32px"
                                                     className="object-cover"
                                                 />
                                             )}
                                         </div>
                                         <div>
                                             <p className="font-bold text-sm text-white">{show.name}</p>
-                                            <p className="text-xs text-gray-400">{show.first_air_date?.split('-')[0]}</p>
+                                            <p className="text-xs text-gray-400">{releaseYear(show)}</p>
                                         </div>
                                     </button>
                                 ))}
@@ -131,7 +134,7 @@ export default function TmdbSection({
                 {/* TRENDING DİZİLER */}
                 {tmdbType === 'tv' && trendingShows.length > 0 && (
                     <div className="mb-6">
-                        <p className="text-xs text-gray-400 uppercase font-bold mb-3">🔥 Popüler Diziler</p>
+                        <p className="text-xs text-gray-400 uppercase font-bold mb-3">{t.tmdb.popularShows}</p>
                         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                             {trendingShows.map((show) => (
                                 <button
@@ -143,12 +146,13 @@ export default function TmdbSection({
                                         {show.poster_path ? (
                                             <Image
                                                 src={`https://image.tmdb.org/t/p/w185${show.poster_path}`}
-                                                alt={show.name}
+                                                alt={displayTitle(show)}
                                                 fill
+                                                sizes="80px"
                                                 className="object-cover group-hover:scale-105 transition-transform"
                                             />
                                         ) : (
-                                            <div className="w-full h-full bg-gray-800 flex items-center justify-center text-[10px] text-gray-500 p-1 text-center">Görsel Yok</div>
+                                            <div className="w-full h-full bg-gray-800 flex items-center justify-center text-[10px] text-gray-500 p-1 text-center">{t.common.noImage}</div>
                                         )}
                                     </div>
                                     <p className="text-[11px] font-medium text-gray-300 line-clamp-1 w-full text-center group-hover:text-red-400">{show.name}</p>
@@ -203,16 +207,17 @@ export default function TmdbSection({
                                     {m.poster_path ? (
                                         <Image
                                             src={`https://image.tmdb.org/t/p/w342${m.poster_path}`}
-                                            alt={m.title || m.name}
+                                            alt={displayTitle(m)}
                                             fill
+                                            sizes="144px"
                                             className="object-cover"
                                         />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-xs text-gray-500 text-center p-2">Görsel Yok</div>
+                                        <div className="w-full h-full flex items-center justify-center text-xs text-gray-500 text-center p-2">{t.common.noImage}</div>
                                     )}
                                 </div>
                                 <div className="p-3">
-                                    <h4 className="font-bold text-white text-xs truncate group-hover:text-purple-400">{m.title || m.name}</h4>
+                                    <h4 className="font-bold text-white text-xs truncate group-hover:text-purple-400">{displayTitle(m)}</h4>
                                     <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">⭐ {m.vote_average?.toFixed(1) || '0.0'}</p>
                                 </div>
                             </div>
@@ -226,13 +231,18 @@ export default function TmdbSection({
                 <div className="w-full max-w-4xl mt-8 animate-in slide-in-from-bottom-8">
                     <div className="bg-gradient-to-br from-gray-900 to-black rounded-3xl overflow-hidden shadow-2xl border border-gray-800 flex flex-col md:flex-row">
                         <div className="md:w-1/3 relative min-h-[350px] md:min-h-[450px] group cursor-pointer" onClick={openTrailer}>
-                            <Image
-                                src={tmdbResult.poster_path ? `https://image.tmdb.org/t/p/w500${tmdbResult.poster_path}` : '/placeholder.png'}
-                                alt={tmdbResult.title || tmdbResult.name}
-                                fill
-                                className="object-cover"
-                                priority
-                            />
+                            {tmdbResult.poster_path ? (
+                                <Image
+                                    src={`https://image.tmdb.org/t/p/w500${tmdbResult.poster_path}`}
+                                    alt={displayTitle(tmdbResult)}
+                                    fill
+                                    sizes="(max-width: 768px) 100vw, 33vw"
+                                    className="object-cover"
+                                    priority
+                                />
+                            ) : (
+                                <div className="absolute inset-0 bg-gray-900" />
+                            )}
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-all">
                                 <div className="bg-red-600 text-white p-4 rounded-full shadow-xl scale-90 group-hover:scale-110 transition-transform">
                                     <Play fill="currentColor" size={32} />
@@ -246,14 +256,14 @@ export default function TmdbSection({
                                 <div className="mb-6 bg-gradient-to-r from-purple-900/40 to-blue-900/40 border border-purple-500/30 p-4 rounded-xl flex gap-3 items-start animate-in fade-in">
                                     <Sparkles className="text-purple-400 shrink-0 mt-1" size={20} />
                                     <div>
-                                        <p className="text-purple-300 text-xs font-bold uppercase mb-1">{t.tmdb.sommelierNote}</p>
+                                        <p className="text-purple-300 text-xs font-bold uppercase mb-1">{tmdbResult.reasonSource === 'curator' ? t.ai.dataNote : t.tmdb.sommelierNote}</p>
                                         <p className="text-white text-sm italic font-medium">&quot;{tmdbResult.reason}&quot;</p>
                                     </div>
                                 </div>
                             )}
 
                             <div className="mb-4">
-                                <h2 className="text-3xl md:text-5xl font-black text-white leading-tight mb-2 drop-shadow-lg">{tmdbResult.title || tmdbResult.name}</h2>
+                                <h2 className="text-3xl md:text-5xl font-black text-white leading-tight mb-2 drop-shadow-lg">{displayTitle(tmdbResult)}</h2>
                                 {tmdbResult.showName && tmdbResult.showName !== tmdbResult.title && (
                                     <p className="text-purple-400 font-bold text-lg mb-1">{tmdbResult.showName}</p>
                                 )}
@@ -275,7 +285,7 @@ export default function TmdbSection({
                                         </a>
                                     )}
 
-                                    {(tmdbResult.release_date || tmdbResult.first_air_date) && <span className="text-gray-400 text-sm font-medium">{(tmdbResult.release_date || tmdbResult.first_air_date).split('-')[0]}</span>}
+                                    {releaseYear(tmdbResult) && <span className="text-gray-400 text-sm font-medium">{releaseYear(tmdbResult)}</span>}
                                 </div>
 
                                 {tmdbResult.season && (
@@ -292,16 +302,16 @@ export default function TmdbSection({
                                 <div className="mb-4">
                                     <p className="text-xs text-gray-500 uppercase font-bold mb-2 tracking-wider">{t.tmdb.watchOnProvider}</p>
                                     <div className="flex gap-2 flex-wrap">
-                                        {providerResults.flatrate.map((p: any) => (
+                                        {providerResults.flatrate.map(p => (
                                             <div key={p.provider_id} className="relative w-8 h-8 rounded-lg overflow-hidden border border-gray-700 shadow" title={p.provider_name}>
-                                                <Image src={`https://image.tmdb.org/t/p/original${p.logo_path}`} alt={p.provider_name} fill className="object-cover" />
+                                                <Image src={`https://image.tmdb.org/t/p/w92${p.logo_path}`} alt={p.provider_name} fill sizes="32px" className="object-cover" />
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             )}
 
-                            <p className="text-gray-400 text-sm leading-relaxed mb-6 line-clamp-4 md:line-clamp-6">{tmdbResult.overview || 'Özet bilgisi bulunamadı.'}</p>
+                            <p className="text-gray-400 text-sm leading-relaxed mb-6 line-clamp-4 md:line-clamp-6">{tmdbResult.overview || t.common.noOverview}</p>
 
                             <div className="flex gap-3 mb-4">
                                 <button onClick={openTrailer} className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"><Video size={18} /> {t.tmdb.trailer}</button>
