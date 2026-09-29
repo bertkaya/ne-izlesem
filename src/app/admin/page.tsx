@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import {
-  getAdminStatus, resolveYouTubeChannel, addSafeChannel, removeSafeChannel, fetchFromSafeChannels,
+  getAdminStatus, getSystemStatus, type SystemCheck, resolveYouTubeChannel, addSafeChannel, removeSafeChannel, fetchFromSafeChannels,
   bulkUpdateVideos, setVideosApproval, deleteVideos, addVideoByUrl, banTitle, unbanTitle,
   checkVideoHealth, fetchYouTubeTrends, fetchYouTubeByMood
 } from '../actions'
 import {
-  ShieldCheck, Loader2, CheckCircle, Trash2, ExternalLink,
+  ShieldCheck, Loader2, CheckCircle, Trash2, ExternalLink, XCircle, Activity,
   Plus, Layers, RefreshCw, Stethoscope, CheckSquare, Square, Flame
 } from 'lucide-react'
 
@@ -43,6 +43,17 @@ export default function AdminPage() {
   // USER STATS TAB
   const [userStats, setUserStats] = useState<UserStatRow[]>([])
 
+  // SİSTEM DURUMU (canlı ortam teşhisi)
+  const [systemChecks, setSystemChecks] = useState<SystemCheck[] | null>(null)
+  const [checkingSystem, setCheckingSystem] = useState(false)
+  const runSystemCheck = async () => {
+    setCheckingSystem(true)
+    const res = await getSystemStatus()
+    if (res.success && res.checks) setSystemChecks(res.checks)
+    else setStatusMsg(`Hata: ${res.message}`)
+    setCheckingSystem(false)
+  }
+
   // --- DATA FETCHING (okuma istemcide; RLS yalnızca admin'e tüm satırları gösterir) ---
   const fetchVideos = async () => {
     let query = supabase.from('videos').select('*').order('created_at', { ascending: false }).limit(500)
@@ -62,7 +73,7 @@ export default function AdminPage() {
     getAdminStatus().then(({ loggedIn, isAdmin }) => {
       if (!loggedIn) router.replace('/login')
       else if (!isAdmin) router.replace('/')
-      else setIsAuthed(true)
+      else { setIsAuthed(true); runSystemCheck() }
     })
   }, [router])
 
@@ -161,6 +172,28 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 font-sans flex flex-col items-center pb-24">
       <div className="max-w-7xl w-full">
         <h1 className="text-3xl font-bold mb-8 flex items-center gap-3 text-yellow-500"><ShieldCheck size={32} /> Mutfak Kontrol</h1>
+
+        {/* SİSTEM DURUMU */}
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold flex items-center gap-2"><Activity size={18} className="text-cyan-400" /> Sistem Durumu <span className="text-xs text-gray-500 font-normal">(bu sunucunun ortam değişkenleri ve servisleri)</span></h2>
+            <button onClick={runSystemCheck} disabled={checkingSystem} className="text-xs border border-gray-600 px-3 py-1 rounded hover:bg-gray-700 flex items-center gap-1">
+              <RefreshCw size={12} className={checkingSystem ? 'animate-spin' : ''} /> Tekrar kontrol et
+            </button>
+          </div>
+          {!systemChecks ? (
+            <p className="text-sm text-gray-500 flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> Kontrol ediliyor...</p>
+          ) : (
+            <ul className="grid gap-2 md:grid-cols-2">
+              {systemChecks.map(c => (
+                <li key={c.name} className={`flex gap-2 items-start text-sm p-2 rounded-lg ${c.ok ? 'bg-green-950/30' : 'bg-red-950/40'}`}>
+                  {c.ok ? <CheckCircle size={16} className="text-green-400 shrink-0 mt-0.5" /> : <XCircle size={16} className="text-red-400 shrink-0 mt-0.5" />}
+                  <span><b>{c.name}:</b> <span className="text-gray-300">{c.detail}</span></span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         {/* TABS */}
         <div className="flex gap-2 mb-8 border-b border-gray-700 overflow-x-auto pb-1">

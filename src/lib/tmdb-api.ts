@@ -17,13 +17,18 @@ export function hasTmdbKey() {
 export async function fetchTMDB(endpoint: string, params: Record<string, string> = {}, revalidate = 3600): Promise<TmdbResponse> {
   if (!API_KEY) return {}
   const query = new URLSearchParams({ api_key: API_KEY, language: 'tr-TR', ...params }).toString()
-  try {
-    const res = await fetch(`${BASE_URL}${endpoint}?${query}`, { next: { revalidate } })
-    if (!res.ok) return {}
-    return await res.json()
-  } catch {
-    return {}
+  // Takılan bir istek tüm öneriyi (ve Vercel fonksiyonunu) bekletmesin: 6 sn zaman aşımı, 1 tekrar
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(`${BASE_URL}${endpoint}?${query}`, { next: { revalidate }, signal: AbortSignal.timeout(6000) })
+      if (res.status === 429 || res.status >= 500) continue
+      if (!res.ok) return {}
+      return await res.json()
+    } catch (e) {
+      console.warn(`TMDB ${endpoint} deneme ${attempt + 1} başarısız:`, (e as Error).name)
+    }
   }
+  return {}
 }
 
 export async function getDetails(id: number, type: MediaType, language?: string): Promise<TmdbResponse> {
