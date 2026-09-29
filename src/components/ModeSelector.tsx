@@ -1,4 +1,4 @@
-import { Utensils, Film, Sparkles, Flame, Heart } from 'lucide-react'
+import { Youtube, Film, Sparkles, Flame, Heart } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { memo } from 'react'
 import { useLanguage } from '@/components/LanguageContext'
@@ -15,7 +15,7 @@ const ModeSelector = memo(function ModeSelector({ appMode, setAppMode }: ModeSel
     const { t } = useLanguage()
 
     const modes = [
-        { id: 'youtube' as const, label: t.modes.youtube, icon: Utensils, color: 'text-yellow-500' },
+        { id: 'youtube' as const, label: t.modes.youtube, icon: Youtube, color: 'text-red-500' },
         { id: 'tmdb' as const, label: t.modes.tmdb, icon: Film, color: 'text-red-500' },
         { id: 'ai' as const, label: t.modes.ai, icon: Sparkles, color: 'text-cyan-400' },
         { id: 'swipe' as const, label: t.modes.swipe, icon: Flame, color: 'text-purple-500' },

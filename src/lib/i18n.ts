@@ -17,8 +17,10 @@ export interface TranslationSchema {
     match: string;
   };
   youtube: {
+    sectionTitle: string;
+    sectionSub: string;
     durationTitle: string;
-    langFilterTr: string;
+    langFilterNative: string;
     langFilterAll: string;
     snack: string;
     snackSub: string;
@@ -65,6 +67,7 @@ export interface TranslationSchema {
     buy: string;
     trailer: string;
     watch: string;
+    watchOn: string;
     pass: string;
     suggestAnother: string;
     watched: string;
@@ -152,8 +155,10 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       match: 'Eşleş'
     },
     youtube: {
+      sectionTitle: 'Yemeğine YouTube arkadaşı',
+      sectionSub: 'Yemek süreni ve modunu seç, sana uygun bir YouTube videosu açalım.',
       durationTitle: 'Yemek Süresi',
-      langFilterTr: 'Sadece Türkçe 🇹🇷',
+      langFilterNative: 'Sadece Türkçe 🇹🇷',
       langFilterAll: 'Tüm Diller 🌍',
       snack: 'Atıştır',
       snackSub: '(0-2 dk)',
@@ -200,6 +205,7 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       buy: 'SATIN AL',
       trailer: 'Fragman',
       watch: 'İzle',
+      watchOn: 'İzle · {provider}',
       pass: 'Pas Geç',
       suggestAnother: 'Başka Öner',
       watched: 'İzledim',
@@ -312,8 +318,10 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       match: 'Match'
     },
     youtube: {
+      sectionTitle: 'A YouTube buddy for your meal',
+      sectionSub: "Pick how long you'll eat and a vibe; we'll play a matching YouTube video.",
       durationTitle: 'Eating Duration',
-      langFilterTr: 'Turkish Only 🇹🇷',
+      langFilterNative: 'English Only 🇬🇧',
       langFilterAll: 'All Languages 🌍',
       snack: 'Snack',
       snackSub: '(0-2 min)',
@@ -360,6 +368,7 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       buy: 'BUY',
       trailer: 'Trailer',
       watch: 'Watch',
+      watchOn: 'Watch on {provider}',
       pass: 'Skip',
       suggestAnother: 'Suggest Another',
       watched: 'Watched',

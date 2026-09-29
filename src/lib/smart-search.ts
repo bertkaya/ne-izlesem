@@ -3,6 +3,7 @@
 // Saf fonksiyonlar: sunucu ve test ortamında aynı şekilde çalışır.
 
 import { TMDB_GENRE_NAMES } from '@/lib/constants'
+import { getRegion } from '@/lib/regions'
 import type { Locale, MediaItem, MediaType } from '@/types/media'
 
 /**
@@ -216,7 +217,7 @@ export function analyzePrompt(text: string, now: Date = new Date()): PromptAnaly
 }
 
 /** TMDB /discover parametreleri (api_key ve dil hariç). */
-export function buildDiscoverParams(a: PromptAnalysis, opts: { page?: number; platforms?: number[] } = {}): Record<string, string> {
+export function buildDiscoverParams(a: PromptAnalysis, opts: { page?: number; platforms?: number[]; region?: string } = {}): Record<string, string> {
   const p: Record<string, string> = {
     sort_by: a.sort,
     include_adult: 'false',
@@ -235,7 +236,7 @@ export function buildDiscoverParams(a: PromptAnalysis, opts: { page?: number; pl
   }
   if (opts.platforms?.length) {
     p.with_watch_providers = opts.platforms.join('|')
-    p.watch_region = 'TR'
+    p.watch_region = opts.region ?? getRegion().tmdbRegion
     p.with_watch_monetization_types = 'flatrate'
   }
   return p

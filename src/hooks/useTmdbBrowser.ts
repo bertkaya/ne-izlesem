@@ -7,6 +7,7 @@ import { MOOD_TO_MOVIE_GENRE } from '@/lib/constants'
 import { checkBadges } from '@/app/actions'
 import { useLanguage } from '@/components/LanguageContext'
 import { useToast } from '@/components/Toast'
+import { getWatchTarget } from '@/lib/watch-link'
 import type { MediaItem, MediaType } from '@/types/media'
 import type { UserData } from '@/hooks/useUserData'
 
@@ -31,10 +32,20 @@ export function useTmdbBrowser(userData: UserData) {
   const [showDropdown, setShowDropdown] = useState(false)
   const [trailerKey, setTrailerKey] = useState<string | null>(null)
 
+  /** Liste sonuçlarında (AI, küratör, Keşfet) platform ve fragman bilgisi yok; arka planda tamamla. */
+  const enrich = async (item: MediaItem) => {
+    const details = await getTitleDetails(item.id, item.media_type ?? 'movie', lang)
+    if (!details) return
+    setTmdbResult(prev => (prev && prev.id === item.id
+      ? { ...prev, videos: details.videos, 'watch/providers': details['watch/providers'], genres: details.genres, runtime: details.runtime }
+      : prev))
+  }
+
   /** Bir yapımı seçer; tipini (film/dizi) yapımın kendisinden alır. */
   const selectItem = (item: MediaItem | null) => {
     setTmdbResult(item)
     if (item?.media_type) setTmdbType(item.media_type)
+    if (item && !item['watch/providers'] && !item.season) enrich(item)
   }
 
   const toggleGenre = (id: string) => setSelectedGenres(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
@@ -125,24 +136,13 @@ export function useTmdbBrowser(userData: UserData) {
     if (newBadges.length) toast(`${t.messages.newBadge} ${newBadges.join(', ')}`, { type: 'success' })
   }
 
-  const getWatchLink = () => {
-    if (!tmdbResult) return '#'
-    // Dizi bölümü: dizi adıyla ara. Film: başlıkla.
-    const q = encodeURIComponent(tmdbResult.showName || tmdbResult.title || tmdbResult.name || '')
-
-    if (platforms.includes(8)) return `https://www.netflix.com/search?q=${q}`
-
-    const tmdbLink = tmdbResult['watch/providers']?.results?.TR?.link
-    if (tmdbLink) return tmdbLink
-
-    const isTv = tmdbResult.media_type === 'tv' || !!(tmdbResult.showName || tmdbResult.season)
-    return `https://www.themoviedb.org/${isTv ? 'tv' : 'movie'}/${tmdbResult.id}/watch`
-  }
+  // Yapımın gerçekten bulunduğu platform (önce kullanıcının seçtikleri); bkz. lib/watch-link.ts
+  const watchTarget = tmdbResult ? getWatchTarget(tmdbResult, platforms) : null
 
   return {
     tmdbResult, selectItem, tmdbType, setTmdbType, tmdbLoading, setTmdbLoading,
     selectedGenres, toggleGenre, searchQuery, setSearchQuery, onlyTurkish, setOnlyTurkish,
     searchResults, showDropdown, handleSearchSelect, fetchTmdbContent,
-    trailerKey, closeTrailer: () => setTrailerKey(null), openTrailer, markAsWatched, getWatchLink,
+    trailerKey, closeTrailer: () => setTrailerKey(null), openTrailer, markAsWatched, watchTarget,
   }
 }
