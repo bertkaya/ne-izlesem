@@ -34,7 +34,7 @@ const Navigation = memo(function Navigation({ user }: NavigationProps) {
                     aria-label={t.nav.switchLang}
                 >
                     <Globe size={14} className="text-purple-400" />
-                    <span>{lang === 'tr' ? 'EN 🇬🇧' : 'TR 🇹🇷'}</span>
+                    <span>{lang === 'tr' ? 'EN' : 'TR'}</span>
                 </button>
 
                 {mounted && (
