@@ -310,7 +310,7 @@ export async function addVideoByUrl(url: string) {
       is_approved: true
     });
     if (error) return { success: false, message: 'DB Hatası: ' + error.message };
-    return { success: true, message: `Eklendi: ${meta.data.title} (${meta.data.duration_category}) - ${meta.data.language === 'tr' ? 'Türkçe 🇹🇷' : 'Yabancı 🌍'}` };
+    return { success: true, message: `Eklendi: ${meta.data.title} (${meta.data.duration_category}) - ${meta.data.language === 'tr' ? 'Türkçe' : 'Yabancı'}` };
   });
 }
 

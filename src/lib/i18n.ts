@@ -158,8 +158,8 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       sectionTitle: 'Yemeğine YouTube arkadaşı',
       sectionSub: 'Yemek süreni ve modunu seç, sana uygun bir YouTube videosu açalım.',
       durationTitle: 'Yemek Süresi',
-      langFilterNative: 'Sadece Türkçe 🇹🇷',
-      langFilterAll: 'Tüm Diller 🌍',
+      langFilterNative: 'Sadece Türkçe',
+      langFilterAll: 'Tüm Diller',
       snack: 'Atıştır',
       snackSub: '(0-2 dk)',
       meal: 'Doyur',
@@ -245,8 +245,8 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
         {
           title: "Gurme",
           chips: [
-            "🐐 IMDb Top 250", "🇹🇷 Yeşilçam Efsaneleri", "🎭 Arthouse / Festival", "🎌 Anime Başyapıtları",
-            "🕵️ Neon Noir", "🤠 Spaghetti Western", "🤖 Cyberpunk", "🇰🇷 Kore Sineması"
+            "🐐 IMDb Top 250", "🎞️ Yeşilçam Efsaneleri", "🎭 Arthouse / Festival", "🎌 Anime Başyapıtları",
+            "🕵️ Neon Noir", "🤠 Spaghetti Western", "🤖 Cyberpunk", "🥢 Kore Sineması"
           ]
         },
         {
@@ -321,8 +321,8 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       sectionTitle: 'A YouTube buddy for your meal',
       sectionSub: "Pick how long you'll eat and a vibe; we'll play a matching YouTube video.",
       durationTitle: 'Eating Duration',
-      langFilterNative: 'English Only 🇬🇧',
-      langFilterAll: 'All Languages 🌍',
+      langFilterNative: 'English Only',
+      langFilterAll: 'All Languages',
       snack: 'Snack',
       snackSub: '(0-2 min)',
       meal: 'Meal',
@@ -408,8 +408,8 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
         {
           title: "Gourmet Cinema",
           chips: [
-            "🐐 IMDb Top 250 Gems", "🇹🇷 Turkish Cinema Classics", "🎭 Arthouse & Cannes Winners", "🎌 Anime Masterpieces",
-            "🕵️ Neon Cyberpunk Noir", "🤠 Spaghetti Westerns", "🤖 Sci-Fi Dystopia", "🇰🇷 Korean Cinema Thrillers"
+            "🐐 IMDb Top 250 Gems", "🎞️ Turkish Cinema Classics", "🎭 Arthouse & Cannes Winners", "🎌 Anime Masterpieces",
+            "🕵️ Neon Cyberpunk Noir", "🤠 Spaghetti Westerns", "🤖 Sci-Fi Dystopia", "🥢 Korean Cinema Thrillers"
           ]
         },
         {

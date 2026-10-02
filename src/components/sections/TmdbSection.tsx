@@ -87,8 +87,10 @@ export default function TmdbSection({
                         <button
                             key={p.id}
                             onClick={() => togglePlatform(p.id)}
-                            className={`px-3 py-2 rounded-lg border text-xs font-bold transition-all ${platforms.includes(p.id) ? `border-transparent text-white ${p.color}` : 'border-gray-700 text-gray-500 grayscale'}`}
+                            aria-pressed={platforms.includes(p.id)}
+                            className={`px-3 py-2 rounded-lg border text-xs font-bold transition-all flex items-center gap-1 ${platforms.includes(p.id) ? `${p.color} ring-1 ring-current` : 'border-gray-700 text-gray-500 hover:text-gray-300 hover:border-gray-500'}`}
                         >
+                            {platforms.includes(p.id) && <Check size={12} />}
                             {p.name}
                         </button>
                     ))}
@@ -246,7 +248,7 @@ export default function TmdbSection({
                             ) : (
                                 <div className="absolute inset-0 bg-gray-900" />
                             )}
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-all">
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-all">
                                 <div className="bg-red-600 text-white p-4 rounded-full shadow-xl scale-90 group-hover:scale-110 transition-transform">
                                     <Play fill="currentColor" size={32} />
                                 </div>
@@ -273,7 +275,7 @@ export default function TmdbSection({
 
                                 <div className="flex flex-wrap items-center gap-3 mt-2">
                                     <div className="flex items-center gap-1.5 bg-yellow-500/20 px-2 py-1 rounded-md border border-yellow-500/50">
-                                        <span className="text-yellow-500 font-black text-xs tracking-wider">IMDb</span>
+                                        <span className="text-yellow-500 font-black text-xs tracking-wider">TMDB</span>
                                         <span className="text-yellow-400 font-bold">{tmdbResult.vote_average?.toFixed(1) || '0.0'}</span>
                                     </div>
 

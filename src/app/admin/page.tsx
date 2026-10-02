@@ -261,7 +261,7 @@ export default function AdminPage() {
                       </td>
                       <td className="p-4">
                         <select value={v.language || 'en'} onChange={(e) => handleSingleUpdate(v.id, 'language', e.target.value)} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs outline-none">
-                          <option value="tr">TR 🇹🇷</option><option value="en">Global 🌍</option>
+                          <option value="tr">TR</option><option value="en">Global</option>
                         </select>
                       </td>
 
@@ -373,7 +373,7 @@ export default function AdminPage() {
               <option value="travel">Gezi</option><option value="sport">Spor</option><option value="tech">Tekno</option>
               <option value="news">Haber</option><option value="music">Müzik</option><option value="popculture">Magazin</option>
             </select>
-            <select onChange={(e) => handleBulkUpdate('language', e.target.value)} className="bg-blue-800 border border-blue-600 rounded px-2 py-1 text-sm outline-none" defaultValue=""><option value="" disabled>Dil...</option><option value="tr">TR 🇹🇷</option><option value="en">Global 🌍</option></select>
+            <select onChange={(e) => handleBulkUpdate('language', e.target.value)} className="bg-blue-800 border border-blue-600 rounded px-2 py-1 text-sm outline-none" defaultValue=""><option value="" disabled>Dil...</option><option value="tr">TR</option><option value="en">Global</option></select>
           </div>
 
           <div className="flex gap-2">
