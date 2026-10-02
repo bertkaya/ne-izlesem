@@ -7,6 +7,8 @@ import { PROVIDERS, MOOD_TO_MOVIE_GENRE, MOOD_TO_TV_GENRE } from '@/lib/constant
 import { getTrendingTvShows } from '@/lib/tmdb'
 import { useLanguage } from '@/components/LanguageContext'
 import { displayTitle, releaseYear, type MediaItem, type MediaType } from '@/types/media'
+import { getRegion } from '@/lib/regions'
+import type { WatchTarget } from '@/lib/watch-link'
 
 const GENRE_LABELS_TR: Record<string, string> = {
     funny: 'Komedi', scary: 'Korku & Gerilim', emotional: 'Dram & Romantik',
@@ -44,7 +46,7 @@ interface TmdbSectionProps {
     loading: boolean;
     tmdbResult: MediaItem | null;
     openTrailer: () => void;
-    getWatchLink: () => string;
+    watchTarget: WatchTarget | null;
     markAsWatched: () => void;
     onTryAgain?: () => void;
     aiSuggestions?: MediaItem[];
@@ -55,9 +57,10 @@ export default function TmdbSection({
     tmdbType, setTmdbType, platforms, togglePlatform, searchQuery, setSearchQuery,
     showDropdown, searchResults, handleSearchSelect, onlyTurkish, setOnlyTurkish,
     toggleGenre, selectedGenres, fetchTmdbContent, loading, tmdbResult,
-    openTrailer, getWatchLink, markAsWatched, onTryAgain, aiSuggestions, setTmdbResult
+    openTrailer, watchTarget, markAsWatched, onTryAgain, aiSuggestions, setTmdbResult
 }: TmdbSectionProps) {
     const { lang, t } = useLanguage()
+    const region = getRegion()
     const [trendingShows, setTrendingShows] = useState<MediaItem[]>([]);
 
     useEffect(() => {
@@ -67,8 +70,8 @@ export default function TmdbSection({
     }, [tmdbType, trendingShows.length]);
 
     const genreLabels = lang === 'en' ? GENRE_LABELS_EN : GENRE_LABELS_TR;
-    const regionKey = lang === 'en' ? 'US' : 'TR';
-    const providerResults = tmdbResult?.['watch/providers']?.results?.[regionKey] || tmdbResult?.['watch/providers']?.results?.TR || tmdbResult?.['watch/providers']?.results?.US;
+    // Platform bilgisi arayüz diline değil bölgeye bağlı (bkz. lib/regions.ts)
+    const providerResults = tmdbResult?.['watch/providers']?.results?.[region.tmdbRegion];
 
     return (
         <div className="flex flex-col items-center mt-8 px-4 animate-in fade-in duration-500">
@@ -315,7 +318,7 @@ export default function TmdbSection({
 
                             <div className="flex gap-3 mb-4">
                                 <button onClick={openTrailer} className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"><Video size={18} /> {t.tmdb.trailer}</button>
-                                <button onClick={() => window.open(getWatchLink(), '_blank')} className="flex-1 bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition flex items-center justify-center gap-2"><Play size={18} /> {t.tmdb.watch}</button>
+                                {watchTarget && <a href={watchTarget.url} target="_blank" rel="noopener noreferrer" className="flex-1 bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition flex items-center justify-center gap-2"><Play size={18} /> {watchTarget.provider ? t.tmdb.watchOn.replace('{provider}', watchTarget.provider) : t.tmdb.watch}</a>}
                             </div>
                             <div className="flex justify-center gap-4">
                                 <button onClick={fetchTmdbContent} className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 rounded-full flex items-center justify-center gap-2 border border-gray-700 transition-colors"><RotateCcw size={18} /> {t.tmdb.pass}</button>

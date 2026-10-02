@@ -12,6 +12,7 @@ import { fetchTMDB, getMoviesByTitles, hasTmdbKey } from '@/lib/tmdb-api'
 import { analyzePrompt, buildCuratorReason, buildDiscoverParams } from '@/lib/smart-search'
 import { AuthError, getServerSupabase, isAdminEmail, getSessionUser, requireAdmin, requireUser } from '@/lib/auth-server'
 import { rateLimitByIp } from '@/lib/rate-limit'
+import { getRegion } from '@/lib/regions'
 import type { AiSuggestionOptions, AiSuggestionResult, Locale, MediaItem, YoutubeVideo } from '@/types/media'
 
 // Oturumsuz (anon) istemci: yalnızca herkese açık okuma/ekleme işlemleri için.
@@ -112,6 +113,79 @@ async function insertNewVideos(db: SupabaseClient, items: YoutubeVideoItem[], mo
 export async function getAdminStatus(): Promise<{ loggedIn: boolean; isAdmin: boolean }> {
   const user = await getSessionUser();
   return { loggedIn: !!user, isAdmin: isAdminEmail(user?.email) };
+}
+
+export interface SystemCheck { name: string; ok: boolean; detail: string }
+
+/**
+ * "Localde çalışıyor, canlıda çalışmıyor" teşhisi: ortam değişkenleri tanımlı mı ve
+ * dış servisler bu sunucudan gerçekten cevap veriyor mu? Anahtar değerleri asla döndürülmez.
+ */
+export async function getSystemStatus(): Promise<{ success: boolean; message?: string; checks?: SystemCheck[] }> {
+  try { await requireAdmin(); } catch { return { success: false, message: 'Bu işlem için admin yetkisi gerekli.' }; }
+
+  const checks: SystemCheck[] = [];
+  const env = (name: string) => Boolean(process.env[name]);
+
+  // TMDB
+  if (!hasTmdbKey()) {
+    checks.push({ name: 'TMDB', ok: false, detail: 'TMDB_API_KEY tanımlı değil — film/dizi önerileri ve Asistan çalışmaz.' });
+  } else {
+    const res = await fetchTMDB('/configuration', {}, 0);
+    checks.push({
+      name: 'TMDB',
+      ok: Boolean(res.images),
+      detail: res.images
+        ? (env('TMDB_API_KEY') ? 'Anahtar geçerli.' : 'Çalışıyor ama eski NEXT_PUBLIC_TMDB_API_KEY adıyla; TMDB_API_KEY olarak yeniden adlandır.')
+        : 'Anahtar tanımlı ama TMDB reddetti (geçersiz anahtar ya da ağ hatası).',
+    });
+  }
+
+  // YouTube (videos.list = 1 kota birimi)
+  if (!YOUTUBE_API_KEY) {
+    checks.push({ name: 'YouTube', ok: false, detail: 'YOUTUBE_API_KEY tanımlı değil — Yemek modu yalnızca veritabanındaki videolarla çalışır.' });
+  } else {
+    try {
+      const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=id&id=dQw4w9WgXcQ&key=${YOUTUBE_API_KEY}`, { cache: 'no-store' });
+      const body = res.ok ? null : await res.json().catch(() => null);
+      const reason = body?.error?.errors?.[0]?.reason as string | undefined;
+      checks.push({
+        name: 'YouTube',
+        ok: res.ok,
+        detail: res.ok ? 'Anahtar geçerli.'
+          : reason === 'quotaExceeded' ? 'Günlük kota doldu (Google Cloud Console → Quotas).'
+            : `YouTube reddetti: ${reason ?? res.status}. Anahtarı ve API kısıtlamalarını kontrol et.`,
+      });
+    } catch {
+      checks.push({ name: 'YouTube', ok: false, detail: 'YouTube API\'ye ulaşılamadı.' });
+    }
+  }
+
+  // Gemini (isteğe bağlı)
+  checks.push({
+    name: 'Gemini',
+    ok: Boolean(GEMINI_API_KEY),
+    detail: GEMINI_API_KEY ? `Tanımlı (model: ${GEMINI_MODEL}).` : 'Tanımlı değil — Asistan TMDB verisiyle çalışır (isteğe bağlı).',
+  });
+
+  // Supabase + RLS kurulumu
+  const db = await getServerSupabase();
+  const { error: dbError } = await db.from('videos').select('id', { head: true, count: 'exact' });
+  checks.push({ name: 'Supabase', ok: !dbError, detail: dbError ? `Sorgu hatası: ${dbError.message}` : 'Bağlantı çalışıyor.' });
+  const { error: rpcError } = await db.rpc('report_video', { video_id: -1 });
+  checks.push({
+    name: 'RLS betiği',
+    ok: !rpcError,
+    detail: rpcError ? 'report_video fonksiyonu yok — supabase/rls.sql henüz çalıştırılmamış.' : 'supabase/rls.sql uygulanmış.',
+  });
+
+  checks.push({
+    name: 'ADMIN_EMAILS',
+    ok: env('ADMIN_EMAILS'),
+    detail: `${(process.env.ADMIN_EMAILS || '').split(',').filter(e => e.trim()).length} admin tanımlı.`,
+  });
+
+  return { success: true, checks };
 }
 
 // --- 1. AKILLI YOUTUBE BOTU ---
@@ -259,8 +333,8 @@ export async function fetchYouTubeTrends() {
   return asAdmin(async (db) => {
     if (!YOUTUBE_API_KEY) return { success: false, message: 'API Key eksik.' };
     try {
-      // TR'de popüler videolar (kategori belirtilmezse genel trendler gelir)
-      const url = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&chart=mostPopular&regionCode=TR&maxResults=10&key=${YOUTUBE_API_KEY}`;
+      // Bölgede popüler videolar (kategori belirtilmezse genel trendler gelir)
+      const url = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&chart=mostPopular&regionCode=${getRegion().youtubeRegion}&maxResults=10&key=${YOUTUBE_API_KEY}`;
       const res = await fetch(url);
       if (!res.ok) return { success: false, message: 'YouTube API hatası.' };
       const data = await res.json();

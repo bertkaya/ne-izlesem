@@ -96,7 +96,7 @@ export default function Home() {
           selectedMovie={tmdbResult}
           setSelectedMovie={tmdb.selectItem}
           openTrailer={tmdb.openTrailer}
-          getWatchLink={tmdb.getWatchLink}
+          watchTarget={tmdb.watchTarget}
         />
       )}
 
@@ -107,7 +107,7 @@ export default function Home() {
           handleSearchSelect={tmdb.handleSearchSelect} onlyTurkish={tmdb.onlyTurkish} setOnlyTurkish={tmdb.setOnlyTurkish}
           toggleGenre={tmdb.toggleGenre} selectedGenres={tmdb.selectedGenres} fetchTmdbContent={tmdb.fetchTmdbContent} loading={tmdb.tmdbLoading}
           tmdbResult={tmdbResult} openTrailer={tmdb.openTrailer}
-          getWatchLink={tmdb.getWatchLink} markAsWatched={tmdb.markAsWatched} onTryAgain={() => { tmdb.selectItem(null); setAppMode('ai'); }}
+          watchTarget={tmdb.watchTarget} markAsWatched={tmdb.markAsWatched} onTryAgain={() => { tmdb.selectItem(null); setAppMode('ai'); }}
           aiSuggestions={aiSuggestions} setTmdbResult={tmdb.selectItem}
         />
       )}

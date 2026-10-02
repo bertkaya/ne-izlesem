@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getVideoFromChannel } from '@/lib/tmdb'
 import { getLiveYoutubeRecommendation, getSurpriseYoutubeVideo, reportVideo } from '@/app/actions'
@@ -18,7 +18,8 @@ export function useYoutubePlayer({ supabase, user, myChannels }: Pick<UserData, 
   const [ytLoading, setYtLoading] = useState(false)
   const [duration, setDuration] = useState('meal')
   const [mood, setMood] = useState('funny')
-  const [ytLang, setYtLang] = useState<'tr' | 'all'>('tr')
+  // 'native' = arayüz dilindeki videolar (TR → Türkçe, EN → İngilizce), 'all' = dil filtresi yok
+  const [ytLang, setYtLang] = useState<'native' | 'all'>('native')
 
   const fetchYoutubeVideo = async (overrideMood?: string, overrideDuration?: string) => {
     setYtLoading(true); setYtVideo(null)
@@ -39,7 +40,7 @@ export function useYoutubePlayer({ supabase, user, myChannels }: Pick<UserData, 
         .eq('duration_category', targetDuration)
         .eq('mood', targetMood)
 
-      const effectiveLang = lang === 'en' ? 'en' : ytLang
+      const effectiveLang = ytLang === 'all' ? 'all' : lang
       if (effectiveLang === 'tr') query = query.or('language.eq.tr,language.is.null')
       else if (effectiveLang === 'en') query = query.eq('language', 'en')
 
@@ -60,6 +61,15 @@ export function useYoutubePlayer({ supabase, user, myChannels }: Pick<UserData, 
       setYtLoading(false)
     }
   }
+
+  // Arayüz dili değişince açık video da yeni dilde yenilenir
+  const prevLang = useRef(lang)
+  useEffect(() => {
+    if (prevLang.current === lang) return
+    prevLang.current = lang
+    if (ytVideo && ytLang === 'native') fetchYoutubeVideo()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang])
 
   const fetchSurpriseYoutubeVideo = async () => {
     setYtLoading(true); setYtVideo(null)

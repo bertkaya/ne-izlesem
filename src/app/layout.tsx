@@ -6,7 +6,12 @@ import { Providers } from '@/components/Providers'
 const syne = Syne({ subsets: ['latin', 'latin-ext'], variable: '--font-syne' })
 const outfit = Outfit({ subsets: ['latin', 'latin-ext'], variable: '--font-outfit' })
 
+// Canlı adres: NEXT_PUBLIC_SITE_URL (özel alan adı) ya da Vercel'in otomatik verdiği üretim adresi
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+  || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'http://localhost:3000')
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: 'Ne İzlesem? | Yapay Zeka Destekli Film ve Dizi Önerisi',
   description: 'Karar vermekte zorlanıyor musun? AI sommelier, çiftler için eşleşme modu ve yemek süresine göre video önerileriyle Ne İzlesem yanında.',
   keywords: ['film önerisi', 'ne izlesem', 'dizi önerisi', 'film tinder', 'couple movie matcher'],
@@ -14,15 +19,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Ne İzlesem? - Karar Yorgunluğuna Son',
     description: 'Yemek yerken veya akşam film ararken en iyi dostun.',
-    url: 'https://ne-izlesem.vercel.app',
+    url: '/',
     siteName: 'Ne İzlesem',
-    images: [
-      {
-        url: 'https://ne-izlesem.vercel.app/og-image.jpg',
-        width: 1200,
-        height: 630,
-      },
-    ],
+    // og-image.jpg public/ klasöründe yok; eklenince images: [{ url: '/og-image.jpg', width: 1200, height: 630 }]
     locale: 'tr_TR',
     type: 'website',
   },

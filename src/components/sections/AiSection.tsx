@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useLanguage } from '@/components/LanguageContext'
 import { displayTitle, releaseYear, type MediaItem } from '@/types/media'
+import type { WatchTarget } from '@/lib/watch-link'
 
 interface AiSectionProps {
     fetchAiRecommendation: (overridePrompt?: string) => void;
@@ -14,7 +15,7 @@ interface AiSectionProps {
     selectedMovie?: MediaItem | null;
     setSelectedMovie?: (movie: MediaItem) => void;
     openTrailer?: () => void;
-    getWatchLink?: () => string;
+    watchTarget?: WatchTarget | null;
 }
 
 const CATEGORY_ICONS = [
@@ -26,7 +27,7 @@ const CATEGORY_ICONS = [
 
 export default function AiSection({
     fetchAiRecommendation, loading, aiSuggestions = [],
-    selectedMovie, setSelectedMovie, openTrailer, getWatchLink
+    selectedMovie, setSelectedMovie, openTrailer, watchTarget
 }: AiSectionProps) {
     const { t } = useLanguage()
     const [inputValue, setInputValue] = useState('')
@@ -184,14 +185,16 @@ export default function AiSection({
                                     </button>
                                 )}
 
-                                {getWatchLink && (
-                                    <button
-                                        onClick={() => window.open(getWatchLink(), '_blank')}
+                                {watchTarget && (
+                                    <a
+                                        href={watchTarget.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
                                         className="flex-1 bg-white hover:bg-gray-200 text-black font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition text-sm shadow-lg"
                                     >
                                         <Play size={16} fill="currentColor" />
-                                        <span>{t.tmdb.watch}</span>
-                                    </button>
+                                        <span>{watchTarget.provider ? t.tmdb.watchOn.replace('{provider}', watchTarget.provider) : t.tmdb.watch}</span>
+                                    </a>
                                 )}
                             </div>
                         </div>

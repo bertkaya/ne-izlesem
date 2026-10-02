@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import {
     Globe, Loader2, Play, RotateCcw, EyeOff, AlertTriangle, Repeat,
     Volume2, VolumeX, ExternalLink, Timer, Tv, Moon, Sun,
-    Flame, Utensils
+    Flame, Utensils, Youtube
 } from 'lucide-react'
 import { useLanguage } from '@/components/LanguageContext'
 import type { YoutubeVideo } from '@/types/media'
@@ -48,8 +48,8 @@ interface YoutubeSectionProps {
     setDuration: (d: string) => void;
     mood: string;
     setMood: (m: string) => void;
-    ytLang: 'tr' | 'all';
-    setYtLang: (l: 'tr' | 'all') => void;
+    ytLang: 'native' | 'all';
+    setYtLang: (l: 'native' | 'all') => void;
     fetchYoutubeVideo: () => void;
     markYoutubeWatched: () => void;
     handleReport: () => void;
@@ -108,6 +108,7 @@ export default function YoutubeSection({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [autoNext, ytVideo, loading]);
 
+    const durationLabel: Record<string, string> = { snack: t.youtube.snack, meal: t.youtube.meal, feast: t.youtube.feast };
     const videoId = ytVideo?.videoId || (ytVideo?.url ? ytVideo.url.match(/v=([^&]+)/)?.[1] : null);
     const youtubeDirectUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : ytVideo?.url;
 
@@ -120,6 +121,17 @@ export default function YoutubeSection({
                     title={t.youtube.lightsOn}
                 />
             )}
+
+            {/* BAŞLIK: bu mod YouTube videoları öneriyor */}
+            <div className="w-full max-w-2xl mb-4 z-10 flex items-center gap-3">
+                <span className="p-2.5 bg-red-600 text-white rounded-2xl shadow-lg shadow-red-900/40 shrink-0">
+                    <Youtube size={22} />
+                </span>
+                <div className="min-w-0">
+                    <h2 className="text-lg md:text-xl font-black text-white leading-tight">{t.youtube.sectionTitle}</h2>
+                    <p className="text-xs md:text-sm text-gray-400">{t.youtube.sectionSub}</p>
+                </div>
+            </div>
 
             {/* YEMEK SAYACI (MEAL TIMER) */}
             <div className="w-full max-w-2xl mb-4 z-10">
@@ -178,10 +190,10 @@ export default function YoutubeSection({
                         <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">{t.youtube.durationTitle}</p>
                     </div>
                     <button
-                        onClick={() => setYtLang(ytLang === 'tr' ? 'all' : 'tr')}
+                        onClick={() => setYtLang(ytLang === 'native' ? 'all' : 'native')}
                         className="text-xs font-bold flex items-center gap-1.5 px-3 py-1 bg-gray-800 border border-gray-700 rounded-full text-gray-300 hover:text-white hover:border-gray-500 transition"
                     >
-                        <Globe size={13} /> {ytLang === 'tr' ? t.youtube.langFilterTr : t.youtube.langFilterAll}
+                        <Globe size={13} /> {ytLang === 'native' ? t.youtube.langFilterNative : t.youtube.langFilterAll}
                     </button>
                 </div>
 
@@ -252,7 +264,7 @@ export default function YoutubeSection({
                 {/* BAŞLATMA BUTONLARI */}
                 <div className="flex flex-col sm:flex-row gap-3">
                     <button
-                        onClick={fetchYoutubeVideo}
+                        onClick={() => fetchYoutubeVideo()}
                         disabled={loading}
                         className="flex-1 bg-gradient-to-r from-yellow-600 via-orange-600 to-red-600 hover:from-yellow-500 hover:to-red-500 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all text-base md:text-lg group"
                     >
@@ -268,7 +280,7 @@ export default function YoutubeSection({
 
                     {fetchSurpriseVideo && (
                         <button
-                            onClick={fetchSurpriseVideo}
+                            onClick={() => fetchSurpriseVideo()}
                             disabled={loading}
                             className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold px-6 py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all text-sm group shrink-0"
                         >
@@ -334,7 +346,7 @@ export default function YoutubeSection({
                             )}
                             {ytVideo.duration_category && (
                                 <span className="text-xs bg-yellow-900/30 text-yellow-300 border border-yellow-700/40 px-2.5 py-1 rounded-lg font-medium whitespace-nowrap">
-                                    ⏱️ {ytVideo.duration_category}
+                                    ⏱️ {durationLabel[ytVideo.duration_category] ?? ytVideo.duration_category}
                                 </span>
                             )}
                         </div>
@@ -348,7 +360,7 @@ export default function YoutubeSection({
                         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-800">
                             <div className="flex gap-2 flex-wrap">
                                 <button
-                                    onClick={fetchYoutubeVideo}
+                                    onClick={() => fetchYoutubeVideo()}
                                     className="text-xs font-bold text-white bg-gray-800 hover:bg-gray-700 flex items-center gap-1.5 border border-gray-700 px-4 py-2 rounded-xl transition"
                                 >
                                     <RotateCcw size={14} /> {t.youtube.skip}
@@ -372,7 +384,7 @@ export default function YoutubeSection({
 
                             <div className="flex gap-2">
                                 <button
-                                    onClick={fetchYoutubeVideo}
+                                    onClick={() => fetchYoutubeVideo()}
                                     className="text-[11px] text-gray-400 hover:text-yellow-400 flex items-center gap-1 py-1 px-2 hover:bg-gray-800 rounded transition"
                                 >
                                     <AlertTriangle size={12} /> {t.youtube.brokenVideo}

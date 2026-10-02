@@ -1,15 +1,10 @@
 // Client-safe constants shared by server and client code.
 // (Kept out of tmdb.ts because 'use server' modules may only export async functions.)
 
-// --- PLATFORMLAR (RENK KODLARIYLA) ---
-export const PROVIDERS = [
-  { id: 8, name: 'Netflix', color: 'border-red-600 text-red-500 bg-red-500/10' },
-  { id: 119, name: 'Prime Video', color: 'border-blue-500 text-blue-500 bg-blue-500/10' },
-  { id: 337, name: 'Disney+', color: 'border-blue-400 text-blue-400 bg-blue-400/10' },
-  { id: 342, name: 'HBO Max (BluTV)', color: 'border-teal-500 text-teal-500 bg-teal-500/10' },
-  { id: 365, name: 'TV+', color: 'border-yellow-500 text-yellow-500 bg-yellow-500/10' },
-  { id: 345, name: 'TOD', color: 'border-purple-500 text-purple-500 bg-purple-500/10' }
-];
+import { getRegion } from '@/lib/regions'
+
+// --- PLATFORMLAR: varsayılan bölgenin (şimdilik TR) platformları. Bkz. lib/regions.ts
+export const PROVIDERS = getRegion().providers;
 
 export const MOOD_TO_MOVIE_GENRE = {
   funny: '35', scary: '27,53', emotional: '18,10749', action: '28,12', scifi: '878,14', crime: '80', relax: '99',

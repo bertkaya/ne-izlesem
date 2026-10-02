@@ -7,10 +7,12 @@
 import type { MediaItem, MediaType, YoutubeVideo } from '@/types/media'
 import { fetchTMDB, getDetails } from '@/lib/tmdb-api'
 import { rateLimitByIp } from '@/lib/rate-limit'
+import { getRegion } from '@/lib/regions'
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY
 
 const MINUTE = 60_000
+const REGION = getRegion().tmdbRegion
 const tmdbAllowed = () => rateLimitByIp('tmdb', 120, MINUTE)
 
 // --- 1. AKILLI ÖNERİ ---
@@ -25,7 +27,7 @@ export async function getSmartRecommendation(
   let fromFallback = false;
 
   const params: Record<string, string> = {
-    with_genres: genresStr, with_watch_providers: validProviders, watch_region: 'TR',
+    with_genres: genresStr, with_watch_providers: validProviders, watch_region: REGION,
     with_watch_monetization_types: 'flatrate', sort_by: sortBy, 'vote_count.gte': '20'
   };
 
@@ -68,7 +70,7 @@ export async function getSmartRecommendation(
   const details = await getDetails(randomItem.id, type);
 
   if (!fromFallback && validProviders) {
-    const trProviders = details['watch/providers']?.results?.TR;
+    const trProviders = details['watch/providers']?.results?.[REGION];
     if (!trProviders || !trProviders.flatrate) fromFallback = true;
   }
 
@@ -107,7 +109,7 @@ export async function getTrendingTvShows(): Promise<MediaItem[]> {
   // TMDB discover + watch_region=TR: Türkiye'de popüler/erişilebilir diziler. Az oylu içerik elenir.
   const data = await fetchTMDB('/discover/tv', {
     sort_by: 'popularity.desc',
-    watch_region: 'TR',
+    watch_region: REGION,
     'vote_count.gte': '100',
     page: (Math.floor(Math.random() * 3) + 1).toString()
   });
@@ -123,8 +125,8 @@ export async function getRandomEpisode(tvId: number | null = null, genreId: stri
   if (!selectedShowId) {
     const randomPage = Math.floor(Math.random() * 5) + 1;
     const validProviders = providers.split('|').filter(id => id !== '0').join('|');
-    let discoverData = await fetchTMDB('/discover/tv', { with_genres: genreId || '35', with_watch_providers: validProviders, watch_region: 'TR', sort_by: 'popularity.desc', page: randomPage.toString() });
-    if (!discoverData.results?.length) discoverData = await fetchTMDB('/discover/tv', { with_genres: genreId || '35', watch_region: 'TR', sort_by: 'popularity.desc', page: randomPage.toString() });
+    let discoverData = await fetchTMDB('/discover/tv', { with_genres: genreId || '35', with_watch_providers: validProviders, watch_region: REGION, sort_by: 'popularity.desc', page: randomPage.toString() });
+    if (!discoverData.results?.length) discoverData = await fetchTMDB('/discover/tv', { with_genres: genreId || '35', watch_region: REGION, sort_by: 'popularity.desc', page: randomPage.toString() });
 
     if (!discoverData.results?.length) return null;
     const randomShow = discoverData.results[Math.floor(Math.random() * discoverData.results.length)];
