@@ -154,7 +154,7 @@ export default function MatchPage() {
           <div className="bg-purple-900/30 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"><Users size={40} className="text-purple-400" /></div>
           <h1 className="text-4xl font-black mb-2 tracking-tight">Sinema Eşi 💘</h1>
           <p className="text-gray-400 mb-8 text-lg">Eşinle eşleş, ortak filmi bul.</p>
-          <button onClick={createRoom} disabled={loading} className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-4 rounded-xl font-bold mb-6 transition-all active:scale-95 shadow-lg relative overflow-hidden group">
+          <button onClick={createRoom} disabled={loading} className="w-full btn-primary py-4 rounded-xl font-bold mb-6 transition-all active:scale-95 shadow-lg relative overflow-hidden group">
             {loading ? <Loader2 className="animate-spin mx-auto" /> : <span className="relative z-10">Oda Oluştur</span>}
           </button>
           <div className="relative mb-6"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-700"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-card dark:bg-gray-900 text-gray-500 font-bold">VEYA</span></div></div>

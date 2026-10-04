@@ -20,6 +20,9 @@ interface AiSectionProps {
     onRetry?: () => void;
 }
 
+// Seçenek metinlerinin başındaki emoji görünümden kaldırılır (kategori ikonları zaten var)
+const LEADING_EMOJI = /^[\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\s]+/u
+
 const CATEGORY_ICONS = [
     <Smile key="smile" size={18} className="text-yellow-400" />,
     <Zap key="zap" size={18} className="text-blue-400" />,
@@ -77,7 +80,7 @@ export default function AiSection({
                 <button
                     onClick={handleSearch}
                     disabled={loading || !inputValue.trim()}
-                    className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold px-6 py-3.5 rounded-2xl transition-all active:scale-95 text-sm shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                    className="btn-primary font-bold px-6 py-3.5 rounded-2xl transition-all active:scale-95 text-sm shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 >
                     {loading ? <Loader2 size={16} className="animate-spin" /> : <span>{t.ai.askButton}</span>}
                 </button>
@@ -107,6 +110,18 @@ export default function AiSection({
                     <p className="text-xs text-gray-400">
                         {t.ai.analyzing}
                     </p>
+                </div>
+            )}
+
+            {/* YÜKLENİRKEN ÖNERİ İSKELETLERİ */}
+            {loading && (
+                <div className="w-full max-w-4xl mb-12 flex gap-3 overflow-hidden" aria-hidden="true">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="shrink-0 w-28">
+                            <div className="h-40 rounded-2xl skeleton mb-2" />
+                            <div className="h-3 w-20 rounded skeleton" />
+                        </div>
+                    ))}
                 </div>
             )}
 
@@ -266,7 +281,7 @@ export default function AiSection({
                                     disabled={loading}
                                     className="bg-gray-800/90 hover:bg-cyan-950/40 hover:border-cyan-500/50 hover:text-cyan-300 active:scale-95 border border-gray-700/80 px-3 py-3 rounded-2xl text-xs md:text-sm font-medium transition-all text-gray-300 shadow-sm text-center"
                                 >
-                                    {chip}
+                                    {chip.replace(LEADING_EMOJI, '')}
                                 </button>
                             ))}
                         </div>

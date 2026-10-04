@@ -1,20 +1,15 @@
 'use client'
 import { User } from '@supabase/supabase-js'
-import { Moon, Sun, User as UserIcon, Globe } from 'lucide-react'
-import { useTheme } from 'next-themes'
-import { memo, useSyncExternalStore } from 'react'
+import { User as UserIcon, Globe } from 'lucide-react'
+import { memo } from 'react'
 import { useLanguage } from '@/components/LanguageContext'
-
-const emptySubscribe = () => () => {}
 
 interface NavigationProps {
     user: User | null
 }
 
 const Navigation = memo(function Navigation({ user }: NavigationProps) {
-    const { theme, setTheme } = useTheme()
     const { lang, toggleLang, t } = useLanguage()
-    const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false)
 
     return (
         <nav className="flex justify-between items-center gap-3 px-4 py-4 md:p-6 max-w-7xl mx-auto w-full z-50 relative">
@@ -36,17 +31,6 @@ const Navigation = memo(function Navigation({ user }: NavigationProps) {
                     <Globe size={14} className="text-purple-400" />
                     <span>{lang === 'tr' ? 'EN' : 'TR'}</span>
                 </button>
-
-                {mounted && (
-                    <button
-                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                        className="p-2.5 rounded-full bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 hover:scale-110 transition border border-gray-300 dark:border-gray-700"
-                        aria-label={t.nav.switchTheme}
-                        title={t.nav.switchTheme}
-                    >
-                        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-                    </button>
-                )}
 
                 {user ? (
                     <a href="/profile" aria-label={t.nav.profile} className="flex items-center gap-2 bg-white/10 px-3 md:px-4 py-2.5 rounded-full hover:bg-white/20 transition backdrop-blur-md border border-white/10 text-sm font-semibold">

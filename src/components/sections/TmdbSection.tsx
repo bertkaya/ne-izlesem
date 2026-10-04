@@ -230,7 +230,7 @@ export default function TmdbSection({
                     </div>
                 </div>
 
-                <button onClick={fetchTmdbContent} disabled={loading} className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-black py-4 rounded-full shadow-xl active:scale-95 flex items-center justify-center gap-2 group text-base md:text-lg">
+                <button onClick={fetchTmdbContent} disabled={loading} className="w-full btn-primary font-black py-4 rounded-full shadow-xl active:scale-95 flex items-center justify-center gap-2 group text-base md:text-lg">
                     {loading ? <Loader2 className="animate-spin mx-auto" /> : <><Play fill="currentColor" className="group-hover:scale-110 transition-transform" /> {t.tmdb.find}</>}
                 </button>
             </div>
@@ -265,6 +265,21 @@ export default function TmdbSection({
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {/* YÜKLENİRKEN İSKELET KART */}
+            {loading && !tmdbResult && (
+                <div className="w-full max-w-4xl mt-8" aria-hidden="true">
+                    <div className="rounded-3xl overflow-hidden border border-gray-800 flex flex-col md:flex-row bg-gray-900/60">
+                        <div className="md:w-1/3 min-h-[350px] md:min-h-[450px] skeleton" />
+                        <div className="p-8 md:w-2/3 flex flex-col justify-center gap-4">
+                            <div className="h-10 w-3/4 rounded-xl skeleton" />
+                            <div className="flex gap-3"><div className="h-7 w-20 rounded-md skeleton" /><div className="h-7 w-14 rounded-md skeleton" /></div>
+                            <div className="space-y-2"><div className="h-3.5 rounded skeleton" /><div className="h-3.5 rounded skeleton" /><div className="h-3.5 w-2/3 rounded skeleton" /></div>
+                            <div className="flex gap-3 mt-2"><div className="h-12 flex-1 rounded-xl skeleton" /><div className="h-12 flex-1 rounded-xl skeleton" /></div>
+                        </div>
                     </div>
                 </div>
             )}

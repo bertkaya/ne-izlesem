@@ -5,27 +5,30 @@ import Image from 'next/image'
 import {
     Globe, Loader2, Play, RotateCcw, EyeOff, AlertTriangle, Repeat,
     Volume2, VolumeX, ExternalLink, Timer, Tv, Moon, Sun,
-    Flame, Utensils, Youtube, Search, X
+    Flame, Utensils, Youtube, Search, X,
+    Laugh, PawPrint, Leaf, Brain, Clapperboard, Plane, Trophy, Cpu, Newspaper, Music, Sparkles,
+    Cookie, Soup, Drumstick, type LucideIcon
 } from 'lucide-react'
 import { useLanguage } from '@/components/LanguageContext'
 import { useMealTimer, formatTimer } from '@/hooks/useMealTimer'
 import { cleanDescription, formatDuration } from '@/lib/youtube-utils'
 import type { YoutubeVideo } from '@/types/media'
 
-const YOUTUBE_MOODS = [
-    { id: 'funny', labelTr: '😂 Güldür', labelEn: '😂 Laughs' },
-    { id: 'eat', labelTr: '🍔 Birlikte Ye', labelEn: '🍔 Eat Together' },
-    { id: 'classic', labelTr: '📺 Klasikler', labelEn: '📺 Classics' },
-    { id: 'pets', labelTr: '🐶 Evcil Dostlar', labelEn: '🐶 Cute Pets' },
-    { id: 'relax', labelTr: '💆‍♂️ Rahatla', labelEn: '💆‍♂️ Chill & Relax' },
-    { id: 'learn', labelTr: '🧠 Öğren', labelEn: '🧠 Learn & Doc' },
-    { id: 'drama', labelTr: '🎬 Hikaye', labelEn: '🎬 Stories' },
-    { id: 'travel', labelTr: '✈️ Gezi & Tatil', labelEn: '✈️ Travel & Vlog' },
-    { id: 'sport', labelTr: '⚽ Spor', labelEn: '⚽ Sports' },
-    { id: 'tech', labelTr: '💻 Teknoloji', labelEn: '💻 Tech & Gadgets' },
-    { id: 'news', labelTr: '📰 Gündem', labelEn: '📰 Deep Dives' },
-    { id: 'music', labelTr: '🎵 Müzik', labelEn: '🎵 Music & Lofi' },
-    { id: 'popculture', labelTr: '✨ Magazin', labelEn: '✨ Pop Culture' }
+// Emoji yerine sitenin geri kalanıyla aynı ikon seti (lucide)
+const YOUTUBE_MOODS: { id: string; labelTr: string; labelEn: string; icon: LucideIcon }[] = [
+    { id: 'funny', labelTr: 'Güldür', labelEn: 'Laughs', icon: Laugh },
+    { id: 'eat', labelTr: 'Birlikte Ye', labelEn: 'Eat Together', icon: Utensils },
+    { id: 'classic', labelTr: 'Klasikler', labelEn: 'Classics', icon: Tv },
+    { id: 'pets', labelTr: 'Evcil Dostlar', labelEn: 'Cute Pets', icon: PawPrint },
+    { id: 'relax', labelTr: 'Rahatla', labelEn: 'Chill & Relax', icon: Leaf },
+    { id: 'learn', labelTr: 'Öğren', labelEn: 'Learn & Doc', icon: Brain },
+    { id: 'drama', labelTr: 'Hikaye', labelEn: 'Stories', icon: Clapperboard },
+    { id: 'travel', labelTr: 'Gezi & Tatil', labelEn: 'Travel & Vlog', icon: Plane },
+    { id: 'sport', labelTr: 'Spor', labelEn: 'Sports', icon: Trophy },
+    { id: 'tech', labelTr: 'Teknoloji', labelEn: 'Tech & Gadgets', icon: Cpu },
+    { id: 'news', labelTr: 'Gündem', labelEn: 'Deep Dives', icon: Newspaper },
+    { id: 'music', labelTr: 'Müzik', labelEn: 'Music & Lofi', icon: Music },
+    { id: 'popculture', labelTr: 'Magazin', labelEn: 'Pop Culture', icon: Sparkles }
 ];
 
 const MOOD_COLORS: Record<string, string> = {
@@ -65,12 +68,13 @@ interface YoutubeSectionProps {
     searchYoutube?: (query: string) => void;
     playVideo?: (video: YoutubeVideo) => void;
     clearSearch?: () => void;
+    popular?: YoutubeVideo[];
 }
 
 export default function YoutubeSection({
     ytVideo, loading, duration, setDuration, mood, setMood, ytLang, setYtLang,
     fetchYoutubeVideo, markYoutubeWatched, handleReport, fetchSurpriseVideo, fetchMoreFromChannel,
-    searchResults = [], searching = false, searchError, searchYoutube, playVideo, clearSearch
+    searchResults = [], searching = false, searchError, searchYoutube, playVideo, clearSearch, popular = []
 }: YoutubeSectionProps) {
     const { lang, t } = useLanguage()
     const [autoPlay, setAutoPlay] = useState(true);
@@ -139,7 +143,7 @@ export default function YoutubeSection({
                         <button
                             type="submit"
                             disabled={searching || searchText.trim().length < 2}
-                            className="bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold px-5 rounded-2xl text-sm flex items-center gap-2 min-h-[44px] transition"
+                            className="btn-primary font-bold px-5 rounded-2xl text-sm flex items-center gap-2 min-h-[44px] transition"
                         >
                             {searching ? <Loader2 size={16} className="animate-spin" /> : <Youtube size={16} />}
                             <span className="hidden sm:inline">{t.youtube.searchButton}</span>
@@ -252,21 +256,21 @@ export default function YoutubeSection({
                         onClick={() => setDuration('snack')}
                         className={`p-3 rounded-xl text-sm font-bold border flex flex-col items-center justify-center gap-1 transition-all ${duration === 'snack' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500 shadow-lg shadow-yellow-500/10' : 'bg-gray-800/80 border-transparent text-gray-400 hover:bg-gray-800'}`}
                     >
-                        <span className="flex items-center gap-1">🍿 {t.youtube.snack}</span>
+                        <span className="flex items-center gap-1.5"><Cookie size={15} /> {t.youtube.snack}</span>
                         <span className="text-[10px] opacity-70 font-normal">{t.youtube.snackSub}</span>
                     </button>
                     <button
                         onClick={() => setDuration('meal')}
                         className={`p-3 rounded-xl text-sm font-bold border flex flex-col items-center justify-center gap-1 transition-all ${duration === 'meal' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500 shadow-lg shadow-yellow-500/10' : 'bg-gray-800/80 border-transparent text-gray-400 hover:bg-gray-800'}`}
                     >
-                        <span className="flex items-center gap-1">🍲 {t.youtube.meal}</span>
+                        <span className="flex items-center gap-1.5"><Soup size={15} /> {t.youtube.meal}</span>
                         <span className="text-[10px] opacity-70 font-normal">{t.youtube.mealSub}</span>
                     </button>
                     <button
                         onClick={() => setDuration('feast')}
                         className={`p-3 rounded-xl text-sm font-bold border flex flex-col items-center justify-center gap-1 transition-all ${duration === 'feast' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500 shadow-lg shadow-yellow-500/10' : 'bg-gray-800/80 border-transparent text-gray-400 hover:bg-gray-800'}`}
                     >
-                        <span className="flex items-center gap-1">🍗 {t.youtube.feast}</span>
+                        <span className="flex items-center gap-1.5"><Drumstick size={15} /> {t.youtube.feast}</span>
                         <span className="text-[10px] opacity-70 font-normal">{t.youtube.feastSub}</span>
                     </button>
                 </div>
@@ -281,9 +285,9 @@ export default function YoutubeSection({
                         <button
                             key={m.id}
                             onClick={() => setMood(m.id)}
-                            className={`px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold border transition-all ${mood === m.id ? `${MOOD_COLORS[m.id]} shadow-md` : 'bg-gray-800/80 border-transparent text-gray-400 hover:text-gray-200'}`}
+                            className={`inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[38px] rounded-xl text-xs md:text-sm font-bold border transition-all ${mood === m.id ? `${MOOD_COLORS[m.id]} shadow-md` : 'bg-gray-800/80 border-transparent text-gray-400 hover:text-gray-200'}`}
                         >
-                            {lang === 'en' ? m.labelEn : m.labelTr}
+                            <m.icon size={15} aria-hidden="true" /> {lang === 'en' ? m.labelEn : m.labelTr}
                         </button>
                     ))}
                 </div>
@@ -315,7 +319,7 @@ export default function YoutubeSection({
                     <button
                         onClick={() => fetchYoutubeVideo()}
                         disabled={loading}
-                        className="flex-1 bg-gradient-to-r from-yellow-600 via-orange-600 to-red-600 hover:from-yellow-500 hover:to-red-500 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all text-base md:text-lg group"
+                        className="flex-1 btn-primary font-black py-4 rounded-2xl flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all text-base md:text-lg group"
                     >
                         {loading ? (
                             <Loader2 className="animate-spin" />
@@ -331,7 +335,7 @@ export default function YoutubeSection({
                         <button
                             onClick={() => fetchSurpriseVideo()}
                             disabled={loading}
-                            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold px-6 py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all text-sm group shrink-0"
+                            className="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-bold px-6 py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all text-sm group shrink-0"
                         >
                             <Flame className="text-yellow-300 group-hover:scale-110 transition-transform" size={18} />
                             <span>{t.youtube.surpriseMe}</span>
@@ -339,6 +343,46 @@ export default function YoutubeSection({
                     )}
                 </div>
             </div>
+
+            {/* ŞU AN POPÜLER: ekran ilk açıldığında boş kalmasın */}
+            {!ytVideo && !loading && searchResults.length === 0 && popular.length > 0 && playVideo && (
+                <section className="w-full max-w-3xl mt-2" aria-labelledby="yt-popular">
+                    <h3 id="yt-popular" className="text-sm font-bold text-gray-300 mb-3 px-1 flex items-center gap-2">
+                        <Flame size={16} className="text-red-500" /> {t.youtube.popularTitle}
+                    </h3>
+                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x">
+                        {popular.map(v => (
+                            <button
+                                key={String(v.id)}
+                                onClick={() => playVideo(v)}
+                                className="snap-start shrink-0 w-56 text-left bg-gray-900/80 border border-gray-800 hover:border-red-500/60 rounded-2xl overflow-hidden transition group"
+                            >
+                                <div className="relative aspect-video bg-gray-800">
+                                    {v.thumbnail && <Image src={v.thumbnail} alt="" fill sizes="224px" className="object-cover" />}
+                                    {v.durationSeconds ? (
+                                        <span className="absolute bottom-1.5 right-1.5 bg-black/80 text-white text-[11px] font-semibold px-1.5 py-0.5 rounded tabular-nums">{formatDuration(v.durationSeconds)}</span>
+                                    ) : null}
+                                </div>
+                                <div className="p-2.5">
+                                    <p className="text-xs font-bold text-white line-clamp-2 leading-snug group-hover:text-red-300">{v.title}</p>
+                                    {v.channelTitle && <p className="text-[11px] text-gray-400 mt-1 truncate">{v.channelTitle}</p>}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* VİDEO YÜKLENİRKEN İSKELET */}
+            {loading && !ytVideo && (
+                <div className="w-full max-w-3xl mt-2" aria-hidden="true">
+                    <div className="aspect-video rounded-3xl skeleton" />
+                    <div className="p-5 space-y-3">
+                        <div className="h-5 w-3/4 rounded-lg skeleton" />
+                        <div className="flex gap-2"><div className="h-6 w-32 rounded-lg skeleton" /><div className="h-6 w-24 rounded-lg skeleton" /></div>
+                    </div>
+                </div>
+            )}
 
             {/* OYNATICI VE KART */}
             {ytVideo && (

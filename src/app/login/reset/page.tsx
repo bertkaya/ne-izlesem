@@ -48,7 +48,7 @@ export default function ResetPasswordPage() {
           <p id="new-password-rule" className="text-xs text-gray-400 mt-1.5">En az 6 karakter.</p>
         </div>
         {error && <div role="alert" className="p-3 bg-red-900/20 border border-red-900/50 text-red-200 text-sm rounded-lg">{error}</div>}
-        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-red-600 to-orange-600 text-white font-bold py-3 rounded-xl flex items-center justify-center min-h-[48px] disabled:opacity-60">
+        <button type="submit" disabled={loading} className="w-full btn-primary font-bold py-3 rounded-xl flex items-center justify-center min-h-[48px] disabled:opacity-60">
           {loading ? <Loader2 className="animate-spin" /> : 'Şifreyi Kaydet'}
         </button>
       </form>

@@ -75,7 +75,7 @@ export default function LoginPage() {
 
       <div className="w-full max-w-md bg-gray-900 border border-gray-800 p-6 sm:p-8 rounded-3xl shadow-2xl">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-black bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent mb-2">
+          <h1 className="text-3xl font-black bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent mb-2">
             NE İZLESEM?
           </h1>
           <p className="text-gray-400">Karar yorgunluğuna son ver.</p>
@@ -156,7 +156,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 disabled:opacity-60 text-white font-bold py-3 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 min-h-[48px]"
+            className="w-full btn-primary font-bold py-3 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 min-h-[48px]"
           >
             {loading ? <Loader2 className="animate-spin" /> : submitLabel}
             {!loading && <ArrowRight size={18} />}

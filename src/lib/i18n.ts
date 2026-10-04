@@ -9,7 +9,6 @@ export interface TranslationSchema {
     tagline: string;
     profile: string;
     login: string;
-    switchTheme: string;
     switchLang: string;
   };
   modes: {
@@ -62,6 +61,7 @@ export interface TranslationSchema {
     searchResults: string;
     searchEmpty: string;
     timerPill: string;
+    popularTitle: string;
   };
   tmdb: {
     movie: string;
@@ -168,7 +168,6 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       tagline: 'Karar yorgunluğuna son',
       profile: 'Profilim',
       login: 'Giriş Yap',
-      switchTheme: 'Temayı Değiştir',
       switchLang: 'Change to English'
     },
     modes: {
@@ -198,7 +197,7 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       muteOff: 'Sesli Başla',
       tvMode: 'TV Modu',
       findAndWatch: 'BUL & İZLE',
-      surpriseMe: 'Beni Şaşırt 🎲',
+      surpriseMe: 'Beni Şaşırt',
       lightsOut: 'Işıkları Kapat',
       lightsOn: 'Işıkları Aç',
       openYoutube: "YouTube'da Aç",
@@ -208,7 +207,7 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       moreFromChannel: 'Bu Kanaldan Başka',
       brokenVideo: 'Açılmıyor mu?',
       wrongCategory: 'Hatalı Kategori',
-      mealTimerTitle: 'Yemek Soğuma Sayacı 🍲',
+      mealTimerTitle: 'Yemek Soğuma Sayacı',
       mealTimerPrompt: 'Yemeğinin tahmini süresini seç:',
       mealTimerRemaining: 'Yemeğin bitmesine:',
       mealTimerDone: '🎉 Afiyet olsun! Yemeğin bitti.',
@@ -220,7 +219,8 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       searchButton: 'Ara',
       searchResults: 'Arama Sonuçları',
       searchEmpty: 'Sonuç bulunamadı. Başka kelimelerle dene.',
-      timerPill: 'Yemek sayacı'
+      timerPill: 'Yemek sayacı',
+      popularTitle: "Şu an YouTube'da popüler"
     },
     tmdb: {
       movie: 'Film',
@@ -246,7 +246,7 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       popularShows: '🔥 Popüler Diziler'
     },
     ai: {
-      title: 'Film Sommelier 🤖',
+      title: 'Film Sommelier',
       subtitle: 'Bugün canın ne çekiyor?',
       placeholder: "Örn: 90'lar nostaljisi, yağmurlu bir gece filmi...",
       askButton: 'Sor',
@@ -352,7 +352,6 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       tagline: 'No more decision fatigue',
       profile: 'My Profile',
       login: 'Sign In',
-      switchTheme: 'Toggle Theme',
       switchLang: 'Türkçe’ye Geç'
     },
     modes: {
@@ -382,7 +381,7 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       muteOff: 'Start Unmuted',
       tvMode: 'TV Mode',
       findAndWatch: 'FIND & PLAY',
-      surpriseMe: 'Surprise Me 🎲',
+      surpriseMe: 'Surprise Me',
       lightsOut: 'Lights Out',
       lightsOn: 'Lights On',
       openYoutube: 'Open in YouTube',
@@ -392,7 +391,7 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       moreFromChannel: 'More From Channel',
       brokenVideo: "Won't play?",
       wrongCategory: 'Wrong Category',
-      mealTimerTitle: 'Meal Cool-down Timer 🍲',
+      mealTimerTitle: 'Meal Cool-down Timer',
       mealTimerPrompt: 'Pick estimated meal time:',
       mealTimerRemaining: 'Time left to eat:',
       mealTimerDone: '🎉 Bon appétit! Meal time finished.',
@@ -404,7 +403,8 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       searchButton: 'Search',
       searchResults: 'Search Results',
       searchEmpty: 'No results. Try different words.',
-      timerPill: 'Meal timer'
+      timerPill: 'Meal timer',
+      popularTitle: 'Trending on YouTube now'
     },
     tmdb: {
       movie: 'Movies',
@@ -430,7 +430,7 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       popularShows: '🔥 Popular Shows'
     },
     ai: {
-      title: 'Film Sommelier 🤖',
+      title: 'Film Sommelier',
       subtitle: 'What are you craving to watch today?',
       placeholder: 'E.g., 90s nostalgia crime thriller, cozy rainy night movie...',
       askButton: 'Ask',

@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from 'next'
-import { Syne, Outfit } from 'next/font/google'
+import { Plus_Jakarta_Sans } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 import { siteUrl } from '@/lib/site'
 
-const syne = Syne({ subsets: ['latin', 'latin-ext'], variable: '--font-syne' })
-const outfit = Outfit({ subsets: ['latin', 'latin-ext'], variable: '--font-outfit' })
+// Tek aile: başlık (800) ve metin (400–600) için Plus Jakarta Sans; latin-ext Türkçe karakterler için
+const jakarta = Plus_Jakarta_Sans({ subsets: ['latin', 'latin-ext'], weight: ['400', '500', '600', '700', '800'], variable: '--font-jakarta', display: 'swap' })
 
 
 export const metadata: Metadata = {
@@ -40,7 +40,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="tr" suppressHydrationWarning>
-      <body className={`${syne.variable} ${outfit.variable} font-sans antialiased text-foreground bg-gray-50 dark:bg-[#0f1014] transition-colors duration-300`}>
+      <body className={`${jakarta.variable} font-sans antialiased text-foreground bg-[#0f1014]`}>
         <Providers>
           {children}
         </Providers>
