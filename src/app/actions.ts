@@ -12,6 +12,10 @@ import { fetchTMDB, getMoviesByTitles, hasTmdbKey } from '@/lib/tmdb-api'
 import { analyzePrompt, buildCuratorReason, buildDiscoverParams } from '@/lib/smart-search'
 import { AuthError, getServerSupabase, isAdminEmail, getSessionUser, requireAdmin, requireUser } from '@/lib/auth-server'
 import { rateLimitByIp } from '@/lib/rate-limit'
+import {
+  YOUTUBE_DURATION_FILTER, cleanDescription, detectVideoLanguage, durationCategory, isLiveOrUnknown,
+  parseDurationSeconds, type DurationCategory
+} from '@/lib/youtube-utils'
 import { getRegion } from '@/lib/regions'
 import type { AiSuggestionOptions, AiSuggestionResult, Locale, MediaItem, YoutubeVideo } from '@/types/media'
 
@@ -35,24 +39,30 @@ interface YoutubeSnippet {
   defaultAudioLanguage?: string;
   defaultLanguage?: string;
   thumbnails?: Record<string, { url: string }>;
+  liveBroadcastContent?: string;
 }
 interface YoutubeVideoItem { id: string; snippet: YoutubeSnippet; contentDetails: { duration: string } }
 
 // --- HELPERS ---
-function parseDuration(duration: string) {
-  const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
-  return (parseInt(match?.[1] || '0') * 60) + (parseInt(match?.[2] || '0'));
-}
-function getCategory(minutes: number) { return minutes < 2 ? 'snack' : minutes <= 20 ? 'meal' : 'feast'; }
+const categoryOf = (item: YoutubeVideoItem) => durationCategory(parseDurationSeconds(item.contentDetails.duration));
+const detectLanguageFromSnippet = detectVideoLanguage;
 
-function detectLanguageFromSnippet(snippet: YoutubeSnippet | undefined): 'tr' | 'en' {
-  const lang = snippet?.defaultAudioLanguage || snippet?.defaultLanguage;
-  if (lang && typeof lang === 'string') {
-    return lang.toLowerCase().startsWith('tr') ? 'tr' : 'en';
-  }
-  const trChars = /[ğüşıöçĞÜŞİÖÇ]/;
-  const text = `${snippet?.title || ''} ${snippet?.description || ''}`;
-  return trChars.test(text) ? 'tr' : 'en';
+function toYoutubeVideo(item: YoutubeVideoItem, extra: Partial<YoutubeVideo> = {}): YoutubeVideo {
+  const seconds = parseDurationSeconds(item.contentDetails.duration);
+  return {
+    id: item.id,
+    videoId: item.id,
+    title: item.snippet.title,
+    url: `https://www.youtube.com/watch?v=${item.id}`,
+    duration_category: durationCategory(seconds),
+    durationSeconds: seconds,
+    language: detectVideoLanguage(item.snippet),
+    channelTitle: item.snippet.channelTitle,
+    channelId: item.snippet.channelId,
+    description: cleanDescription(item.snippet.description),
+    thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url,
+    ...extra,
+  };
 }
 
 const isVideoMood = (m: string): m is VideoMood => (VIDEO_MOODS as string[]).includes(m);
@@ -89,13 +99,14 @@ async function youtubeSearchIds(query: string, extra = ''): Promise<string[]> {
 async function insertNewVideos(db: SupabaseClient, items: YoutubeVideoItem[], mood: string): Promise<number> {
   let added = 0;
   for (const item of items) {
+    if (isLiveOrUnknown(item)) continue; // canlı yayınların süresi yok, kategoriye uymaz
     const videoUrl = `https://www.youtube.com/watch?v=${item.id}`;
     const { data: existing } = await db.from('videos').select('id').eq('url', videoUrl).maybeSingle();
     if (existing) continue;
     const { error } = await db.from('videos').insert({
       title: item.snippet.title,
       url: videoUrl,
-      duration_category: getCategory(parseDuration(item.contentDetails.duration)),
+      duration_category: categoryOf(item),
       mood,
       language: detectLanguageFromSnippet(item.snippet),
       is_approved: false // Onay beklemeli (güvenlik önlemi)
@@ -379,7 +390,7 @@ async function youtubeMetadata(url: string) {
         videoId,
         title: item.snippet.title,
         description: item.snippet.description,
-        duration_category: getCategory(parseDuration(item.contentDetails.duration)),
+        duration_category: categoryOf(item),
         mood: 'funny', // Varsayılan, admin değiştirebilir
         language: detectLanguageFromSnippet(item.snippet),
         thumbnail: item.snippet.thumbnails?.high?.url
@@ -569,68 +580,103 @@ export async function getAiSuggestions(prompt: string, locale: Locale = 'tr', op
   }
 }
 
+/** Arama + detay: süre filtresiyle arar, canlı yayınları eler. */
+async function searchYoutubeItems(query: string, opts: { duration?: DurationCategory; lang?: 'tr' | 'en' | 'all'; max?: number } = {}): Promise<YoutubeVideoItem[]> {
+  const params = new URLSearchParams({
+    part: 'id', q: query, type: 'video', order: 'relevance', videoEmbeddable: 'true', safeSearch: 'moderate',
+    maxResults: String(opts.max ?? 10), key: YOUTUBE_API_KEY!,
+  });
+  if (opts.duration) params.set('videoDuration', YOUTUBE_DURATION_FILTER[opts.duration]);
+  if (opts.lang && opts.lang !== 'all') {
+    params.set('relevanceLanguage', opts.lang);
+    if (opts.lang === 'tr') params.set('regionCode', 'TR');
+  }
+  const res = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  const ids = (data.items || []).map((i: { id?: { videoId?: string } }) => i.id?.videoId).filter(Boolean);
+  return (await youtubeDetails(ids)).filter(item => !isLiveOrUnknown(item));
+}
+
 export async function getLiveYoutubeRecommendation(mood: string, duration: string, lang: 'tr' | 'all' | 'en' = 'tr'): Promise<{ success: boolean; message?: string; video?: YoutubeVideo }> {
   if (!YOUTUBE_API_KEY) return { success: false, message: 'API Key eksik' };
   if (!isVideoMood(mood)) mood = 'funny';
-  if (!(VIDEO_DURATIONS as readonly string[]).includes(duration)) duration = 'meal';
+  const target: DurationCategory = (VIDEO_DURATIONS as readonly string[]).includes(duration) ? duration as DurationCategory : 'meal';
   if (!(await rateLimitByIp('youtube', 20, MINUTE))) return { success: false, message: 'rate_limited' };
 
   const isEn = lang === 'en';
   const poolByLang = isEn ? GLOBAL_YOUTUBE_KEYWORDS.en : GLOBAL_YOUTUBE_KEYWORDS.tr;
   const keywordPool = poolByLang[mood as keyof typeof poolByLang] || (isEn ? ['Trending videos', 'Comedy sketch', 'Food tour'] : ['Komik', 'Yemek', 'Sohbet']);
-  const selectedQuery = shuffle(keywordPool)[0];
 
   try {
-    const langParam = isEn ? '&relevanceLanguage=en' : (lang === 'tr' ? '&relevanceLanguage=tr' : '');
-    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=id&q=${encodeURIComponent(selectedQuery)}&type=video&order=relevance&maxResults=10&videoEmbeddable=true${langParam}&key=${YOUTUBE_API_KEY}`;
-    const searchRes = await fetch(searchUrl);
-    if (!searchRes.ok) return { success: false, message: 'YouTube arama başarısız' };
+    // En fazla 2 farklı anahtar kelimeyle dene: hem süre hem dil uyan videoyu bul
+    let chosen: YoutubeVideoItem | undefined;
+    let fallback: YoutubeVideoItem | undefined;
+    for (const query of shuffle(keywordPool).slice(0, 2)) {
+      const items = shuffle(await searchYoutubeItems(query, { duration: target, lang }));
+      const langOk = (it: YoutubeVideoItem) => lang === 'all' || detectVideoLanguage(it.snippet) === lang;
+      chosen = items.find(it => categoryOf(it) === target && langOk(it));
+      if (chosen) break;
+      // Dil kesin; süre en yakın kategoriden olabilir
+      fallback ??= items.find(langOk);
+    }
+    chosen ??= fallback;
+    if (!chosen) return { success: false, message: 'Video bulunamadı' };
 
-    const searchData = await searchRes.json();
-    const videoIds = (searchData.items || []).map((i: { id?: { videoId?: string } }) => i.id?.videoId).filter(Boolean);
-    if (videoIds.length === 0) return { success: false, message: 'Video bulunamadı' };
-
-    const items = await youtubeDetails(videoIds);
-    if (items.length === 0) return { success: false, message: 'Video detayları boş' };
-
-    // İstenen süre kategorisine en uygun video; yoksa rastgele biri
-    const chosenItem = items.find(it => getCategory(parseDuration(it.contentDetails.duration)) === duration)
-      || items[Math.floor(Math.random() * items.length)];
-
-    const videoId = chosenItem.id;
-    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const category = getCategory(parseDuration(chosenItem.contentDetails.duration));
-    const detectedLang = isEn ? 'en' : detectLanguageFromSnippet(chosenItem.snippet);
+    const video = toYoutubeVideo(chosen, { mood });
 
     // Admin onay kuyruğuna ekle (anon kullanıcı onaylı video ekleyemez; bkz. supabase/rls.sql)
     anonSupabase.from('videos').upsert({
-      url: videoUrl,
-      title: chosenItem.snippet.title,
-      duration_category: category,
+      url: video.url,
+      title: video.title,
+      duration_category: video.duration_category,
       mood,
-      language: detectedLang,
+      language: video.language,
       is_approved: false
     }, { onConflict: 'url', ignoreDuplicates: true }).then(() => { });
 
-    return {
-      success: true,
-      video: {
-        id: videoId,
-        videoId,
-        title: chosenItem.snippet.title,
-        url: videoUrl,
-        duration_category: category,
-        mood,
-        language: detectedLang,
-        channelTitle: chosenItem.snippet.channelTitle,
-        channelId: chosenItem.snippet.channelId,
-        description: chosenItem.snippet.description,
-        thumbnail: chosenItem.snippet.thumbnails?.high?.url || chosenItem.snippet.thumbnails?.medium?.url
-      }
-    };
+    return { success: true, video };
   } catch (err) {
     console.error('getLiveYoutubeRecommendation error:', err);
     return { success: false, message: 'Beklenmeyen hata oluştu' };
+  }
+}
+
+/** Yemek ekranı boşken gösterilen "Şu an popüler" şeridi. videos.list (1 kota birimi), 30 dk önbellek. */
+export async function getPopularYoutubeVideos(lang: 'tr' | 'en' = 'tr'): Promise<YoutubeVideo[]> {
+  if (!YOUTUBE_API_KEY) return [];
+  const region = lang === 'en' ? 'US' : getRegion().youtubeRegion;
+  try {
+    const params = new URLSearchParams({
+      part: 'contentDetails,snippet', chart: 'mostPopular', regionCode: region, maxResults: '20',
+      hl: lang, key: YOUTUBE_API_KEY,
+    });
+    const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?${params}`, { next: { revalidate: 1800 } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return ((data.items || []) as YoutubeVideoItem[])
+      .filter(it => !isLiveOrUnknown(it) && parseDurationSeconds(it.contentDetails.duration) >= 60) // canlı yayın ve Shorts hariç
+      .slice(0, 10)
+      .map(it => toYoutubeVideo(it));
+  } catch (err) {
+    console.error('getPopularYoutubeVideos error:', err);
+    return [];
+  }
+}
+
+/** Yemek ekranındaki "YouTube'da ara" kutusu: serbest metinle video arama (canlı yayınlar hariç). */
+export async function searchYoutubeVideos(query: string, lang: 'tr' | 'en' | 'all' = 'tr'): Promise<{ success: boolean; message?: string; videos: YoutubeVideo[] }> {
+  if (!YOUTUBE_API_KEY) return { success: false, message: 'unavailable', videos: [] };
+  const q = String(query || '').trim().slice(0, 100);
+  if (q.length < 2) return { success: false, message: 'empty', videos: [] };
+  // Arama 100 kota birimi harcar; kişi başı sınır daha sıkı
+  if (!(await rateLimitByIp('yt-search', 8, MINUTE))) return { success: false, message: 'rate_limited', videos: [] };
+  try {
+    const items = await searchYoutubeItems(q, { lang, max: 12 });
+    return { success: true, videos: items.map(it => toYoutubeVideo(it)) };
+  } catch (err) {
+    console.error('searchYoutubeVideos error:', err);
+    return { success: false, message: 'error', videos: [] };
   }
 }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import {
     Loader2, Play, Check, Flag, Video, RotateCcw, EyeOff, AlertTriangle, Sparkles
@@ -28,6 +28,9 @@ const GENRE_LABELS_EN: Record<string, string> = {
     travel: 'Travel & Nature', sport: 'Sports', tech: 'Technology', news: 'Current Affairs', popculture: 'Pop Culture'
 };
 
+// YouTube modlarından kalan ya da başka bir türü tekrarlayan anahtarlar Gurme'de gösterilmez
+const HIDDEN_GENRES = new Set(['travel', 'sport', 'tech', 'news', 'popculture', 'doc']);
+
 interface TmdbSectionProps {
     tmdbType: MediaType;
     setTmdbType: (t: MediaType) => void;
@@ -48,7 +51,8 @@ interface TmdbSectionProps {
     openTrailer: () => void;
     watchTarget: WatchTarget | null;
     markAsWatched: () => void;
-    onTryAgain?: () => void;
+    onSimilar?: () => void;
+    closeDropdown?: () => void;
     aiSuggestions?: MediaItem[];
     setTmdbResult?: (result: MediaItem) => void;
 }
@@ -57,11 +61,37 @@ export default function TmdbSection({
     tmdbType, setTmdbType, platforms, togglePlatform, searchQuery, setSearchQuery,
     showDropdown, searchResults, handleSearchSelect, onlyTurkish, setOnlyTurkish,
     toggleGenre, selectedGenres, fetchTmdbContent, loading, tmdbResult,
-    openTrailer, watchTarget, markAsWatched, onTryAgain, aiSuggestions, setTmdbResult
+    openTrailer, watchTarget, markAsWatched, onSimilar, closeDropdown, aiSuggestions, setTmdbResult
 }: TmdbSectionProps) {
     const { lang, t } = useLanguage()
     const region = getRegion()
     const [trendingShows, setTrendingShows] = useState<MediaItem[]>([]);
+    const [activeIndex, setActiveIndex] = useState(-1);
+    const searchBoxRef = useRef<HTMLDivElement>(null);
+    const resultRef = useRef<HTMLDivElement>(null);
+
+    // Otomatik tamamlama: dışarı tıklayınca kapanır
+    useEffect(() => {
+        if (!showDropdown) return;
+        const onDown = (e: MouseEvent) => {
+            if (!searchBoxRef.current?.contains(e.target as Node)) closeDropdown?.();
+        };
+        document.addEventListener('mousedown', onDown);
+        return () => document.removeEventListener('mousedown', onDown);
+    }, [showDropdown, closeDropdown]);
+
+    // Yeni sonuç gelince karta kaydır (önceden ekranın altında kalıp fark edilmiyordu)
+    useEffect(() => {
+        if (tmdbResult?.id) resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, [tmdbResult?.id]);
+
+    const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (!showDropdown || searchResults.length === 0) return;
+        if (e.key === 'Escape') { e.preventDefault(); closeDropdown?.(); }
+        else if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex(i => Math.min(i + 1, searchResults.length - 1)); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex(i => Math.max(i - 1, 0)); }
+        else if (e.key === 'Enter' && activeIndex >= 0) { e.preventDefault(); handleSearchSelect(searchResults[activeIndex]); }
+    };
 
     useEffect(() => {
         if (tmdbType === 'tv' && trendingShows.length === 0) {
@@ -98,21 +128,29 @@ export default function TmdbSection({
 
                 {/* DİZİ ARAMA KUTUSU */}
                 {tmdbType === 'tv' && (
-                    <div className="mb-6 relative">
+                    <div className="mb-6 relative" ref={searchBoxRef}>
                         <input
                             type="text"
+                            role="combobox"
+                            aria-expanded={showDropdown}
+                            aria-controls="tv-suggestions"
+                            aria-label={t.tmdb.searchTvPlaceholder}
+                            autoComplete="off"
                             placeholder={t.tmdb.searchTvPlaceholder}
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(e) => { setSearchQuery(e.target.value); setActiveIndex(-1); }}
+                            onKeyDown={onSearchKeyDown}
                             className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white outline-none focus:border-red-500 transition-colors text-sm"
                         />
                         {showDropdown && searchResults.length > 0 && (
-                            <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-xl overflow-hidden z-20 max-h-60 overflow-y-auto shadow-2xl">
-                                {searchResults.map((show) => (
+                            <div id="tv-suggestions" role="listbox" className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-xl overflow-hidden z-20 max-h-60 overflow-y-auto shadow-2xl">
+                                {searchResults.map((show, i) => (
                                     <button
                                         key={show.id}
+                                        role="option"
+                                        aria-selected={i === activeIndex}
                                         onClick={() => handleSearchSelect(show)}
-                                        className="w-full text-left px-4 py-3 hover:bg-gray-700 flex items-center gap-3 transition-colors border-b border-gray-700/50 last:border-0"
+                                        className={`w-full text-left px-4 py-3 hover:bg-gray-700 flex items-center gap-3 transition-colors border-b border-gray-700/50 last:border-0 ${i === activeIndex ? 'bg-gray-700' : ''}`}
                                     >
                                         <div className="w-8 h-12 relative shrink-0 bg-gray-900 rounded overflow-hidden">
                                             {show.poster_path && (
@@ -180,7 +218,7 @@ export default function TmdbSection({
                         )}
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        {Object.entries(tmdbType === 'movie' ? MOOD_TO_MOVIE_GENRE : MOOD_TO_TV_GENRE).map(([key, val]) => (
+                        {Object.entries(tmdbType === 'movie' ? MOOD_TO_MOVIE_GENRE : MOOD_TO_TV_GENRE).filter(([key]) => !HIDDEN_GENRES.has(key)).map(([key, val]) => (
                             <button
                                 key={key}
                                 onClick={() => toggleGenre(val)}
@@ -192,7 +230,7 @@ export default function TmdbSection({
                     </div>
                 </div>
 
-                <button onClick={fetchTmdbContent} disabled={loading} className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-black py-4 rounded-full shadow-xl active:scale-95 flex items-center justify-center gap-2 group text-base md:text-lg">
+                <button onClick={fetchTmdbContent} disabled={loading} className="w-full btn-primary font-black py-4 rounded-full shadow-xl active:scale-95 flex items-center justify-center gap-2 group text-base md:text-lg">
                     {loading ? <Loader2 className="animate-spin mx-auto" /> : <><Play fill="currentColor" className="group-hover:scale-110 transition-transform" /> {t.tmdb.find}</>}
                 </button>
             </div>
@@ -231,9 +269,24 @@ export default function TmdbSection({
                 </div>
             )}
 
+            {/* YÜKLENİRKEN İSKELET KART */}
+            {loading && !tmdbResult && (
+                <div className="w-full max-w-4xl mt-8" aria-hidden="true">
+                    <div className="rounded-3xl overflow-hidden border border-gray-800 flex flex-col md:flex-row bg-gray-900/60">
+                        <div className="md:w-1/3 min-h-[350px] md:min-h-[450px] skeleton" />
+                        <div className="p-8 md:w-2/3 flex flex-col justify-center gap-4">
+                            <div className="h-10 w-3/4 rounded-xl skeleton" />
+                            <div className="flex gap-3"><div className="h-7 w-20 rounded-md skeleton" /><div className="h-7 w-14 rounded-md skeleton" /></div>
+                            <div className="space-y-2"><div className="h-3.5 rounded skeleton" /><div className="h-3.5 rounded skeleton" /><div className="h-3.5 w-2/3 rounded skeleton" /></div>
+                            <div className="flex gap-3 mt-2"><div className="h-12 flex-1 rounded-xl skeleton" /><div className="h-12 flex-1 rounded-xl skeleton" /></div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* TMDB KART (SONUÇ) */}
             {tmdbResult && (
-                <div className="w-full max-w-4xl mt-8 animate-in slide-in-from-bottom-8">
+                <div ref={resultRef} className="w-full max-w-4xl mt-8 animate-in slide-in-from-bottom-8 scroll-mt-24">
                     <div className="bg-gradient-to-br from-gray-900 to-black rounded-3xl overflow-hidden shadow-2xl border border-gray-800 flex flex-col md:flex-row">
                         <div className="md:w-1/3 relative min-h-[350px] md:min-h-[450px] group cursor-pointer" onClick={openTrailer}>
                             {tmdbResult.poster_path ? (
@@ -268,9 +321,9 @@ export default function TmdbSection({
                             )}
 
                             <div className="mb-4">
-                                <h2 className="text-3xl md:text-5xl font-black text-white leading-tight mb-2 drop-shadow-lg">{displayTitle(tmdbResult)}</h2>
-                                {tmdbResult.showName && tmdbResult.showName !== tmdbResult.title && (
-                                    <p className="text-purple-400 font-bold text-lg mb-1">{tmdbResult.showName}</p>
+                                <h2 className="text-3xl md:text-5xl font-black text-white leading-tight mb-2 drop-shadow-lg">{tmdbResult.showName || displayTitle(tmdbResult)}</h2>
+                                {tmdbResult.showName && tmdbResult.title && tmdbResult.title !== tmdbResult.showName && (
+                                    <p className="text-purple-300 font-semibold text-base md:text-lg mb-1">“{tmdbResult.title}”</p>
                                 )}
 
                                 <div className="flex flex-wrap items-center gap-3 mt-2">
@@ -324,7 +377,7 @@ export default function TmdbSection({
                             </div>
                             <div className="flex justify-center gap-4">
                                 <button onClick={fetchTmdbContent} className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 rounded-full flex items-center justify-center gap-2 border border-gray-700 transition-colors"><RotateCcw size={18} /> {t.tmdb.pass}</button>
-                                {onTryAgain && <button onClick={onTryAgain} className="flex-1 bg-yellow-900/40 hover:bg-yellow-900/60 text-yellow-500 font-bold py-3 rounded-full flex items-center justify-center gap-2 border border-yellow-700/50 transition-colors"><RotateCcw size={18} /> {t.tmdb.suggestAnother}</button>}
+                                {onSimilar && <button onClick={onSimilar} disabled={loading} className="flex-1 bg-yellow-900/40 hover:bg-yellow-900/60 text-yellow-500 font-bold py-3 rounded-full flex items-center justify-center gap-2 border border-yellow-700/50 transition-colors"><Sparkles size={18} /> {t.tmdb.suggestAnother}</button>}
                                 <button onClick={markAsWatched} className="flex-1 bg-green-900/40 hover:bg-green-900/60 text-green-500 font-bold py-3 rounded-full flex items-center justify-center gap-2 border border-green-700/50 transition-colors"><EyeOff size={18} /> {t.tmdb.watched}</button>
                             </div>
                         </div>

@@ -1,12 +1,14 @@
 export type Language = 'tr' | 'en';
 
 export interface TranslationSchema {
+  meta: {
+    title: string;
+  };
   nav: {
     brand: string;
     tagline: string;
     profile: string;
     login: string;
-    switchTheme: string;
     switchLang: string;
   };
   modes: {
@@ -52,6 +54,14 @@ export interface TranslationSchema {
     mealTimerDone: string;
     reset: string;
     minuteShort: string;
+    noMatch: string;
+    searchLabel: string;
+    searchPlaceholder: string;
+    searchButton: string;
+    searchResults: string;
+    searchEmpty: string;
+    timerPill: string;
+    popularTitle: string;
   };
   tmdb: {
     movie: string;
@@ -89,6 +99,8 @@ export interface TranslationSchema {
     tastingNote: string;
     dataNote: string;
     allPicks: string;
+    errorTitle: string;
+    retry: string;
     moodCategories: {
       title: string;
       chips: string[];
@@ -106,6 +118,7 @@ export interface TranslationSchema {
     detailsTitle: string;
     loading: string;
     loadingSub: string;
+    guestNote: string;
   };
   common: {
     noImage: string;
@@ -113,6 +126,7 @@ export interface TranslationSchema {
     noOverview: string;
     login: string;
     cancel: string;
+    close: string;
   };
   messages: {
     noTrailer: string;
@@ -129,6 +143,13 @@ export interface TranslationSchema {
     aiNoResults: string;
     aiUnavailable: string;
     genericError: string;
+    savedLocally: string;
+    loginRequiredTitle: string;
+    loginRequiredMatch: string;
+    loginRequiredProfile: string;
+    backHome: string;
+    notFoundTitle: string;
+    notFoundText: string;
   };
   footer: {
     brand: string;
@@ -139,12 +160,14 @@ export interface TranslationSchema {
 
 export const DICTIONARY: Record<Language, TranslationSchema> = {
   tr: {
+    meta: {
+      title: 'Ne İzlesem? | Yapay Zeka Destekli Film ve Dizi Önerisi'
+    },
     nav: {
       brand: 'NE İZLESEM?',
       tagline: 'Karar yorgunluğuna son',
       profile: 'Profilim',
       login: 'Giriş Yap',
-      switchTheme: 'Temayı Değiştir',
       switchLang: 'Change to English'
     },
     modes: {
@@ -174,7 +197,7 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       muteOff: 'Sesli Başla',
       tvMode: 'TV Modu',
       findAndWatch: 'BUL & İZLE',
-      surpriseMe: 'Beni Şaşırt 🎲',
+      surpriseMe: 'Beni Şaşırt',
       lightsOut: 'Işıkları Kapat',
       lightsOn: 'Işıkları Aç',
       openYoutube: "YouTube'da Aç",
@@ -184,12 +207,20 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       moreFromChannel: 'Bu Kanaldan Başka',
       brokenVideo: 'Açılmıyor mu?',
       wrongCategory: 'Hatalı Kategori',
-      mealTimerTitle: 'Yemek Soğuma Sayacı 🍲',
+      mealTimerTitle: 'Yemek Soğuma Sayacı',
       mealTimerPrompt: 'Yemeğinin tahmini süresini seç:',
       mealTimerRemaining: 'Yemeğin bitmesine:',
       mealTimerDone: '🎉 Afiyet olsun! Yemeğin bitti.',
       reset: 'Sıfırla',
-      minuteShort: 'dk'
+      minuteShort: 'dk',
+      noMatch: 'Bu süre ve modda uygun video bulamadım. Başka bir mod ya da süre dener misin?',
+      searchLabel: "YouTube'da video ara",
+      searchPlaceholder: "YouTube'da ara: ör. Cem Yılmaz, sokak lezzetleri...",
+      searchButton: 'Ara',
+      searchResults: 'Arama Sonuçları',
+      searchEmpty: 'Sonuç bulunamadı. Başka kelimelerle dene.',
+      timerPill: 'Yemek sayacı',
+      popularTitle: "Şu an YouTube'da popüler"
     },
     tmdb: {
       movie: 'Film',
@@ -207,7 +238,7 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       watch: 'İzle',
       watchOn: 'İzle · {provider}',
       pass: 'Pas Geç',
-      suggestAnother: 'Başka Öner',
+      suggestAnother: 'Benzerini Öner',
       watched: 'İzledim',
       season: 'SEZON',
       episode: 'BÖLÜM',
@@ -215,7 +246,7 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       popularShows: '🔥 Popüler Diziler'
     },
     ai: {
-      title: 'Film Sommelier 🤖',
+      title: 'Film Sommelier',
       subtitle: 'Bugün canın ne çekiyor?',
       placeholder: "Örn: 90'lar nostaljisi, yağmurlu bir gece filmi...",
       askButton: 'Sor',
@@ -227,6 +258,8 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       tastingNote: "Sommelier'in Tadım Notu",
       dataNote: 'Neden Bu Yapım?',
       allPicks: 'Seçilen Tüm Yapımlar (İncelemek için tıkla)',
+      errorTitle: 'Öneriler getirilemedi.',
+      retry: 'Tekrar dene',
       moodCategories: [
         {
           title: "Ruh Hali",
@@ -270,14 +303,16 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       passTitle: 'Geç (Sola Kaydır)',
       detailsTitle: 'Detay & Fragman',
       loading: 'Yeni içerikler yükleniyor',
-      loadingSub: 'Mükemmel öneriler hazırlanıyor...'
+      loadingSub: 'Mükemmel öneriler hazırlanıyor...',
+      guestNote: 'Beğendiklerin bu cihazda saklanıyor; giriş yapınca hesabına aktarılır'
     },
     common: {
       noImage: 'Görsel Yok',
       untitled: 'İsimsiz İçerik',
       noOverview: 'Bu içerik için özet açıklaması bulunmuyor.',
       login: 'Giriş Yap',
-      cancel: 'Vazgeç'
+      cancel: 'Vazgeç',
+      close: 'Kapat'
     },
     messages: {
       noTrailer: 'Bu yapımın fragmanı bulunamadı.',
@@ -293,7 +328,14 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       rateLimited: 'Çok hızlı gidiyorsun, birkaç saniye bekle.',
       aiNoResults: 'Bu isteğe uygun bir şey bulamadım. Biraz farklı anlatmayı dener misin?',
       aiUnavailable: 'Öneri servisi şu an kullanılamıyor.',
-      genericError: 'Bir hata oluştu, tekrar dene.'
+      genericError: 'Bir hata oluştu, tekrar dene.',
+      savedLocally: 'Bu cihaza kaydedildi. Giriş yaparsan favorilerin hesabına aktarılır.',
+      loginRequiredTitle: 'Bu bölüm için giriş yapmalısın',
+      loginRequiredMatch: 'Eşleş modunda bir oda açıp kodunu arkadaşınla paylaşırsın; ikiniz de film kaydırırsınız ve ikinizin de beğendiği ilk film ekrana gelir.',
+      loginRequiredProfile: 'Profilinde izlediklerin, favorilerin, rozetlerin ve platform tercihlerin saklanır.',
+      backHome: 'Ana sayfaya dön',
+      notFoundTitle: 'Bu sayfa bulunamadı',
+      notFoundText: 'Aradığın sayfa taşınmış ya da hiç var olmamış olabilir. Ama izleyecek bir şey bulmana yardım edebiliriz.'
     },
     footer: {
       brand: 'Ne İzlesem?',
@@ -302,18 +344,20 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
     }
   },
   en: {
+    meta: {
+      title: 'What To Watch? | AI-Powered Movie & TV Picks'
+    },
     nav: {
       brand: 'WHAT TO WATCH?',
       tagline: 'No more decision fatigue',
       profile: 'My Profile',
       login: 'Sign In',
-      switchTheme: 'Toggle Theme',
       switchLang: 'Türkçe’ye Geç'
     },
     modes: {
       youtube: 'Watch & Eat',
       tmdb: 'Gourmet',
-      ai: 'Sommelier',
+      ai: 'Assistant',
       swipe: 'Discover',
       match: 'Match'
     },
@@ -337,7 +381,7 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       muteOff: 'Start Unmuted',
       tvMode: 'TV Mode',
       findAndWatch: 'FIND & PLAY',
-      surpriseMe: 'Surprise Me 🎲',
+      surpriseMe: 'Surprise Me',
       lightsOut: 'Lights Out',
       lightsOn: 'Lights On',
       openYoutube: 'Open in YouTube',
@@ -347,12 +391,20 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       moreFromChannel: 'More From Channel',
       brokenVideo: "Won't play?",
       wrongCategory: 'Wrong Category',
-      mealTimerTitle: 'Meal Cool-down Timer 🍲',
+      mealTimerTitle: 'Meal Cool-down Timer',
       mealTimerPrompt: 'Pick estimated meal time:',
       mealTimerRemaining: 'Time left to eat:',
       mealTimerDone: '🎉 Bon appétit! Meal time finished.',
       reset: 'Reset',
-      minuteShort: 'min'
+      minuteShort: 'min',
+      noMatch: "I couldn't find a video for this length and vibe. Try another vibe or length?",
+      searchLabel: 'Search YouTube videos',
+      searchPlaceholder: 'Search YouTube: e.g. street food, stand-up...',
+      searchButton: 'Search',
+      searchResults: 'Search Results',
+      searchEmpty: 'No results. Try different words.',
+      timerPill: 'Meal timer',
+      popularTitle: 'Trending on YouTube now'
     },
     tmdb: {
       movie: 'Movies',
@@ -370,7 +422,7 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       watch: 'Watch',
       watchOn: 'Watch on {provider}',
       pass: 'Skip',
-      suggestAnother: 'Suggest Another',
+      suggestAnother: 'More Like This',
       watched: 'Watched',
       season: 'SEASON',
       episode: 'EPISODE',
@@ -378,7 +430,7 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       popularShows: '🔥 Popular Shows'
     },
     ai: {
-      title: 'Film Sommelier 🤖',
+      title: 'Film Sommelier',
       subtitle: 'What are you craving to watch today?',
       placeholder: 'E.g., 90s nostalgia crime thriller, cozy rainy night movie...',
       askButton: 'Ask',
@@ -390,6 +442,8 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       tastingNote: "Sommelier's Tasting Note",
       dataNote: 'Why This Pick?',
       allPicks: 'All Curated Titles (Tap to preview)',
+      errorTitle: "Couldn't load recommendations.",
+      retry: 'Try again',
       moodCategories: [
         {
           title: "Mood & Vibe",
@@ -433,14 +487,16 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       passTitle: 'Pass (Swipe Left)',
       detailsTitle: 'Details & Trailer',
       loading: 'Loading new titles',
-      loadingSub: 'Preparing great picks...'
+      loadingSub: 'Preparing great picks...',
+      guestNote: 'Your likes are saved on this device and move to your account when you sign in'
     },
     common: {
       noImage: 'No Image',
       untitled: 'Untitled',
       noOverview: 'No overview available for this title.',
       login: 'Sign In',
-      cancel: 'Cancel'
+      cancel: 'Cancel',
+      close: 'Close'
     },
     messages: {
       noTrailer: 'No trailer found for this title.',
@@ -456,7 +512,14 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       rateLimited: "You're going fast — wait a few seconds.",
       aiNoResults: "I couldn't find a match. Could you describe it a bit differently?",
       aiUnavailable: 'The recommendation service is unavailable right now.',
-      genericError: 'Something went wrong, please try again.'
+      genericError: 'Something went wrong, please try again.',
+      savedLocally: 'Saved on this device. Sign in to move your favourites to your account.',
+      loginRequiredTitle: 'Sign in to use this',
+      loginRequiredMatch: 'In Match you open a room and share its code with a friend; you both swipe, and the first film you both like shows up.',
+      loginRequiredProfile: 'Your profile keeps what you watched, your favourites, badges and platform choices.',
+      backHome: 'Back to home',
+      notFoundTitle: "This page doesn't exist",
+      notFoundText: 'It may have moved or never existed. We can still help you find something to watch.'
     },
     footer: {
       brand: 'What To Watch?',

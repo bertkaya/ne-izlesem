@@ -1,8 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { X } from 'lucide-react'
-import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { useLanguage } from '@/components/LanguageContext'
 import { useUserData } from '@/hooks/useUserData'
@@ -19,9 +17,8 @@ import AiSection from '@/components/sections/AiSection'
 import YoutubeSection from '@/components/sections/YoutubeSection'
 import TmdbSection from '@/components/sections/TmdbSection'
 import SwipeSection from '@/components/sections/SwipeSection'
-
-// react-player v3: video adresi `src` prop'u ile verilir (v2'deki `url` değil)
-const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
+import TrailerModal from '@/components/TrailerModal'
+import MealTimerPill from '@/components/MealTimerPill'
 
 type AppMode = 'youtube' | 'tmdb' | 'swipe' | 'ai'
 
@@ -67,14 +64,10 @@ export default function Home() {
       <Navigation user={user} />
 
       {/* Trailer Modal */}
-      {trailerKey && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in">
-          <div className="relative w-full max-w-5xl aspect-video bg-black rounded-3xl overflow-hidden shadow-2xl border border-gray-800">
-            <button onClick={tmdb.closeTrailer} className="absolute top-4 right-4 z-10 bg-black/50 p-2 rounded-full text-white hover:bg-white hover:text-black transition"><X size={24} /></button>
-            <ReactPlayer src={`https://www.youtube.com/watch?v=${trailerKey}`} width="100%" height="100%" playing controls />
-          </div>
-        </div>
-      )}
+      {trailerKey !== null && <TrailerModal videoKey={trailerKey} onClose={tmdb.closeTrailer} />}
+
+      {/* Yemek sayacı diğer sekmelerde de görünsün */}
+      {appMode !== 'youtube' && <MealTimerPill onOpen={() => setAppMode('youtube')} />}
 
       <ModeSelector appMode={appMode} setAppMode={setAppMode} />
 
@@ -85,6 +78,8 @@ export default function Home() {
           mood={yt.mood} setMood={yt.setMood} ytLang={yt.ytLang} setYtLang={yt.setYtLang}
           fetchYoutubeVideo={yt.fetchYoutubeVideo} markYoutubeWatched={yt.markYoutubeWatched} handleReport={yt.handleReport}
           fetchSurpriseVideo={yt.fetchSurpriseYoutubeVideo} fetchMoreFromChannel={yt.fetchMoreFromChannel}
+          searchResults={yt.searchResults} searching={yt.searching} searchError={yt.searchError}
+          searchYoutube={yt.searchYoutube} playVideo={yt.playVideo} clearSearch={yt.clearSearch} popular={yt.popular}
         />
       )}
 
@@ -97,6 +92,8 @@ export default function Home() {
           setSelectedMovie={tmdb.selectItem}
           openTrailer={tmdb.openTrailer}
           watchTarget={tmdb.watchTarget}
+          error={ai.aiError}
+          onRetry={ai.retry}
         />
       )}
 
@@ -107,7 +104,7 @@ export default function Home() {
           handleSearchSelect={tmdb.handleSearchSelect} onlyTurkish={tmdb.onlyTurkish} setOnlyTurkish={tmdb.setOnlyTurkish}
           toggleGenre={tmdb.toggleGenre} selectedGenres={tmdb.selectedGenres} fetchTmdbContent={tmdb.fetchTmdbContent} loading={tmdb.tmdbLoading}
           tmdbResult={tmdbResult} openTrailer={tmdb.openTrailer}
-          watchTarget={tmdb.watchTarget} markAsWatched={tmdb.markAsWatched} onTryAgain={() => { tmdb.selectItem(null); setAppMode('ai'); }}
+          watchTarget={tmdb.watchTarget} markAsWatched={tmdb.markAsWatched} onSimilar={tmdb.suggestSimilar} closeDropdown={tmdb.closeDropdown}
           aiSuggestions={aiSuggestions} setTmdbResult={tmdb.selectItem}
         />
       )}
@@ -119,6 +116,7 @@ export default function Home() {
           swipeMovies={swipe.swipeMovies}
           handleSwipe={swipe.handleSwipe}
           handleSwipeWatch={handleSwipeWatch}
+          isLoggedIn={!!user}
         />
       )}
 

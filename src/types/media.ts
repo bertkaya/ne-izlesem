@@ -61,6 +61,8 @@ export interface YoutubeVideo {
   title: string;
   url: string;
   duration_category?: string;
+  /** Gerçek süre (saniye); veritabanı videolarında olmayabilir */
+  durationSeconds?: number;
   mood?: string;
   language?: string | null;
   channelTitle?: string;

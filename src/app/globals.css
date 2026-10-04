@@ -26,8 +26,8 @@
   --color-card-foreground: var(--card-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --font-sans: var(--font-outfit);
-  --font-display: var(--font-syne);
+  --font-sans: var(--font-jakarta);
+  --font-display: var(--font-jakarta);
 }
 
 body {
@@ -43,7 +43,31 @@ h4,
 h5,
 h6 {
   font-family: var(--font-display), sans-serif;
-  letter-spacing: 0.05em;
+  letter-spacing: -0.015em;
+}
+
+/* Tek ana renk: tüm modlardaki birincil eylem düğmeleri (logo ile aynı mor→pembe) */
+.btn-primary {
+  background-image: linear-gradient(90deg, #9333ea, #db2777);
+  color: #fff;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+.btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+.btn-primary:active:not(:disabled) { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* İskelet yükleyici */
+.skeleton {
+  background: linear-gradient(90deg, rgb(31 41 55 / 0.7) 25%, rgb(55 65 81 / 0.7) 50%, rgb(31 41 55 / 0.7) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
 }
 
 /* Responsive Text Utility */

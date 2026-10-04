@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState } from 'react'
 import { Language, TranslationSchema, DICTIONARY } from '@/lib/i18n'
 
 interface LanguageContextType {
@@ -31,6 +31,13 @@ function getInitialLanguage(): Language {
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Language>(getInitialLanguage);
+
+  // CSS "uppercase" dönüşümü <html lang>'e göre yapılır: lang="tr" kalırsa İngilizce
+  // "Eating" → "EATİNG" olur. Dil değişince lang ve sekme başlığını da güncelle.
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.title = DICTIONARY[lang].meta.title;
+  }, [lang]);
 
   const setLang = (newLang: Language) => {
     setLangState(newLang);

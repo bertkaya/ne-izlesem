@@ -1,7 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { getDiscoverBatch } from '@/lib/tmdb'
+import { addGuestFavorite } from '@/lib/guest-favorites'
+import { useLanguage } from '@/components/LanguageContext'
+import { useToast } from '@/components/Toast'
 import type { MediaItem, MediaType } from '@/types/media'
 import type { UserData } from '@/hooks/useUserData'
 
@@ -11,6 +15,9 @@ const REFILL_BELOW = 4
 /** Keşfet (swipe) destesi: kartları yükler, kaydırılanları çıkarır, sağa kaydırılanı favoriye ekler. */
 export function useSwipeDeck(userData: Pick<UserData, 'supabase' | 'user' | 'watchedIds' | 'blacklistedIds'>, preferredGenres: string[]) {
   const { supabase, user, watchedIds, blacklistedIds } = userData
+  const { t } = useLanguage()
+  const toast = useToast()
+  const router = useRouter()
   const [swipeType, setSwipeType] = useState<MediaType>('movie')
   const [swipeMovies, setSwipeMovies] = useState<MediaItem[]>([])
   const pageRef = useRef(1)
@@ -54,11 +61,17 @@ export function useSwipeDeck(userData: Pick<UserData, 'supabase' | 'user' | 'wat
     setSwipeMovies(remaining)
     if (remaining.length < REFILL_BELOW) loadCards(swipeType, false)
 
-    if (direction === 'right' && user) {
-      supabase.from('favorites').insert({
-        user_id: user.id, tmdb_id: movie.id, media_type: swipeType,
-        title: movie.title || movie.name, poster_path: movie.poster_path, vote_average: movie.vote_average
-      }).then(({ error }) => { if (error) console.error('Favorite insert error', error) })
+    if (direction !== 'right') return
+    const fav = {
+      tmdb_id: movie.id, media_type: swipeType,
+      title: movie.title || movie.name || '', poster_path: movie.poster_path, vote_average: movie.vote_average
+    }
+    if (user) {
+      supabase.from('favorites').insert({ user_id: user.id, ...fav })
+        .then(({ error }) => { if (error) console.error('Favorite insert error', error) })
+    } else if (addGuestFavorite(fav)) {
+      // Giriş yapılmamış: bu cihaza kaydedildi; ilk beğenide nedenini ve girişi söyle
+      toast(t.messages.savedLocally, { action: { label: t.common.login, onClick: () => router.push('/login') } })
     }
   }
 
