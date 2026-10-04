@@ -8,7 +8,10 @@ import { useLanguage } from '@/components/LanguageContext'
 // react-player v3: video adresi `src` prop'u ile verilir (v2'deki `url` değil)
 const ReactPlayer = dynamic(() => import('react-player'), { ssr: false })
 
-/** Fragman penceresi: Esc ve arka plana tıklama ile kapanır; ✕ oynatıcının kontrollerinin üstünde değil, dışında. */
+/**
+ * Fragman penceresi: Esc ve arka plana tıklama ile kapanır; ✕ oynatıcının kontrollerinin üstünde değil, dışında.
+ * videoKey boşsa fragman hâlâ aranıyordur: yalnızca yükleme göstergesi görünür.
+ */
 export default function TrailerModal({ videoKey, onClose }: { videoKey: string; onClose: () => void }) {
   const { t } = useLanguage()
   const [ready, setReady] = useState(false)
@@ -50,14 +53,14 @@ export default function TrailerModal({ videoKey, onClose }: { videoKey: string; 
               <Loader2 size={40} className="animate-spin text-gray-500" />
             </div>
           )}
-          <ReactPlayer
+          {videoKey && <ReactPlayer
             src={`https://www.youtube.com/watch?v=${videoKey}`}
             width="100%"
             height="100%"
             playing
             controls
             onReady={() => setReady(true)}
-          />
+          />}
         </div>
       </div>
     </div>

@@ -113,6 +113,8 @@ export function useTmdbBrowser(userData: UserData) {
     if (!tmdbResult) return
     let key = findTrailerKey(tmdbResult)
     if (!key) {
+      // Pencereyi hemen aç (yükleniyor); fragman aranırken tıklama boşa gitmiş gibi görünmesin
+      setTrailerKey('')
       // Liste/küratör sonuçlarında fragman bilgisi yok; detayları getir
       const details = await getTitleDetails(tmdbResult.id, tmdbResult.media_type ?? tmdbType, lang)
       if (details) {
@@ -121,7 +123,7 @@ export function useTmdbBrowser(userData: UserData) {
       }
     }
     if (key) setTrailerKey(key)
-    else toast(t.messages.noTrailer)
+    else { setTrailerKey(null); toast(t.messages.noTrailer) }
   }
 
   const markAsWatched = async () => {

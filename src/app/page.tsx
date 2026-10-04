@@ -64,7 +64,7 @@ export default function Home() {
       <Navigation user={user} />
 
       {/* Trailer Modal */}
-      {trailerKey && <TrailerModal videoKey={trailerKey} onClose={tmdb.closeTrailer} />}
+      {trailerKey !== null && <TrailerModal videoKey={trailerKey} onClose={tmdb.closeTrailer} />}
 
       {/* Yemek sayacı diğer sekmelerde de görünsün */}
       {appMode !== 'youtube' && <MealTimerPill onOpen={() => setAppMode('youtube')} />}
