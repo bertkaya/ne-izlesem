@@ -4,12 +4,16 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 
 // Sayaç bitiş zamanını saklar; sekme değişince, video açılınca ya da sayfa yenilenince kaybolmaz.
 const KEY = 'meal_timer_end'
+// Süresi biten sayaç bu kadar süre sonra kendiliğinden silinir (sonsuza dek "0:00" kalmasın)
+const EXPIRE_AFTER_MS = 10 * 60_000
 const listeners = new Set<() => void>()
 
 function readEnd(): number | null {
   try {
     const v = Number(localStorage.getItem(KEY))
-    return Number.isFinite(v) && v > 0 ? v : null
+    if (!Number.isFinite(v) || v <= 0) return null
+    if (Date.now() - v > EXPIRE_AFTER_MS) { localStorage.removeItem(KEY); return null }
+    return v
   } catch {
     return null
   }
@@ -26,7 +30,7 @@ function writeEnd(end: number | null) {
 
 let memoryEnd: number | null = null
 const subscribe = (l: () => void) => { listeners.add(l); return () => listeners.delete(l) }
-const getSnapshot = () => readEnd() ?? memoryEnd
+const getSnapshot = () => readEnd() ?? (memoryEnd && Date.now() - memoryEnd <= EXPIRE_AFTER_MS ? memoryEnd : null)
 const getServerSnapshot = () => null
 
 export function useMealTimer() {

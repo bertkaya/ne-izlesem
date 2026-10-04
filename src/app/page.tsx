@@ -79,7 +79,7 @@ export default function Home() {
           fetchYoutubeVideo={yt.fetchYoutubeVideo} markYoutubeWatched={yt.markYoutubeWatched} handleReport={yt.handleReport}
           fetchSurpriseVideo={yt.fetchSurpriseYoutubeVideo} fetchMoreFromChannel={yt.fetchMoreFromChannel}
           searchResults={yt.searchResults} searching={yt.searching} searchError={yt.searchError}
-          searchYoutube={yt.searchYoutube} playVideo={yt.playVideo} clearSearch={yt.clearSearch}
+          searchYoutube={yt.searchYoutube} playVideo={yt.playVideo} clearSearch={yt.clearSearch} popular={yt.popular}
         />
       )}
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getVideoFromChannel } from '@/lib/tmdb'
-import { getLiveYoutubeRecommendation, getSurpriseYoutubeVideo, reportVideo, searchYoutubeVideos } from '@/app/actions'
+import { getLiveYoutubeRecommendation, getPopularYoutubeVideos, getSurpriseYoutubeVideo, reportVideo, searchYoutubeVideos } from '@/app/actions'
 import { useLanguage } from '@/components/LanguageContext'
 import { useToast } from '@/components/Toast'
 import type { YoutubeVideo } from '@/types/media'
@@ -24,6 +24,14 @@ export function useYoutubePlayer({ supabase, user, myChannels }: Pick<UserData, 
   const [searchResults, setSearchResults] = useState<YoutubeVideo[]>([])
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
+  const [popular, setPopular] = useState<YoutubeVideo[]>([])
+
+  // "Şu an popüler" şeridi: arayüz diline göre (TR → Türkiye, EN → ABD)
+  useEffect(() => {
+    let cancelled = false
+    getPopularYoutubeVideos(lang).then(v => { if (!cancelled) setPopular(v) }).catch(() => {})
+    return () => { cancelled = true }
+  }, [lang])
 
   const fetchYoutubeVideo = async (overrideMood?: string, overrideDuration?: string) => {
     setYtLoading(true); setYtVideo(null)
@@ -149,7 +157,7 @@ export function useYoutubePlayer({ supabase, user, myChannels }: Pick<UserData, 
   return {
     ytVideo, ytLoading, duration, setDuration, mood, setMood, ytLang, setYtLang,
     fetchYoutubeVideo, fetchSurpriseYoutubeVideo, fetchMoreFromChannel, handleReport, markYoutubeWatched,
-    searchResults, searching, searchError, searchYoutube, playVideo: setYtVideo,
+    searchResults, searching, searchError, searchYoutube, playVideo: setYtVideo, popular,
     clearSearch: () => { setSearchResults([]); setSearchError(null) },
   }
 }

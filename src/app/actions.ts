@@ -642,6 +642,28 @@ export async function getLiveYoutubeRecommendation(mood: string, duration: strin
   }
 }
 
+/** Yemek ekranı boşken gösterilen "Şu an popüler" şeridi. videos.list (1 kota birimi), 30 dk önbellek. */
+export async function getPopularYoutubeVideos(lang: 'tr' | 'en' = 'tr'): Promise<YoutubeVideo[]> {
+  if (!YOUTUBE_API_KEY) return [];
+  const region = lang === 'en' ? 'US' : getRegion().youtubeRegion;
+  try {
+    const params = new URLSearchParams({
+      part: 'contentDetails,snippet', chart: 'mostPopular', regionCode: region, maxResults: '20',
+      hl: lang, key: YOUTUBE_API_KEY,
+    });
+    const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?${params}`, { next: { revalidate: 1800 } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return ((data.items || []) as YoutubeVideoItem[])
+      .filter(it => !isLiveOrUnknown(it) && parseDurationSeconds(it.contentDetails.duration) >= 60) // canlı yayın ve Shorts hariç
+      .slice(0, 10)
+      .map(it => toYoutubeVideo(it));
+  } catch (err) {
+    console.error('getPopularYoutubeVideos error:', err);
+    return [];
+  }
+}
+
 /** Yemek ekranındaki "YouTube'da ara" kutusu: serbest metinle video arama (canlı yayınlar hariç). */
 export async function searchYoutubeVideos(query: string, lang: 'tr' | 'en' | 'all' = 'tr'): Promise<{ success: boolean; message?: string; videos: YoutubeVideo[] }> {
   if (!YOUTUBE_API_KEY) return { success: false, message: 'unavailable', videos: [] };
