@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getVideoFromChannel } from '@/lib/tmdb'
-import { getLiveYoutubeRecommendation, getSurpriseYoutubeVideo, reportVideo } from '@/app/actions'
+import { getLiveYoutubeRecommendation, getSurpriseYoutubeVideo, reportVideo, searchYoutubeVideos } from '@/app/actions'
 import { useLanguage } from '@/components/LanguageContext'
 import { useToast } from '@/components/Toast'
 import type { YoutubeVideo } from '@/types/media'
@@ -20,6 +20,10 @@ export function useYoutubePlayer({ supabase, user, myChannels }: Pick<UserData, 
   const [mood, setMood] = useState('funny')
   // 'native' = arayüz dilindeki videolar (TR → Türkçe, EN → İngilizce), 'all' = dil filtresi yok
   const [ytLang, setYtLang] = useState<'native' | 'all'>('native')
+  // "YouTube'da ara" kutusu
+  const [searchResults, setSearchResults] = useState<YoutubeVideo[]>([])
+  const [searching, setSearching] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
 
   const fetchYoutubeVideo = async (overrideMood?: string, overrideDuration?: string) => {
     setYtLoading(true); setYtVideo(null)
@@ -40,9 +44,9 @@ export function useYoutubePlayer({ supabase, user, myChannels }: Pick<UserData, 
         .eq('duration_category', targetDuration)
         .eq('mood', targetMood)
 
+      // Dil filtresi kesin: dili bilinmeyen (null) videolar "Sadece Türkçe"de gösterilmez
       const effectiveLang = ytLang === 'all' ? 'all' : lang
-      if (effectiveLang === 'tr') query = query.or('language.eq.tr,language.is.null')
-      else if (effectiveLang === 'en') query = query.eq('language', 'en')
+      if (effectiveLang !== 'all') query = query.eq('language', effectiveLang)
 
       const { data } = await query
       if (data && data.length > 0) {
@@ -50,13 +54,15 @@ export function useYoutubePlayer({ supabase, user, myChannels }: Pick<UserData, 
         return
       }
 
-      // 3. Veritabanında yoksa YouTube'dan canlı çek, o da olmazsa sürpriz video
+      // 3. Veritabanında yoksa YouTube'dan canlı çek. Bulunamazsa başka mood/süreye
+      //    sessizce geçmek yerine kullanıcıya söyle (önceden "sürpriz" video seçimi bozuyordu).
       const liveRes = await getLiveYoutubeRecommendation(targetMood, targetDuration, effectiveLang)
       if (liveRes.success && liveRes.video) { setYtVideo(liveRes.video); return }
-      if (liveRes.message === 'rate_limited') { toast(t.messages.rateLimited, { type: 'error' }); return }
-
-      const surpriseRes = await getSurpriseYoutubeVideo(lang)
-      if (surpriseRes.success && surpriseRes.video) setYtVideo(surpriseRes.video)
+      if (liveRes.message === 'rate_limited') toast(t.messages.rateLimited, { type: 'error' })
+      else toast(t.youtube.noMatch)
+    } catch (e) {
+      console.error('fetchYoutubeVideo error', e)
+      toast(t.messages.genericError, { type: 'error' })
     } finally {
       setYtLoading(false)
     }
@@ -116,13 +122,34 @@ export function useYoutubePlayer({ supabase, user, myChannels }: Pick<UserData, 
   }
 
   const markYoutubeWatched = async () => {
-    if (!ytVideo || !user) return
+    if (!ytVideo) return
+    if (!user) {
+      toast(t.messages.loginToSave, { action: { label: t.common.login, onClick: () => router.push('/login') } })
+      return
+    }
     await supabase.from('user_history').insert({ user_id: user.id, tmdb_id: 0, media_type: 'youtube', title: ytVideo.title })
     fetchYoutubeVideo()
+  }
+
+  const searchYoutube = async (query: string) => {
+    if (query.trim().length < 2) return
+    setSearching(true); setSearchError(null)
+    try {
+      const res = await searchYoutubeVideos(query, ytLang === 'all' ? 'all' : lang)
+      setSearchResults(res.videos)
+      if (!res.success) setSearchError(res.message === 'rate_limited' ? t.messages.rateLimited : t.messages.genericError)
+      else if (res.videos.length === 0) setSearchError(t.youtube.searchEmpty)
+    } catch {
+      setSearchError(t.messages.genericError)
+    } finally {
+      setSearching(false)
+    }
   }
 
   return {
     ytVideo, ytLoading, duration, setDuration, mood, setMood, ytLang, setYtLang,
     fetchYoutubeVideo, fetchSurpriseYoutubeVideo, fetchMoreFromChannel, handleReport, markYoutubeWatched,
+    searchResults, searching, searchError, searchYoutube, playVideo: setYtVideo,
+    clearSearch: () => { setSearchResults([]); setSearchError(null) },
   }
 }
