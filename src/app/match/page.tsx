@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/Toast'
+import LoginGate from '@/components/LoginGate'
+import { useLanguage } from '@/components/LanguageContext'
 import { getDiscoverBatch } from '@/lib/tmdb'
 import MovieSwiper from '@/components/MovieSwiper'
 import { Users, Copy, ArrowRight, Loader2, Sparkles, Film, Play } from 'lucide-react'
@@ -26,8 +28,10 @@ export default function MatchPage() {
   const [supabase] = useState(() => createClientComponentClient())
   const router = useRouter()
   const toast = useToast()
+  const { t } = useLanguage()
 
   const [user, setUser] = useState<User | null>(null)
+  const [authChecked, setAuthChecked] = useState(false)
   const [view, setView] = useState<'lobby' | 'swiping' | 'matched'>('lobby')
   const [roomCode, setRoomCode] = useState('')
   const [movies, setMovies] = useState<MediaItem[]>([])
@@ -38,11 +42,11 @@ export default function MatchPage() {
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
       setUser(user)
+      setAuthChecked(true)
     }
     init()
-  }, [supabase, router])
+  }, [supabase])
 
   // Real-time Room Update and Presence
   useEffect(() => {
@@ -138,7 +142,8 @@ export default function MatchPage() {
     window.open(`https://www.google.com/search?q=${encodeURIComponent(movie.title || movie.name || '')}+izle`, '_blank');
   }
 
-  if (!user) return null;
+  if (!authChecked) return <div className="min-h-screen bg-[#0f1014] flex items-center justify-center text-white"><Loader2 className="animate-spin" /></div>;
+  if (!user) return <LoginGate description={t.messages.loginRequiredMatch} />;
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans flex flex-col items-center justify-center p-4">

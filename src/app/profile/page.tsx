@@ -5,6 +5,8 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter } from 'next/navigation'
 import { User, Trash2, Save, Loader2, ArrowLeft, LogOut, Tv, Youtube, Link as LinkIcon, Search, Heart, Eye, Film } from 'lucide-react'
 import { useToast } from '@/components/Toast'
+import LoginGate from '@/components/LoginGate'
+import { useLanguage } from '@/components/LanguageContext'
 import { PROVIDERS } from '@/lib/constants'
 import { resolveYouTubeChannel } from '../actions' // Action import
 import Image from 'next/image'
@@ -18,6 +20,7 @@ export default function ProfilePage() {
   const [supabase] = useState(() => createClientComponentClient())
   const router = useRouter()
   const toast = useToast()
+  const { t } = useLanguage()
 
   const [user, setUser] = useState<AuthUser | null>(null)
   const [activeTab, setActiveTab] = useState<'settings' | 'channels' | 'history' | 'watchlist'>('settings')
@@ -38,7 +41,7 @@ export default function ProfilePage() {
     const fetchData = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) { router.push('/login'); return }
+        if (!user) return // LoginGate gösterilir
         setUser(user)
 
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
@@ -94,6 +97,7 @@ export default function ProfilePage() {
   const handleLogout = async () => { await supabase.auth.signOut(); router.push('/') }
 
   if (loading) return <div className="min-h-screen bg-[#0f1014] flex items-center justify-center text-white"><Loader2 className="animate-spin" /></div>
+  if (!user) return <LoginGate description={t.messages.loginRequiredProfile} />
 
   return (
     <div className="min-h-screen bg-[#0f1014] text-white font-sans p-4 md:p-8">

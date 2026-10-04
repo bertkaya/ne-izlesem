@@ -2,13 +2,11 @@ import type { Metadata, Viewport } from 'next'
 import { Syne, Outfit } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/Providers'
+import { siteUrl } from '@/lib/site'
 
 const syne = Syne({ subsets: ['latin', 'latin-ext'], variable: '--font-syne' })
 const outfit = Outfit({ subsets: ['latin', 'latin-ext'], variable: '--font-outfit' })
 
-// Canlı adres: NEXT_PUBLIC_SITE_URL (özel alan adı) ya da Vercel'in otomatik verdiği üretim adresi
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
-  || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'http://localhost:3000')
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
