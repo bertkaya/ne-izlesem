@@ -16,6 +16,8 @@ interface AiSectionProps {
     setSelectedMovie?: (movie: MediaItem) => void;
     openTrailer?: () => void;
     watchTarget?: WatchTarget | null;
+    error?: string | null;
+    onRetry?: () => void;
 }
 
 const CATEGORY_ICONS = [
@@ -27,15 +29,15 @@ const CATEGORY_ICONS = [
 
 export default function AiSection({
     fetchAiRecommendation, loading, aiSuggestions = [],
-    selectedMovie, setSelectedMovie, openTrailer, watchTarget
+    selectedMovie, setSelectedMovie, openTrailer, watchTarget, error, onRetry
 }: AiSectionProps) {
     const { t } = useLanguage()
     const [inputValue, setInputValue] = useState('')
 
     const handleSearch = () => {
         if (inputValue.trim()) {
+            // Metin silinmez: hata olursa ya da sonuç beğenilmezse kullanıcı düzenleyip yeniden sorabilir
             fetchAiRecommendation(inputValue.trim());
-            setInputValue('');
         }
     };
 
@@ -82,6 +84,19 @@ export default function AiSection({
             </div>
 
             {/* YÜKLENİYOR DURUMU (ŞIK VE ASLA DONMAYAN INLINE KART) */}
+            {/* HATA DURUMU: sessizce boş ekran yerine açıklama + tekrar dene */}
+            {!loading && error && (
+                <div role="alert" className="w-full max-w-2xl bg-red-950/40 border border-red-500/30 rounded-3xl p-6 text-center mb-8 animate-in fade-in">
+                    <p className="text-white font-bold mb-1">{t.ai.errorTitle}</p>
+                    <p className="text-sm text-gray-300 mb-4">{error}</p>
+                    {onRetry && (
+                        <button onClick={onRetry} className="bg-white text-black font-bold px-5 py-2.5 rounded-xl text-sm hover:bg-gray-200 transition min-h-[44px]">
+                            {t.ai.retry}
+                        </button>
+                    )}
+                </div>
+            )}
+
             {loading && (
                 <div className="w-full max-w-2xl bg-gradient-to-r from-cyan-950/40 via-gray-900 to-blue-950/40 border border-cyan-500/30 rounded-3xl p-8 text-center shadow-2xl backdrop-blur-md mb-8 animate-in fade-in">
                     <div className="relative w-16 h-16 mx-auto mb-4 flex items-center justify-center">

@@ -90,6 +90,20 @@ export async function getTitleDetails(id: number, type: MediaType, locale: 'tr' 
   return { ...details, media_type: type } as MediaItem
 }
 
+/** "Benzerini Öner": TMDB önerilerinden izlenmemiş/yasaklı olmayan rastgele bir yapım. */
+export async function getSimilarTitle(id: number, type: MediaType, excludeIds: number[] = [], locale: 'tr' | 'en' = 'tr'): Promise<MediaItem | null> {
+  if (!Number.isInteger(id) || !(await tmdbAllowed())) return null
+  const language = locale === 'en' ? 'en-US' : 'tr-TR'
+  const exclude = new Set([id, ...excludeIds.filter(Number.isInteger).slice(0, 5000)])
+  let data = await fetchTMDB(`/${type}/${id}/recommendations`, { language })
+  if (!data.results?.length) data = await fetchTMDB(`/${type}/${id}/similar`, { language })
+  const candidates = ((data.results || []) as MediaItem[]).filter(m => !exclude.has(m.id) && m.poster_path)
+  if (!candidates.length) return null
+  const pick = candidates[Math.floor(Math.random() * Math.min(candidates.length, 10))]
+  const details = await getDetails(pick.id, type, language)
+  return { ...pick, ...details, media_type: type }
+}
+
 // --- 2. DİZİ ARAMA ---
 export async function searchTvShow(query: string): Promise<MediaItem | null> {
   if (!(await tmdbAllowed())) return null

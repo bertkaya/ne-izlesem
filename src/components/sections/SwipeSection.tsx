@@ -4,6 +4,7 @@ import { useLanguage } from '@/components/LanguageContext'
 import type { MediaItem, MediaType } from '@/types/media'
 
 interface SwipeSectionProps {
+    isLoggedIn?: boolean;
     swipeType: MediaType;
     setSwipeType: (t: MediaType) => void;
     swipeMovies: MediaItem[];
@@ -12,7 +13,7 @@ interface SwipeSectionProps {
 }
 
 export default function SwipeSection({
-    swipeType, setSwipeType, swipeMovies, handleSwipe, handleSwipeWatch
+    swipeType, setSwipeType, swipeMovies, handleSwipe, handleSwipeWatch, isLoggedIn = false
 }: SwipeSectionProps) {
     const { t } = useLanguage()
 
@@ -25,7 +26,7 @@ export default function SwipeSection({
             <h2 className="text-2xl font-black mb-6 text-purple-500">{t.swipe.title}</h2>
             <MovieSwiper movies={swipeMovies} onSwipe={handleSwipe} onWatch={handleSwipeWatch} />
             <div className="mt-8 flex gap-4">
-                <p className="text-gray-400 text-xs flex items-center gap-1"><Heart size={12} /> {t.swipe.autoFavoriteNote}</p>
+                <p className="text-gray-400 text-xs flex items-center gap-1"><Heart size={12} /> {isLoggedIn ? t.swipe.autoFavoriteNote : t.swipe.guestNote}</p>
             </div>
         </div>
     )

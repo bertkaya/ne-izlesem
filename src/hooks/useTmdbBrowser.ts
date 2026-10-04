@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getRandomEpisode, getSmartRecommendation, getTitleDetails, searchTvShow, searchTvShowsList } from '@/lib/tmdb'
+import { getRandomEpisode, getSimilarTitle, getSmartRecommendation, getTitleDetails, searchTvShow, searchTvShowsList } from '@/lib/tmdb'
 import { MOOD_TO_MOVIE_GENRE } from '@/lib/constants'
 import { checkBadges } from '@/app/actions'
 import { useLanguage } from '@/components/LanguageContext'
@@ -31,6 +31,8 @@ export function useTmdbBrowser(userData: UserData) {
   const [searchResults, setSearchResults] = useState<MediaItem[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [trailerKey, setTrailerKey] = useState<string | null>(null)
+  // Listeden seçim yapınca arama kutusu dizinin adıyla dolar; bu, listeyi yeniden açmamalı
+  const skipNextSearch = useRef(false)
 
   /** Liste sonuçlarında (AI, küratör, Keşfet) platform ve fragman bilgisi yok; arka planda tamamla. */
   const enrich = async (item: MediaItem) => {
@@ -52,6 +54,7 @@ export function useTmdbBrowser(userData: UserData) {
 
   // Dizi arama otomatik tamamlama
   useEffect(() => {
+    if (skipNextSearch.current) { skipNextSearch.current = false; return }
     const timer = setTimeout(async () => {
       if (searchQuery.length > 2 && tmdbType === 'tv') {
         setSearchResults(await searchTvShowsList(searchQuery))
@@ -63,14 +66,16 @@ export function useTmdbBrowser(userData: UserData) {
     return () => clearTimeout(timer)
   }, [searchQuery, tmdbType])
 
+  const closeDropdown = useCallback(() => setShowDropdown(false), [])
+
   const handleSearchSelect = async (show: MediaItem) => {
     const name = show.name || show.title || ''
+    skipNextSearch.current = true
     setSearchQuery(name); setShowDropdown(false); setTmdbLoading(true)
     try {
-      const s = await searchTvShow(name)
-      if (!s) { toast(t.messages.tvNotFound, { type: 'error' }); return }
+      // Seçilen dizinin kendisi kullanılır (adıyla yeniden aramak başka bir diziyi bulabiliyordu)
       const g = selectedGenres.length > 0 ? selectedGenres.join(',') : '35'
-      const e = await getRandomEpisode(s.id, g, platforms.join('|'))
+      const e = await getRandomEpisode(show.id, g, platforms.join('|'))
       if (e) selectItem(e); else toast(t.messages.episodeNotFound, { type: 'error' })
     } finally {
       setTmdbLoading(false)
@@ -136,13 +141,31 @@ export function useTmdbBrowser(userData: UserData) {
     if (newBadges.length) toast(`${t.messages.newBadge} ${newBadges.join(', ')}`, { type: 'success' })
   }
 
+  /** "Benzerini Öner": aynı sekmede, seçili yapıma benzeyen başka bir yapım (önceden Asistan'a atıyordu). */
+  const suggestSimilar = async () => {
+    if (!tmdbResult) return
+    const type = tmdbResult.media_type ?? tmdbType
+    setTmdbLoading(true)
+    try {
+      const similar = await getSimilarTitle(tmdbResult.id, type, [...watchedIds, ...blacklistedIds], lang)
+      if (similar) selectItem(similar)
+      else toast(type === 'tv' ? t.messages.tvNotFound : t.messages.movieNotFound)
+    } catch {
+      toast(t.messages.genericError, { type: 'error' })
+    } finally {
+      setTmdbLoading(false)
+    }
+  }
+
+  const closeTrailer = useCallback(() => setTrailerKey(null), [])
+
   // Yapımın gerçekten bulunduğu platform (önce kullanıcının seçtikleri); bkz. lib/watch-link.ts
   const watchTarget = tmdbResult ? getWatchTarget(tmdbResult, platforms) : null
 
   return {
     tmdbResult, selectItem, tmdbType, setTmdbType, tmdbLoading, setTmdbLoading,
     selectedGenres, toggleGenre, searchQuery, setSearchQuery, onlyTurkish, setOnlyTurkish,
-    searchResults, showDropdown, handleSearchSelect, fetchTmdbContent,
-    trailerKey, closeTrailer: () => setTrailerKey(null), openTrailer, markAsWatched, watchTarget,
+    searchResults, showDropdown, closeDropdown, handleSearchSelect, fetchTmdbContent, suggestSimilar,
+    trailerKey, closeTrailer, openTrailer, markAsWatched, watchTarget,
   }
 }
