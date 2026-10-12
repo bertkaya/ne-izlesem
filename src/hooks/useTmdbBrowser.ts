@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getRandomEpisode, getSimilarTitle, getSmartRecommendation, getTitleDetails, searchTvShow, searchTvShowsList } from '@/lib/tmdb'
+import { getRandomEpisode, getSimilarTitle, getSmartRecommendation, getTitleDetails, getTmdbStatus, searchTvShow, searchTvShowsList } from '@/lib/tmdb'
 import { MOOD_TO_MOVIE_GENRE } from '@/lib/constants'
 import { checkBadges } from '@/app/actions'
 import { useLanguage } from '@/components/LanguageContext'
@@ -89,7 +89,7 @@ export function useTmdbBrowser(userData: UserData) {
       if (tmdbType === 'movie') {
         const g = selectedGenres.length > 0 ? selectedGenres.join(',') : MOOD_TO_MOVIE_GENRE.funny
         const m = await getSmartRecommendation(g, pStr, 'movie', watchedIds, blacklistedIds, onlyTurkish)
-        if (m) selectItem(m); else toast(t.messages.movieNotFound, { type: 'error' })
+        if (m) selectItem(m); else toast((await getTmdbStatus()) === 'ok' ? t.messages.movieNotFound : t.messages.serviceDown, { type: 'error' })
       } else {
         let tId: number | null = null
         if (searchQuery && !showDropdown) {
@@ -99,7 +99,7 @@ export function useTmdbBrowser(userData: UserData) {
         }
         const g = selectedGenres.length > 0 ? selectedGenres.join(',') : '35'
         const e = await getRandomEpisode(tId, g, pStr)
-        if (e) selectItem(e); else toast(t.messages.episodeNotFound, { type: 'error' })
+        if (e) selectItem(e); else toast((await getTmdbStatus()) === 'ok' ? t.messages.episodeNotFound : t.messages.serviceDown, { type: 'error' })
       }
     } catch (e) {
       console.error(e)

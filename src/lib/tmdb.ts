@@ -5,7 +5,7 @@
 // Sabitler (PROVIDERS, MOOD_TO_*) için: '@/lib/constants'
 
 import type { MediaItem, MediaType, YoutubeVideo } from '@/types/media'
-import { fetchTMDB, getDetails } from '@/lib/tmdb-api'
+import { fetchTMDB, getDetails, tmdbLastStatus } from '@/lib/tmdb-api'
 import { rateLimitByIp } from '@/lib/rate-limit'
 import { getRegion } from '@/lib/regions'
 
@@ -14,6 +14,11 @@ const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY
 const MINUTE = 60_000
 const REGION = getRegion().tmdbRegion
 const tmdbAllowed = () => rateLimitByIp('tmdb', 120, MINUTE)
+
+/** Sonuç boş döndüğünde istemci bunu sorar: gerçekten mi bulunamadı, yoksa film servisi mi çalışmıyor? */
+export async function getTmdbStatus(): Promise<'ok' | 'auth' | 'down'> {
+  return tmdbLastStatus()
+}
 
 // --- 1. AKILLI ÖNERİ ---
 export async function getSmartRecommendation(

@@ -143,6 +143,7 @@ export interface TranslationSchema {
     aiNoResults: string;
     aiUnavailable: string;
     genericError: string;
+    serviceDown: string;
     savedLocally: string;
     loginRequiredTitle: string;
     loginRequiredMatch: string;
@@ -329,6 +330,7 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       aiNoResults: 'Bu isteğe uygun bir şey bulamadım. Biraz farklı anlatmayı dener misin?',
       aiUnavailable: 'Öneri servisi şu an kullanılamıyor.',
       genericError: 'Bir hata oluştu, tekrar dene.',
+      serviceDown: 'Film servisine şu an ulaşılamıyor. Birazdan tekrar dene; sorun sürerse bize bildir.',
       savedLocally: 'Bu cihaza kaydedildi. Giriş yaparsan favorilerin hesabına aktarılır.',
       loginRequiredTitle: 'Bu bölüm için giriş yapmalısın',
       loginRequiredMatch: 'Eşleş modunda bir oda açıp kodunu arkadaşınla paylaşırsın; ikiniz de film kaydırırsınız ve ikinizin de beğendiği ilk film ekrana gelir.',
@@ -513,6 +515,7 @@ export const DICTIONARY: Record<Language, TranslationSchema> = {
       aiNoResults: "I couldn't find a match. Could you describe it a bit differently?",
       aiUnavailable: 'The recommendation service is unavailable right now.',
       genericError: 'Something went wrong, please try again.',
+      serviceDown: 'The movie service is unavailable right now. Try again shortly.',
       savedLocally: 'Saved on this device. Sign in to move your favourites to your account.',
       loginRequiredTitle: 'Sign in to use this',
       loginRequiredMatch: 'In Match you open a room and share its code with a friend; you both swipe, and the first film you both like shows up.',

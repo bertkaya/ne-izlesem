@@ -162,7 +162,7 @@ export default function Home() {
                 "bestRating": "10",
                 "ratingCount": tmdbResult.vote_count
               }
-            })
+            }).replace(/</g, '\\u003c')
           }}
         />
       )}

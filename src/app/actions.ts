@@ -98,11 +98,14 @@ async function youtubeSearchIds(query: string, extra = ''): Promise<string[]> {
 /** Veritabanında olmayan videoları onay bekleyen olarak ekler; eklenen sayısını döndürür. */
 async function insertNewVideos(db: SupabaseClient, items: YoutubeVideoItem[], mood: string): Promise<number> {
   let added = 0;
-  for (const item of items) {
-    if (isLiveOrUnknown(item)) continue; // canlı yayınların süresi yok, kategoriye uymaz
+  const candidates = items.filter(i => !isLiveOrUnknown(i)); // canlı yayınların süresi yok, kategoriye uymaz
+  const urls = candidates.map(i => `https://www.youtube.com/watch?v=${i.id}`);
+  if (!urls.length) return 0;
+  const { data: found } = await db.from('videos').select('url').in('url', urls); // tek sorgu (N+1 yerine)
+  const known = new Set((found ?? []).map(r => r.url));
+  for (const item of candidates) {
     const videoUrl = `https://www.youtube.com/watch?v=${item.id}`;
-    const { data: existing } = await db.from('videos').select('id').eq('url', videoUrl).maybeSingle();
-    if (existing) continue;
+    if (known.has(videoUrl)) continue;
     const { error } = await db.from('videos').insert({
       title: item.snippet.title,
       url: videoUrl,
@@ -233,11 +236,12 @@ export async function checkVideoHealth() {
         const validIds = new Set((data.items || []).map((v: { id: string }) => v.id));
         for (const v of chunk) {
           const vid = v.url.match(/v=([^&]+)/)?.[1];
-          if (vid && !validIds.has(vid)) { await db.from('videos').delete().eq('id', v.id); deletedCount++; }
+          // Silmek yerine yayından kaldır: bölge kısıtlı/geçici gizli videolar geri getirilebilsin
+          if (vid && !validIds.has(vid)) { await db.from('videos').update({ is_approved: false }).eq('id', v.id); deletedCount++; }
         }
       } catch (e) { console.error('Health check error:', e); }
     }
-    return { success: true, message: `${deletedCount} ölü video temizlendi.` };
+    return { success: true, message: `${deletedCount} ölü video yayından kaldırıldı (silinmedi, onay bekleyenlerde görünür).` };
   });
 }
 
