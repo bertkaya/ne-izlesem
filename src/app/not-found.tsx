@@ -7,7 +7,7 @@ import { useLanguage } from '@/components/LanguageContext'
 export default function NotFound() {
   const { t } = useLanguage()
   return (
-    <main className="min-h-screen bg-[#0f1014] text-white flex items-center justify-center p-4">
+    <main className="min-h-screen bg-[#1a0a12] text-white flex items-center justify-center p-4">
       <div className="text-center max-w-md">
         <p className="text-7xl font-black bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent mb-2">404</p>
         <h1 className="text-2xl font-bold mb-3">{t.messages.notFoundTitle}</h1>

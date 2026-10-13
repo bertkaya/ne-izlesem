@@ -76,7 +76,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f1014] text-white flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-[#1a0a12] text-white flex flex-col items-center justify-center p-6">
       <div className="max-w-2xl w-full">
         
         {/* İlerleme Çubuğu */}

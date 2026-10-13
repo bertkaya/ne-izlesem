@@ -142,7 +142,7 @@ export default function MatchPage() {
     window.open(`https://www.google.com/search?q=${encodeURIComponent(movie.title || movie.name || '')}+izle`, '_blank');
   }
 
-  if (!authChecked) return <div className="min-h-screen bg-[#0f1014] flex items-center justify-center text-white"><Loader2 className="animate-spin" /></div>;
+  if (!authChecked) return <div className="min-h-screen bg-[#1a0a12] flex items-center justify-center text-white"><Loader2 className="animate-spin" /></div>;
   if (!user) return <LoginGate description={t.messages.loginRequiredMatch} />;
 
   return (
@@ -185,7 +185,7 @@ export default function MatchPage() {
 
       {view === 'matched' && matchResult && (
         <div className="w-full max-w-md bg-gradient-to-br from-purple-600 to-pink-600 p-1 rounded-3xl shadow-2xl animate-in zoom-in duration-500">
-          <div className="bg-[#0f1014] p-8 rounded-[22px] text-center h-full relative overflow-hidden">
+          <div className="bg-[#1a0a12] p-8 rounded-[22px] text-center h-full relative overflow-hidden">
             <div className="text-6xl mb-4 animate-bounce">🎉</div>
             <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-2">EŞLEŞME!</h2>
             <p className="text-gray-400 mb-6 text-sm">İkiniz de bunu beğendiniz:</p>

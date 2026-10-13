@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from 'next'
-import { Plus_Jakarta_Sans } from 'next/font/google'
+import { Bricolage_Grotesque, Nunito } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 import { siteUrl } from '@/lib/site'
 
-// Tek aile: başlık (800) ve metin (400–600) için Plus Jakarta Sans; latin-ext Türkçe karakterler için
-const jakarta = Plus_Jakarta_Sans({ subsets: ['latin', 'latin-ext'], weight: ['400', '500', '600', '700', '800'], variable: '--font-jakarta', display: 'swap' })
+// Marka B (Akşam Sofrası): başlıkta Bricolage Grotesque, metinde Nunito; latin-ext Türkçe karakterler için
+const bricolage = Bricolage_Grotesque({ subsets: ['latin', 'latin-ext'], weight: ['600', '700', '800'], variable: '--font-bricolage', display: 'swap' })
+const nunito = Nunito({ subsets: ['latin', 'latin-ext'], weight: ['400', '500', '600', '700', '800'], variable: '--font-nunito', display: 'swap' })
 
 
 export const metadata: Metadata = {
@@ -26,7 +27,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0f1014',
+  themeColor: '#1a0a12',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -40,7 +41,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="tr" suppressHydrationWarning>
-      <body className={`${jakarta.variable} font-sans antialiased text-foreground bg-[#0f1014]`}>
+      <body className={`${bricolage.variable} ${nunito.variable} font-sans antialiased text-foreground bg-[#1a0a12]`}>
         <Providers>
           {children}
         </Providers>

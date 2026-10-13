@@ -6,17 +6,17 @@
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #020617;
-  --primary: #7c3aed;
+  --primary: #e5432a;
   --primary-foreground: #f8fafc;
 }
 
 .dark {
-  --background: #0f1014;
-  --foreground: #ededed;
-  --card: #1e293b;
-  --card-foreground: #f8fafc;
-  --primary: #a78bfa;
-  --primary-foreground: #0f1014;
+  --background: #1a0a12;
+  --foreground: #fff1e6;
+  --card: #2e1520;
+  --card-foreground: #fff1e6;
+  --primary: #ff5a36;
+  --primary-foreground: #1a0a12;
 }
 
 @theme inline {
@@ -26,8 +26,37 @@
   --color-card-foreground: var(--card-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --font-sans: var(--font-jakarta);
-  --font-display: var(--font-jakarta);
+  --font-sans: var(--font-nunito);
+  --font-display: var(--font-bricolage);
+}
+
+/*
+ * Marka B, "Akşam Sofrası" (bordo-kırmızı yön): bileşenlerdeki Tailwind renk sınıfları
+ * (purple/pink/fuchsia/indigo/gray) bu ölçeklere yeniden eşlenir, tek tek sınıf değiştirmeden.
+ * purple = domates kırmızısı, pink = safran sarısı, fuchsia = mercan, indigo = bordo, gray = bordo tonlu nötr.
+ */
+@theme {
+  --color-purple-50: #fff1ec;  --color-purple-100: #ffdcd1; --color-purple-200: #ffbaa5;
+  --color-purple-300: #ff9577; --color-purple-400: #ff7650; --color-purple-500: #ff5a36;
+  --color-purple-600: #e5432a; --color-purple-700: #c2341f; --color-purple-800: #8f2618;
+  --color-purple-900: #5f1a13; --color-purple-950: #3a0f0b;
+
+  --color-pink-50: #fff8e1;  --color-pink-100: #ffecb3; --color-pink-200: #ffe082;
+  --color-pink-300: #ffd24d; --color-pink-400: #ffc42a; --color-pink-500: #ffb703;
+  --color-pink-600: #e09f00; --color-pink-700: #b87f00; --color-pink-800: #8a5f00;
+  --color-pink-900: #5c3f00; --color-pink-950: #382600;
+
+  --color-fuchsia-300: #ff9e8a; --color-fuchsia-400: #ff7f68; --color-fuchsia-500: #f2604a;
+  --color-fuchsia-600: #d4472f; --color-fuchsia-700: #a83623;
+
+  --color-indigo-300: #e08aa0; --color-indigo-400: #c95d7b; --color-indigo-500: #a63a5a;
+  --color-indigo-600: #8a2c49; --color-indigo-700: #6d2038; --color-indigo-800: #4f1627;
+  --color-indigo-900: #35101c;
+
+  --color-gray-50: #fdf4f0;  --color-gray-100: #f6e7e2; --color-gray-200: #e9d0cf;
+  --color-gray-300: #d6b4b9; --color-gray-400: #b3939e; --color-gray-500: #8d6f7a;
+  --color-gray-600: #664a56; --color-gray-700: #4a323f; --color-gray-800: #35202c;
+  --color-gray-900: #26121d; --color-gray-950: #1a0a12;
 }
 
 body {
@@ -48,8 +77,9 @@ h6 {
 
 /* Tek ana renk: tüm modlardaki birincil eylem düğmeleri (logo ile aynı mor→pembe) */
 .btn-primary {
-  background-image: linear-gradient(90deg, #9333ea, #db2777);
+  background-image: linear-gradient(90deg, #e5432a, #c22a47);
   color: #fff;
+  border-radius: 9999px;
   transition: filter 0.15s ease, transform 0.1s ease;
 }
 .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
@@ -84,7 +114,7 @@ html {
 }
 
 ::selection {
-  background-color: rgba(124, 58, 237, 0.3);
+  background-color: rgba(255, 90, 54, 0.3);
   color: white;
 }
 

@@ -54,10 +54,10 @@ export default function Home() {
               className="object-cover opacity-30 blur-sm scale-105"
               priority
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0f1014] via-[#0f1014]/80 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#1a0a12] via-[#1a0a12]/80 to-transparent" />
           </>
         ) : (
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/40 via-[#0f1014] to-[#0f1014]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/40 via-[#1a0a12] to-[#1a0a12]" />
         )}
       </div>
 

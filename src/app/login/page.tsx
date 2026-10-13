@@ -66,7 +66,7 @@ export default function LoginPage() {
   const submitLabel = view === 'sign-in' ? 'Giriş Yap' : view === 'sign-up' ? 'Kayıt Ol' : 'Sıfırlama Bağlantısı Gönder'
 
   return (
-    <div className="min-h-screen bg-[#0f1014] flex flex-col items-center justify-center p-4 text-white">
+    <div className="min-h-screen bg-[#1a0a12] flex flex-col items-center justify-center p-4 text-white">
       <div className="w-full max-w-md mb-4">
         <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white min-h-[44px]">
           <ArrowLeft size={16} /> Ana sayfaya dön

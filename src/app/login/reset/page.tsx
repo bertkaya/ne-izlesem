@@ -26,7 +26,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f1014] flex items-center justify-center p-4 text-white">
+    <div className="min-h-screen bg-[#1a0a12] flex items-center justify-center p-4 text-white">
       <form onSubmit={submit} className="w-full max-w-md bg-gray-900 border border-gray-800 p-6 sm:p-8 rounded-3xl shadow-2xl space-y-4">
         <h1 className="text-xl font-bold">Yeni şifre belirle</h1>
         <div>

@@ -96,11 +96,11 @@ export default function ProfilePage() {
   const deleteHistoryItem = async (id: number) => { await supabase.from('user_history').delete().eq('id', id); setHistory(history.filter(h => h.id !== id)) }
   const handleLogout = async () => { await supabase.auth.signOut(); router.push('/') }
 
-  if (loading) return <div className="min-h-screen bg-[#0f1014] flex items-center justify-center text-white"><Loader2 className="animate-spin" /></div>
+  if (loading) return <div className="min-h-screen bg-[#1a0a12] flex items-center justify-center text-white"><Loader2 className="animate-spin" /></div>
   if (!user) return <LoginGate description={t.messages.loginRequiredProfile} />
 
   return (
-    <div className="min-h-screen bg-[#0f1014] text-white font-sans p-4 md:p-8">
+    <div className="min-h-screen bg-[#1a0a12] text-white font-sans p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">

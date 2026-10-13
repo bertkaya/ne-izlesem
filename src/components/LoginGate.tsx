@@ -8,7 +8,7 @@ import { useLanguage } from '@/components/LanguageContext'
 export default function LoginGate({ description }: { description: string }) {
   const { t } = useLanguage()
   return (
-    <div className="min-h-screen bg-[#0f1014] text-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#1a0a12] text-white flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-gray-900 border border-gray-800 rounded-3xl p-8 text-center shadow-2xl">
         <span className="inline-flex p-3 rounded-2xl bg-pink-500/15 text-pink-400 mb-4"><Lock size={24} /></span>
         <h1 className="text-xl font-bold mb-2">{t.messages.loginRequiredTitle}</h1>
