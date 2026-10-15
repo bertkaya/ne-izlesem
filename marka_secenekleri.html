@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ne İzlesem? Marka Seçenekleri</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;600;700&family=Bricolage+Grotesque:wght@600;800&family=Nunito:wght@600;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0c1016;--ink:#e8edf4;--mute:#93a0b3;--line:#27313f;--card:#141a23}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,"Segoe UI",sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:22px 16px 120px}
+  h1{font-size:26px;margin:0 0 6px} .sub{color:var(--mute);max-width:760px;margin:0 0 20px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:16px}
+  .opt{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px}
+  .opt.sel{border-color:#ff5a2c}
+  .opt h2{margin:0;font-size:17px} .why{color:var(--mute);font-size:13.5px;margin:0}
+  .pick{background:#1a222d;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:inherit;cursor:pointer}
+  .opt.sel .pick{background:#ff5a2c;border-color:#ff5a2c;color:#fff;font-weight:700}
+  .sw{display:flex;gap:6px} .sw i{flex:1;height:26px;border-radius:6px;border:1px solid rgba(255,255,255,.12)}
+  /* mini uygulama */
+  .app{border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px;background:var(--b);color:var(--t);font-family:var(--fb)}
+  .logo{font-family:var(--fd);font-weight:800;font-size:26px;letter-spacing:var(--ls,0);line-height:1;color:var(--a)}
+  .logo small{color:var(--t);font-size:12px;font-weight:600;display:block;font-family:var(--fb);letter-spacing:.14em;margin-top:5px;opacity:.7}
+  .tabs{display:flex;gap:6px;padding:5px;border-radius:14px;background:var(--s)}
+  .tabs b{flex:1;text-align:center;padding:7px 4px;border-radius:10px;font-size:12.5px;font-weight:700;color:var(--m)}
+  .tabs b.on{background:var(--a);color:var(--ao)}
+  .card{border-radius:16px;background:var(--s);padding:10px;display:flex;gap:10px;align-items:stretch}
+  .poster{width:78px;border-radius:10px;background:linear-gradient(160deg,var(--a),var(--a2));flex:none;aspect-ratio:2/3;display:grid;place-items:center;font-family:var(--fd);font-weight:800;font-size:11px;color:var(--ao);text-align:center;padding:4px}
+  .card h3{margin:0;font-family:var(--fd);font-size:17px;line-height:1.15} .card p{margin:4px 0 0;font-size:12.5px;color:var(--m)}
+  .chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px} .chips span{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--b);color:var(--t);border:1px solid var(--l)}
+  .btn{margin-top:auto;border:0;border-radius:var(--r);padding:11px;font:inherit;font-weight:800;background:var(--a);color:var(--ao);text-align:center;font-family:var(--fd)}
+  .A{--b:#0e0b0a;--s:#1b1512;--t:#f6ecd9;--m:#b9a98f;--a:#f5b544;--ao:#1a1206;--a2:#c2410c;--l:#3a2d22;--fd:'Fraunces',Georgia,serif;--fb:'Inter',system-ui,sans-serif;--r:12px}
+  .B{--b:#1a0f1f;--s:#2a1830;--t:#fff1e6;--m:#c9a9c9;--a:#ff5a36;--ao:#fff;--a2:#ffb703;--l:#4a2a52;--fd:'Bricolage Grotesque',system-ui,sans-serif;--fb:'Nunito',system-ui,sans-serif;--r:99px}
+  .C{--b:#070a12;--s:#0f1523;--t:#e7f0ff;--m:#8aa0c2;--a:#22d3ee;--ao:#041014;--a2:#a3e635;--l:#1e2b44;--fd:'Space Grotesk',system-ui,sans-serif;--fb:'Inter',system-ui,sans-serif;--r:8px;--ls:-.02em}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:#141a23;border-top:1px solid var(--line);padding:10px 16px;display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+  textarea{width:100%;background:#0c1016;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font:inherit;min-height:54px;margin-top:6px}
+  .go{background:#ff5a2c;border:0;color:#fff;font-weight:700;border-radius:10px;padding:9px 14px;cursor:pointer;font:inherit}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Ne İzlesem? · Marka seçenekleri</h1>
+  <p class="sub">Şu anki kimlik: mor-pembe gradyan yazı, koyu tema, Plus Jakarta Sans. Aşağıda üç farklı yön, aynı ekranla yan yana. Yazı tipleri Google Fonts'tan yüklenir (internet gerekir). Birini seç ya da karışım iste; seçimini en alttaki düğmeyle bana yapıştır.</p>
+
+  <div class="grid" id="grid"></div>
+
+  <div style="margin-top:22px">
+    <b>Notun (isteğe bağlı)</b>
+    <textarea id="note" placeholder="Örn: B'nin renkleri ama A'nın yazı tipi; logoda çatal-bıçak simgesi olsun…"></textarea>
+  </div>
+</div>
+<div class="bar"><span id="status" style="color:var(--mute);font-size:13px">Henüz seçmedin.</span><button class="go" id="copy">Seçimimi kopyala</button></div>
+
+<script>
+const OPTIONS=[
+ {id:"A",cls:"A",name:"A · Sinema Gecesi",why:"Sıcak, sinematik. Neredeyse siyah zemin, krem metin, altın vurgu ve serif başlıklar: 'film başlıyor' hissi. Güvenilir ve premium durur; yemek sofrası ortamına loş ışıkla uyar.",sw:["#0e0b0a","#1b1512","#f6ecd9","#f5b544","#c2410c"],fonts:"Fraunces (başlık) + Inter (metin)",logo:"NE İZLESEM?",sub:"BU AKŞAM · FİLM · DİZİ",poster:"AKŞAM<br>FİLMİ"},
+ {id:"B",cls:"B",name:"B · Akşam Sofrası",why:"Eğlenceli ve iştah açıcı. Koyu erik zemin, domates kırmızısı ve safran sarısı; yuvarlak köşeler ve düğmeler. Yemek + film fikrini en çok bu yön taşır, genç ve samimi.",sw:["#1a0f1f","#2a1830","#fff1e6","#ff5a36","#ffb703"],fonts:"Bricolage Grotesque (başlık) + Nunito (metin)",logo:"Ne İzlesem?",sub:"YEMEK · FİLM · KEYİF",poster:"SOFRA<br>KURULDU"},
+ {id:"C",cls:"C",name:"C · Neon Ekran",why:"Modern akış uygulaması hissi. Gece mavisi zemin, camgöbeği ve limon yeşili vurgu, keskin köşeler, teknik bir grotesk. En çağdaş görünen yön; mevcut mor-pembeye en yakın 'enerjik' karakter.",sw:["#070a12","#0f1523","#e7f0ff","#22d3ee","#a3e635"],fonts:"Space Grotesk (başlık) + Inter (metin)",logo:"ne izlesem?",sub:"AKILLI ÖNERİ · TMDB · AI",poster:"EKRAN<br>AÇIK"}
+];
+const grid=document.getElementById('grid');
+OPTIONS.forEach(o=>{
+  const el=document.createElement('div'); el.className='opt'; el.dataset.id=o.id;
+  el.innerHTML=`<h2>${o.name}</h2><p class="why">${o.why}</p>
+  <div class="sw">${o.sw.map(c=>`<i style="background:${c}" title="${c}"></i>`).join('')}</div>
+  <div class="why">Yazı tipi: ${o.fonts}</div>
+  <div class="app ${o.cls}">
+    <div class="logo">${o.logo}<small>${o.sub}</small></div>
+    <div class="tabs"><b class="on">Yemek</b><b>Gurme</b><b>Asistan</b><b>Keşfet</b></div>
+    <div class="card"><div class="poster">${o.poster}</div><div><h3>Bu akşam için seçtik</h3><p>Yemeğin bitmeden başlayan, 95 dakikalık bir komedi.</p><div class="chips"><span>Netflix</span><span>Komedi</span><span>7.8</span></div></div></div>
+    <div class="btn">BUL &amp; İZLE</div>
+  </div>
+  <button class="pick">Bunu seç</button>`;
+  grid.appendChild(el);
+});
+let pick=null; try{pick=localStorage.getItem('ney_brand')}catch(e){}
+function paint(){document.querySelectorAll('.opt').forEach(e=>e.classList.toggle('sel',e.dataset.id===pick)); document.getElementById('status').textContent=pick?('Seçimin: '+OPTIONS.find(o=>o.id===pick).name):'Henüz seçmedin.';}
+grid.addEventListener('click',e=>{const b=e.target.closest('.pick'); if(!b)return; pick=b.closest('.opt').dataset.id; try{localStorage.setItem('ney_brand',pick)}catch(_){} paint();});
+document.getElementById('copy').onclick=async()=>{const t='Ne İzlesem marka seçimi: '+(pick?OPTIONS.find(o=>o.id===pick).name:'(seçilmedi)')+'\nNot: '+document.getElementById('note').value; try{await navigator.clipboard.writeText(t); document.getElementById('status').textContent='Kopyalandı, bana yapıştır.'}catch(e){prompt('Kopyala:',t)}};
+paint();
+</script>
+</body>
+</html>

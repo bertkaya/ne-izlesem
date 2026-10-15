@@ -32,6 +32,15 @@ describe('analyzePrompt — kelime sınırları', () => {
     expect(analyze('Gülmekten Karnım Ağrısın').genreKey).toBe('comedy')
   })
 
+  it('QA: "yağmurlu bir pazar günü izlenecek sıcacık film" içini ısıtan türü seçer', () => {
+    expect(analyze('yağmurlu bir pazar günü izlenecek sıcacık film').genreKey).toBe('feelgood')
+    expect(analyze('cozy rainy sunday movie').genreKey).toBe('feelgood')
+  })
+
+  it('"Brain-Off Comfort" komedi olarak kalır', () => {
+    expect(analyze('😴 Brain-Off Comfort').genreKey).toBe('comedy')
+  })
+
   it('"Büyük Soygun" fantastik değil suç', () => {
     expect(analyze('💰 Büyük Soygun').genreKey).toBe('crime')
   })

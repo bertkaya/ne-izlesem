@@ -16,7 +16,12 @@ interface AiSectionProps {
     setSelectedMovie?: (movie: MediaItem) => void;
     openTrailer?: () => void;
     watchTarget?: WatchTarget | null;
+    error?: string | null;
+    onRetry?: () => void;
 }
+
+// Seçenek metinlerinin başındaki emoji görünümden kaldırılır (kategori ikonları zaten var)
+const LEADING_EMOJI = /^[\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\s]+/u
 
 const CATEGORY_ICONS = [
     <Smile key="smile" size={18} className="text-yellow-400" />,
@@ -27,15 +32,15 @@ const CATEGORY_ICONS = [
 
 export default function AiSection({
     fetchAiRecommendation, loading, aiSuggestions = [],
-    selectedMovie, setSelectedMovie, openTrailer, watchTarget
+    selectedMovie, setSelectedMovie, openTrailer, watchTarget, error, onRetry
 }: AiSectionProps) {
     const { t } = useLanguage()
     const [inputValue, setInputValue] = useState('')
 
     const handleSearch = () => {
         if (inputValue.trim()) {
+            // Metin silinmez: hata olursa ya da sonuç beğenilmezse kullanıcı düzenleyip yeniden sorabilir
             fetchAiRecommendation(inputValue.trim());
-            setInputValue('');
         }
     };
 
@@ -75,13 +80,26 @@ export default function AiSection({
                 <button
                     onClick={handleSearch}
                     disabled={loading || !inputValue.trim()}
-                    className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold px-6 py-3.5 rounded-2xl transition-all active:scale-95 text-sm shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                    className="btn-primary font-bold px-6 py-3.5 rounded-2xl transition-all active:scale-95 text-sm shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 >
                     {loading ? <Loader2 size={16} className="animate-spin" /> : <span>{t.ai.askButton}</span>}
                 </button>
             </div>
 
             {/* YÜKLENİYOR DURUMU (ŞIK VE ASLA DONMAYAN INLINE KART) */}
+            {/* HATA DURUMU: sessizce boş ekran yerine açıklama + tekrar dene */}
+            {!loading && error && (
+                <div role="alert" className="w-full max-w-2xl bg-red-950/40 border border-red-500/30 rounded-3xl p-6 text-center mb-8 animate-in fade-in">
+                    <p className="text-white font-bold mb-1">{t.ai.errorTitle}</p>
+                    <p className="text-sm text-gray-300 mb-4">{error}</p>
+                    {onRetry && (
+                        <button onClick={onRetry} className="bg-white text-black font-bold px-5 py-2.5 rounded-xl text-sm hover:bg-gray-200 transition min-h-[44px]">
+                            {t.ai.retry}
+                        </button>
+                    )}
+                </div>
+            )}
+
             {loading && (
                 <div className="w-full max-w-2xl bg-gradient-to-r from-cyan-950/40 via-gray-900 to-blue-950/40 border border-cyan-500/30 rounded-3xl p-8 text-center shadow-2xl backdrop-blur-md mb-8 animate-in fade-in">
                     <div className="relative w-16 h-16 mx-auto mb-4 flex items-center justify-center">
@@ -92,6 +110,18 @@ export default function AiSection({
                     <p className="text-xs text-gray-400">
                         {t.ai.analyzing}
                     </p>
+                </div>
+            )}
+
+            {/* YÜKLENİRKEN ÖNERİ İSKELETLERİ */}
+            {loading && (
+                <div className="w-full max-w-4xl mb-12 flex gap-3 overflow-hidden" aria-hidden="true">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="shrink-0 w-28">
+                            <div className="h-40 rounded-2xl skeleton mb-2" />
+                            <div className="h-3 w-20 rounded skeleton" />
+                        </div>
+                    ))}
                 </div>
             )}
 
@@ -251,7 +281,7 @@ export default function AiSection({
                                     disabled={loading}
                                     className="bg-gray-800/90 hover:bg-cyan-950/40 hover:border-cyan-500/50 hover:text-cyan-300 active:scale-95 border border-gray-700/80 px-3 py-3 rounded-2xl text-xs md:text-sm font-medium transition-all text-gray-300 shadow-sm text-center"
                                 >
-                                    {chip}
+                                    {chip.replace(LEADING_EMOJI, '')}
                                 </button>
                             ))}
                         </div>

@@ -78,6 +78,7 @@ export default function MovieSwiper({ movies, onSwipe, onWatch }: Props) {
         <button
           onClick={() => triggerSwipe('left')}
           title={t.swipe.passTitle}
+          aria-label={t.swipe.passTitle}
           className="p-4 bg-gray-900/90 text-red-500 border border-red-500/30 hover:bg-red-500 hover:text-white rounded-full transition-all shadow-xl hover:shadow-red-500/20 active:scale-90 group"
         >
           <X size={28} className="group-hover:scale-110 transition-transform" />
@@ -86,6 +87,7 @@ export default function MovieSwiper({ movies, onSwipe, onWatch }: Props) {
         <button
           onClick={() => { if (cards.length > 0) onWatch(cards[cards.length - 1]) }}
           title={t.swipe.detailsTitle}
+          aria-label={t.swipe.detailsTitle}
           className="p-5 bg-gradient-to-tr from-purple-600 to-pink-600 text-white rounded-full hover:scale-110 transition-all shadow-2xl hover:shadow-purple-500/40 active:scale-95 group"
         >
           <Play fill="currentColor" size={24} className="group-hover:scale-110 transition-transform ml-0.5" />
@@ -94,6 +96,7 @@ export default function MovieSwiper({ movies, onSwipe, onWatch }: Props) {
         <button
           onClick={() => triggerSwipe('right')}
           title={t.swipe.likeTitle}
+          aria-label={t.swipe.likeTitle}
           className="p-4 bg-gray-900/90 text-green-500 border border-green-500/30 hover:bg-green-500 hover:text-white rounded-full transition-all shadow-xl hover:shadow-green-500/20 active:scale-90 group"
         >
           <Heart fill="currentColor" size={28} className="group-hover:scale-110 transition-transform" />

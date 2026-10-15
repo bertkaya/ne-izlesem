@@ -1,14 +1,13 @@
 import type { Metadata, Viewport } from 'next'
-import { Syne, Outfit } from 'next/font/google'
+import { Bricolage_Grotesque, Nunito } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/Providers'
+import { siteUrl } from '@/lib/site'
 
-const syne = Syne({ subsets: ['latin', 'latin-ext'], variable: '--font-syne' })
-const outfit = Outfit({ subsets: ['latin', 'latin-ext'], variable: '--font-outfit' })
+// Marka B (Akşam Sofrası): başlıkta Bricolage Grotesque, metinde Nunito; latin-ext Türkçe karakterler için
+const bricolage = Bricolage_Grotesque({ subsets: ['latin', 'latin-ext'], weight: ['600', '700', '800'], variable: '--font-bricolage', display: 'swap' })
+const nunito = Nunito({ subsets: ['latin', 'latin-ext'], weight: ['400', '500', '600', '700', '800'], variable: '--font-nunito', display: 'swap' })
 
-// Canlı adres: NEXT_PUBLIC_SITE_URL (özel alan adı) ya da Vercel'in otomatik verdiği üretim adresi
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
-  || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'http://localhost:3000')
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -28,7 +27,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0f1014',
+  themeColor: '#1a0a12',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -42,7 +41,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="tr" suppressHydrationWarning>
-      <body className={`${syne.variable} ${outfit.variable} font-sans antialiased text-foreground bg-gray-50 dark:bg-[#0f1014] transition-colors duration-300`}>
+      <body className={`${bricolage.variable} ${nunito.variable} font-sans antialiased text-foreground bg-[#1a0a12]`}>
         <Providers>
           {children}
         </Providers>

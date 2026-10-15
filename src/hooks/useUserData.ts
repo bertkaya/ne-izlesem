@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import type { User } from '@supabase/supabase-js'
+import { clearGuestFavorites, readGuestFavorites } from '@/lib/guest-favorites'
 
 /** Oturum, izlenenler, kara liste, platform ve favori kanal bilgileri. */
 export function useUserData() {
@@ -20,6 +21,13 @@ export function useUserData() {
       const { data: blacklist } = await supabase.from('blacklist').select('tmdb_id')
       if (blacklist) setBlacklistedIds(blacklist.map(b => b.tmdb_id))
       if (!user) return
+
+      // Giriş yapmadan önce Keşfet'te beğenilenleri hesaba aktar
+      const guestFavs = readGuestFavorites()
+      if (guestFavs.length) {
+        const { error } = await supabase.from('favorites').insert(guestFavs.map(f => ({ ...f, user_id: user.id })))
+        if (!error) clearGuestFavorites()
+      }
 
       const [{ data: history }, { data: profile }] = await Promise.all([
         supabase.from('user_history').select('tmdb_id').eq('user_id', user.id),

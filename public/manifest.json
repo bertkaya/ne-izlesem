@@ -4,8 +4,8 @@
   "description": "Karar yorgunluğuna son ver. Yemek ve film eşlikçin.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f1014",
-  "theme_color": "#dc2626",
+  "background_color": "#1a0a12",
+  "theme_color": "#e5432a",
   "icons": [
     {
       "src": "/favicon.ico",

@@ -39,7 +39,7 @@ const GENRE_RULES: GenreRule[] = [
   },
   {
     key: 'feelgood', movie: '35|10749|10751', tv: '35|10751', label: { tr: 'içini ısıtan', en: 'feel-good' },
-    terms: ['pamuk gibi*', 'içimi ısıt*', 'romanti*', 'aşk*', 'feel-good', 'feel good', 'warm', 'wholesome', 'cozy', 'romance', 'romantic*']
+    terms: ['pamuk gibi*', 'içimi ısıt*', 'içini ısıt*', 'sıcacık*', 'yağmur*', 'huzur*', 'battaniye*', 'romanti*', 'aşk*', 'feel-good', 'feel good', 'warm', 'wholesome', 'cozy', 'cosy', 'rainy', 'heartwarming', 'comfort*', 'romance', 'romantic*']
   },
   {
     key: 'action', movie: '28', tv: '10759', label: { tr: 'aksiyon', en: 'action' },

@@ -10,21 +10,28 @@ const API_KEY = process.env.TMDB_API_KEY || process.env.NEXT_PUBLIC_TMDB_API_KEY
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type TmdbResponse = Record<string, any>
 
+/** Son TMDB isteğinin sonucu: 'auth' (anahtar geçersiz/eksik), 'down' (zaman aşımı/5xx), 'ok'. */
+let lastStatus: 'ok' | 'auth' | 'down' = 'ok'
+export const tmdbLastStatus = () => (API_KEY ? lastStatus : 'auth')
+
 export function hasTmdbKey() {
   return Boolean(API_KEY)
 }
 
 export async function fetchTMDB(endpoint: string, params: Record<string, string> = {}, revalidate = 3600): Promise<TmdbResponse> {
-  if (!API_KEY) return {}
+  if (!API_KEY) { lastStatus = 'auth'; return {} }
   const query = new URLSearchParams({ api_key: API_KEY, language: 'tr-TR', ...params }).toString()
   // Takılan bir istek tüm öneriyi (ve Vercel fonksiyonunu) bekletmesin: 6 sn zaman aşımı, 1 tekrar
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const res = await fetch(`${BASE_URL}${endpoint}?${query}`, { next: { revalidate }, signal: AbortSignal.timeout(6000) })
-      if (res.status === 429 || res.status >= 500) continue
+      if (res.status === 429 || res.status >= 500) { lastStatus = 'down'; continue }
+      if (res.status === 401) { lastStatus = 'auth'; console.error('[TMDB] 401: TMDB_API_KEY geçersiz — öneriler boş dönecek. .env.local / Vercel ortam değişkenini kontrol et.'); return {} }
       if (!res.ok) return {}
+      lastStatus = 'ok'
       return await res.json()
     } catch (e) {
+      lastStatus = 'down'
       console.warn(`TMDB ${endpoint} deneme ${attempt + 1} başarısız:`, (e as Error).name)
     }
   }
