@@ -38,11 +38,16 @@ export async function fetchTMDB(endpoint: string, params: Record<string, string>
   return {}
 }
 
+import { getFallbackDetails, searchFallbackCatalog } from '@/lib/fallback-catalog'
+
 export async function getDetails(id: number, type: MediaType, language?: string): Promise<TmdbResponse> {
-  return fetchTMDB(`/${type}/${id}`, {
+  const res = await fetchTMDB(`/${type}/${id}`, {
     append_to_response: 'external_ids,credits,watch/providers,videos',
     ...(language ? { language } : {})
   })
+  if (res.id) return res
+  const fallback = getFallbackDetails(id, type)
+  return fallback ? { ...fallback } : {}
 }
 
 export async function getMoviesByTitles(
@@ -60,7 +65,11 @@ export async function getMoviesByTitles(
 
     const searchRes = await fetchTMDB(`/search/${type}`, params)
     const bestMatch = searchRes.results?.[0]
-    if (!bestMatch) return null
+    if (!bestMatch) {
+      const localMatch = searchFallbackCatalog(item.title, type)[0]
+      if (!localMatch) return null
+      return { ...localMatch, media_type: type, reason: item.reason, reasonSource: 'ai', fromFallback: true }
+    }
     const details = await getDetails(bestMatch.id, type, language)
     return { ...bestMatch, ...details, media_type: type, reason: item.reason, reasonSource: 'ai' }
   })

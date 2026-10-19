@@ -6,6 +6,13 @@
 
 import type { MediaItem, MediaType, YoutubeVideo } from '@/types/media'
 import { fetchTMDB, getDetails, tmdbLastStatus } from '@/lib/tmdb-api'
+import {
+  discoverFallbackCatalog,
+  getFallbackDetails,
+  getFallbackRandomEpisode,
+  getFallbackSimilar,
+  searchFallbackCatalog,
+} from '@/lib/fallback-catalog'
 import { rateLimitByIp } from '@/lib/rate-limit'
 import { getRegion } from '@/lib/regions'
 
@@ -67,7 +74,35 @@ export async function getSmartRecommendation(
     fromFallback = true;
   }
 
-  if (!data.results?.length) return null;
+  if (!data.results?.length) {
+    const parsedGenres = genresStr
+      .split(/[|,]/)
+      .map((g) => parseInt(g.trim(), 10))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    const parsedPlatforms = validProviders
+      .split('|')
+      .map((p) => parseInt(p.trim(), 10))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    let yearFrom: number | undefined;
+    let yearTo: number | undefined;
+    if (yearRange && yearRange.includes('-')) {
+      const [s, e] = yearRange.split('-');
+      yearFrom = parseInt(s, 10) || undefined;
+      yearTo = parseInt(e, 10) || undefined;
+    }
+    const localPool = discoverFallbackCatalog(type, {
+      genreIds: parsedGenres,
+      onlyTurkish,
+      yearFrom,
+      yearTo,
+      platforms: parsedPlatforms,
+      excludeIds: [...watchedIds, ...blacklistedIds],
+    });
+    if (localPool.length === 0) return null;
+    const pick = localPool[Math.floor(Math.random() * Math.min(localPool.length, 6))];
+    return { ...pick, media_type: type, fromFallback: true };
+  }
+
   const filtered = (data.results as MediaItem[]).filter(item => !watchedIds.includes(item.id) && !blacklistedIds.includes(item.id));
   if (filtered.length === 0) return null;
 
@@ -86,7 +121,10 @@ export async function getSmartRecommendation(
 export async function getTitleDetails(id: number, type: MediaType, locale: 'tr' | 'en' = 'tr'): Promise<MediaItem | null> {
   if (!Number.isInteger(id) || !(await tmdbAllowed())) return null
   const details = await getDetails(id, type, locale === 'en' ? 'en-US' : 'tr-TR')
-  if (!details.id) return null
+  if (!details.id) {
+    const fallback = getFallbackDetails(id, type)
+    return fallback ? ({ ...fallback, media_type: type } as MediaItem) : null
+  }
   // Yerel dilde fragman yoksa İngilizce fragmanları da dene
   if (!details.videos?.results?.length && locale !== 'en') {
     const en = await fetchTMDB(`/${type}/${id}/videos`, { language: 'en-US' })
@@ -103,7 +141,9 @@ export async function getSimilarTitle(id: number, type: MediaType, excludeIds: n
   let data = await fetchTMDB(`/${type}/${id}/recommendations`, { language })
   if (!data.results?.length) data = await fetchTMDB(`/${type}/${id}/similar`, { language })
   const candidates = ((data.results || []) as MediaItem[]).filter(m => !exclude.has(m.id) && m.poster_path)
-  if (!candidates.length) return null
+  if (!candidates.length) {
+    return getFallbackSimilar(id, type, [...exclude])
+  }
   const pick = candidates[Math.floor(Math.random() * Math.min(candidates.length, 10))]
   const details = await getDetails(pick.id, type, language)
   return { ...pick, ...details, media_type: type }
@@ -113,14 +153,18 @@ export async function getSimilarTitle(id: number, type: MediaType, excludeIds: n
 export async function searchTvShow(query: string): Promise<MediaItem | null> {
   if (!(await tmdbAllowed())) return null
   const data = await fetchTMDB('/search/tv', { query });
-  if (!data.results?.length) return null;
+  if (!data.results?.length) {
+    const fallback = searchFallbackCatalog(query, 'tv')[0];
+    return fallback ? ({ ...fallback, media_type: 'tv' } as MediaItem) : null;
+  }
   return { ...(await getDetails(data.results[0].id, 'tv')), media_type: 'tv' } as MediaItem;
 }
 
 export async function searchTvShowsList(query: string): Promise<MediaItem[]> {
   if (!(await tmdbAllowed())) return []
   const data = await fetchTMDB('/search/tv', { query });
-  return data.results ? data.results.slice(0, 5) : [];
+  if (data.results?.length) return data.results.slice(0, 5);
+  return searchFallbackCatalog(query, 'tv').slice(0, 5);
 }
 
 export async function getTrendingTvShows(): Promise<MediaItem[]> {
@@ -132,7 +176,8 @@ export async function getTrendingTvShows(): Promise<MediaItem[]> {
     'vote_count.gte': '100',
     page: (Math.floor(Math.random() * 3) + 1).toString()
   });
-  return data.results ? data.results.slice(0, 12) : [];
+  if (data.results?.length) return data.results.slice(0, 12);
+  return discoverFallbackCatalog('tv').slice(0, 12);
 }
 
 // --- 3. RASTGELE BÖLÜM ---
@@ -140,6 +185,11 @@ export async function getRandomEpisode(tvId: number | null = null, genreId: stri
   if (!(await tmdbAllowed())) return null
   let selectedShowId = tvId;
   let showNameOverride = '';
+  const parsedPlatforms = providers
+    .split('|')
+    .map((p) => parseInt(p.trim(), 10))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  const parsedGenre = genreId ? parseInt(genreId, 10) || 35 : 35;
 
   if (!selectedShowId) {
     const randomPage = Math.floor(Math.random() * 5) + 1;
@@ -147,18 +197,26 @@ export async function getRandomEpisode(tvId: number | null = null, genreId: stri
     let discoverData = await fetchTMDB('/discover/tv', { with_genres: genreId || '35', with_watch_providers: validProviders, watch_region: REGION, sort_by: 'popularity.desc', page: randomPage.toString() });
     if (!discoverData.results?.length) discoverData = await fetchTMDB('/discover/tv', { with_genres: genreId || '35', watch_region: REGION, sort_by: 'popularity.desc', page: randomPage.toString() });
 
-    if (!discoverData.results?.length) return null;
+    if (!discoverData.results?.length) {
+      return getFallbackRandomEpisode(null, parsedGenre, parsedPlatforms);
+    }
     const randomShow = discoverData.results[Math.floor(Math.random() * discoverData.results.length)];
     selectedShowId = randomShow.id; showNameOverride = randomShow.name;
   }
 
   const showDetails = await fetchTMDB(`/tv/${selectedShowId}`, { append_to_response: 'external_ids,videos,watch/providers' });
-  if (!showDetails.seasons) return null;
+  if (!showDetails.seasons) {
+    return getFallbackRandomEpisode(selectedShowId, parsedGenre, parsedPlatforms);
+  }
   const seasons = showDetails.seasons.filter((s: { season_number: number, episode_count: number }) => s.season_number > 0 && s.episode_count > 0);
-  if (seasons.length === 0) return null;
+  if (seasons.length === 0) {
+    return getFallbackRandomEpisode(selectedShowId, parsedGenre, parsedPlatforms);
+  }
   const randomSeason = seasons[Math.floor(Math.random() * seasons.length)];
   const seasonDetails = await fetchTMDB(`/tv/${selectedShowId}/season/${randomSeason.season_number}`);
-  if (!seasonDetails.episodes?.length) return null;
+  if (!seasonDetails.episodes?.length) {
+    return getFallbackRandomEpisode(selectedShowId, parsedGenre, parsedPlatforms);
+  }
   const randomEpisode = seasonDetails.episodes[Math.floor(Math.random() * seasonDetails.episodes.length)];
 
   return {
@@ -213,7 +271,17 @@ export async function getDiscoverBatch(page: number = 1, preferredGenres: string
   if (preferredGenres && Math.random() > 0.3) params.with_genres = preferredGenres;
 
   const data = await fetchTMDB(`/discover/${type}`, params);
-  if (!data.results) return [];
+  if (!data.results?.length) {
+    const parsedGenres = preferredGenres
+      .split(/[|,]/)
+      .map((g) => parseInt(g.trim(), 10))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    return discoverFallbackCatalog(type, { genreIds: parsedGenres }).map(item => ({
+      ...item,
+      media_type: type,
+      title: item.title || item.name,
+    }));
+  }
 
   return (data.results as MediaItem[]).map(item => ({
     ...item,

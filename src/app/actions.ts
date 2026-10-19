@@ -518,6 +518,8 @@ async function askGemini(prompt: string, locale: Locale) {
   }
 }
 
+import { discoverFallbackCatalog } from '@/lib/fallback-catalog';
+
 /** Gemini'siz öneri: istek analiz edilip TMDB discover ile gerçek veriye dayalı seçim. */
 async function curatorSuggestions(prompt: string, locale: Locale, excludeIds: Set<number>, platforms: number[]): Promise<MediaItem[]> {
   const analysis = analyzePrompt(prompt);
@@ -544,6 +546,30 @@ async function curatorSuggestions(prompt: string, locale: Locale, excludeIds: Se
       language,
     })).results, platforms.length > 0);
   }
+  // TMDB erişilemez veya 401 dönüyorsa yerel küratör kataloğundan tamamla
+  if (picked.length === 0) {
+    let yearFrom: number | undefined;
+    let yearTo: number | undefined;
+    if (analysis.year && analysis.year.includes('-')) {
+      const [s, e] = analysis.year.split('-');
+      yearFrom = parseInt(s, 10) || undefined;
+      yearTo = parseInt(e, 10) || undefined;
+    }
+    const parsedGenreIds = analysis.genreIds
+      ? analysis.genreIds.split(/[|,]/).map(g => parseInt(g.trim(), 10)).filter(n => Number.isFinite(n) && n > 0)
+      : [];
+    const localMatches = discoverFallbackCatalog(analysis.mediaType, {
+      genreIds: parsedGenreIds,
+      onlyTurkish: analysis.originalLanguage === 'tr',
+      yearFrom,
+      yearTo,
+      platforms,
+      excludeIds: [...excludeIds],
+      minVoteAverage: analysis.minVoteAverage,
+      maxRuntime: analysis.maxRuntime,
+    });
+    picked = shuffle(localMatches).map(m => ({ ...m, fromFallback: true }));
+  }
 
   return picked.slice(0, 8).map(m => ({
     ...m,
@@ -558,7 +584,6 @@ export async function getAiSuggestions(prompt: string, locale: Locale = 'tr', op
   const cleanPrompt = String(prompt || '').trim().slice(0, MAX_PROMPT_LENGTH);
   if (!cleanPrompt) return { success: false, results: [], error: 'empty' };
   if (!(await rateLimitByIp('ai', 10, MINUTE))) return { success: false, results: [], error: 'rate_limited' };
-  if (!hasTmdbKey()) return { success: false, results: [], error: 'unavailable' };
 
   const excludeIds = new Set((options.excludeIds || []).filter(Number.isInteger).slice(0, 5000));
   const platforms = (options.platforms || []).filter(p => Number.isInteger(p) && p > 0).slice(0, 10);
@@ -572,7 +597,7 @@ export async function getAiSuggestions(prompt: string, locale: Locale = 'tr', op
   }
   if (aiResults.length >= 3) return { success: true, results: aiResults.slice(0, 8), source: 'ai' };
 
-  // 2. Veri tabanlı küratör (Gemini yoksa ya da az sonuç döndüyse tamamlar)
+  // 2. Veri tabanlı küratör (Gemini yoksa, TMDB 401 dönse bile yerel katalog ile tamamlar)
   try {
     const seen = new Set([...excludeIds, ...aiResults.map(m => m.id)]);
     const curated = await curatorSuggestions(cleanPrompt, locale, seen, platforms);
